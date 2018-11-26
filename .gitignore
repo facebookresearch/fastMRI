@@ -1,0 +1,6 @@
+__pycache__
+logs
+.idea
+*.png
+*.cfl
+*.hdr

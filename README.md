@@ -21,7 +21,7 @@ the fastMRI dataset paper:
 ```
 @inproceedings{zbontar2018fastMRI,
   title={fastMRI: An Open Dataset and Benchmarks for Accelerated MRI},
-  author={Jure Zbontar and Florian Knoll and Anuroop Sriram et. al.},
+  author={Jure Zbontar and Florian Knoll and Anuroop Sriram and Matthew J. Muckley and Mary Bruno and Aaron Defazio and Marc Parente and Krzysztof J. Geras and Joe Katsnelson and Hersh Chandarana and Zizhao Zhang and Michal Drozdzal and Adriana Romero and Michael Rabbat and Pascal Vincent and James Pinkerton and Duo Wang and Nafissa Yakubova and Erich Owens and C. Lawrence Zitnick and Michael P. Recht and Daniel K. Sodickson and Yvonne W. Lui},
   journal = {ArXiv e-prints},
   archivePrefix = "arXiv",
   eprint = {1811.08839},

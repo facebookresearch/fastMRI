@@ -11,7 +11,7 @@ where `CHALLENGE` is either `singlecoil` or `multicoil`.
 
 To run the model on validation data:
 ```bash
-python models/unet/run_unet.py --data-path DATA --data-split val --checkpoint checkpoint/best_model.pt --challenge CHALLENGE --out-dir reconstructions_val
+python models/unet/run_unet.py --data-path DATA --data-split val --checkpoint checkpoint/best_model.pt --challenge CHALLENGE --out-dir reconstructions_val --mask-kspace
 ```
 The outputs will be saved to `reconstructions_val`. To evaluate the results, run:
 ```bash

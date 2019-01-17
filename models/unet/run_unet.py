@@ -14,6 +14,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from common.args import Args
+from common.subsample import MaskFunc
 from common.utils import save_reconstructions
 from data import transforms
 from data.mri_data import SliceData
@@ -25,16 +26,19 @@ class DataTransform:
     Data Transformer for running U-Net models on a test dataset.
     """
 
-    def __init__(self, resolution, which_challenge):
+    def __init__(self, resolution, which_challenge, mask_func=None):
         """
         Args:
             resolution (int): Resolution of the image.
             which_challenge (str): Either "singlecoil" or "multicoil" denoting the dataset.
+            mask_func (common.subsample.MaskFunc): A function that can create a mask of
+                appropriate shape.
         """
         if which_challenge not in ('singlecoil', 'multicoil'):
             raise ValueError(f'Challenge should either be "singlecoil" or "multicoil"')
         self.resolution = resolution
         self.which_challenge = which_challenge
+        self.mask_func = mask_func
 
     def __call__(self, kspace, target, attrs, fname, slice):
         """
@@ -52,7 +56,12 @@ class DataTransform:
                 fname (pathlib.Path): Path to the input file
                 slice (int): Serial number of the slice
         """
-        masked_kspace = transforms.to_tensor(kspace)
+        kspace = transforms.to_tensor(kspace)
+        if self.mask_func is not None:
+            seed = tuple(map(ord, fname))
+            masked_kspace, _ = transforms.apply_mask(kspace, self.mask_func, seed)
+        else:
+            masked_kspace = kspace
         # Inverse Fourier Transform to get zero filled solution
         image = transforms.ifft2(masked_kspace)
         # Crop input image
@@ -69,9 +78,12 @@ class DataTransform:
 
 
 def create_data_loaders(args):
+    mask_func = None
+    if args.mask_kspace:
+        mask_func = MaskFunc(args.center_fractions, args.accelerations)
     data = SliceData(
         root=args.data_path / f'{args.challenge}_{args.data_split}',
-        transform=DataTransform(args.resolution, args.challenge),
+        transform=DataTransform(args.resolution, args.challenge, mask_func),
         sample_rate=1.,
         challenge=args.challenge
     )
@@ -121,6 +133,9 @@ def main(args):
 
 def create_arg_parser():
     parser = Args()
+    parser.add_argument('--mask-kspace', action='store_true',
+                        help='Whether to apply a mask (set to True for val data and False '
+                             'for test data')
     parser.add_argument('--data-split', choices=['val', 'test'], required=True,
                         help='Which data partition to run on: "val" or "test"')
     parser.add_argument('--checkpoint', type=pathlib.Path, required=True,

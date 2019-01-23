@@ -111,9 +111,9 @@ def main():
             outputs = pool.map(run_model, range(len(data)))
     else:
         outputs = map(run_model, range(len(data)))
+    save_outputs(outputs, args.output_path)
     time_taken = time.perf_counter() - start_time
     logging.info(f'Run Time = {time_taken:}s')
-    save_outputs(outputs, args.output_path)
 
 
 def save_outputs(outputs, output_path):

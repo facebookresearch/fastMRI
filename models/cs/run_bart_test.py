@@ -123,12 +123,19 @@ def run_model(i):
 
 
 def main():
-    with multiprocessing.Pool(20) as pool:
+    if args.num_procs == 0:
         start_time = time.perf_counter()
-        outputs = pool.map(run_model, range(len(data)))
+        outputs = []
+        for i in range(len(data)):
+            outputs.append(run_model(i))
         time_taken = time.perf_counter() - start_time
-        logging.info(f'Run Time = {time_taken:}s')
-        save_outputs(outputs, args.output_path)
+    else:
+        with multiprocessing.Pool(args.num_procs) as pool:
+            start_time = time.perf_counter()
+            outputs = pool.map(run_model, range(len(data)))
+            time_taken = time.perf_counter() - start_time
+    logging.info(f'Run Time = {time_taken:}s')
+    save_outputs(outputs, args.output_path)
 
 
 if __name__ == '__main__':
@@ -137,6 +144,8 @@ if __name__ == '__main__':
                         help='Path to save the reconstructions to')
     parser.add_argument('--num-iters', type=int, default=200,
                         help='Number of iterations to run the reconstruction algorithm')
+    parser.add_argument('--num-procs', type=int, default=20,
+                        help='Number of processes. Set to 0 to disable multiprocessing.')
     args = parser.parse_args()
 
     random.seed(args.seed)

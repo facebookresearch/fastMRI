@@ -84,9 +84,7 @@ def evaluate(args, recons_key):
     for tgt_file in args.target_path.iterdir():
         with h5py.File(tgt_file) as target, h5py.File(
           args.predictions_path / tgt_file.name) as recons:
-            if args.acquisition and args.acquisition == target.attrs['acquisition']:
-                continue
-            if args.acceleration and args.acceleration == target.attrs['acceleration']:
+            if args.acquisition and args.acquisition != target.attrs['acquisition']:
                 continue
             target = target[recons_key].value
             recons = recons['reconstruction'].value
@@ -102,11 +100,8 @@ if __name__ == '__main__':
                         help='Path to reconstructions')
     parser.add_argument('--challenge', choices=['singlecoil', 'multicoil'], required=True,
                         help='Which challenge')
-    parser.add_argument('--acquisition', choices=['PD', 'PDFS'], default=None,
+    parser.add_argument('--acquisition', choices=['CORPD_FBK', 'CORPDFS_FBK'], default=None,
                         help='If set, only volumes of the specified acquisition type are used '
-                             'for evaluation. By default, all volumes are included.')
-    parser.add_argument('--acceleration', choices=[4, 8], default=None,
-                        help='If set, only volumes of the specified acceleration rate are used '
                              'for evaluation. By default, all volumes are included.')
     args = parser.parse_args()
 

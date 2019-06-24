@@ -55,16 +55,12 @@ Run `pytest`.
 
 ## Submitting to Leaderboard
 Run your model on the provided test data and create a zip file containing your
-predictions. Upload this to any publicly accessible cloud storage (e.g. Amazon
-S3, Dropbox etc) and then create a JSON file with your information.
+predictions. The `common/utils.py` file has a `save_reconstructions` function 
+saves the data in the correct format.
 
-The `common/utils.py` file has some convenience functions to help with this:
-* `save_reconstructions` function saves the data in the correct
- format.
-* `create_submission_file` creates a JSON file for submission.
-
-Submit the JSON file on the
-[EvalAI page](https://evalai.cloudcv.org/web/challenges/challenge-page/153/overview).
+Upload this to any publicly accessible cloud storage (e.g. Amazon S3, Dropbox etc).
+Submit a link to the zip file on the [challenge website](fastmri.org/submit). You
+will need to create an account before submitting.
 
 ## License
 fastMRI is MIT licensed, as found in the LICENSE file.

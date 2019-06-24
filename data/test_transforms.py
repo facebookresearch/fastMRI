@@ -32,7 +32,7 @@ def test_apply_mask(shape, center_fractions, accelerations):
     assert output.shape == input.shape
     assert mask.shape == expected_mask.shape
     assert np.all(expected_mask.numpy() == mask.numpy())
-    assert np.all((output * mask).numpy() == output.numpy())
+    assert np.all(np.where(mask.numpy() == 0, 0, output.numpy()) == output.numpy())
 
 
 @pytest.mark.parametrize('shape', [

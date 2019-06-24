@@ -45,7 +45,7 @@ def apply_mask(data, mask_func, seed=None):
     shape = np.array(data.shape)
     shape[:-3] = 1
     mask = mask_func(shape, seed)
-    return data * mask, mask
+    return torch.where(mask == 0, torch.Tensor([0]), data), mask
 
 
 def fft2(data):

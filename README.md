@@ -53,6 +53,42 @@ information about using the data loaders.
 ## Testing
 Run `pytest`.
 
+## Training a model
+The following is a tutorial on using the provided PyTorch data loaders and transforms and training your models. Please look at https://github.com/facebookresearch/fastMRI/master/models/unet/train_unet.py for a more concrete example.
+
+```
+from common import transforms, mri_data as data
+
+# Define the data transform class
+class DataTransform:
+   def __call__(self, kspace, seed, target):
+        # Preprocess the data here
+        masked_kspace = transforms.apply_mask(kspace)
+        image = transforms.ifft2(masked_kspace)
+        cropped_image = transforms.center_crop(transforms.complex_abs(image))
+        return cropped_image, target
+
+# Create the dataset (either single-coil or multi-coil)
+dataset = data.Slice(
+    root='path_to_data', # Change based on your setup
+    transform=DataTransform()
+)
+data_loader = DataLoader(dataset, batch_size)
+
+# Create pytorch model and optimizer
+my_model = build_pytorch_model()
+my_optim = build_pytorch_optimizer()
+
+# Train the model
+for epoch in range(num_epochs):
+    for masked_kspace, target in data_loader:
+        reconstruction = my_model(masked_kspace)
+        loss = mse_loss(reconstruction, target)
+        my_optim.zero_grad()
+        loss.backward()
+        optimizer.step()
+```
+
 ## Submitting to Leaderboard
 Run your model on the provided test data and create a zip file containing your
 predictions. The `common/utils.py` file has a `save_reconstructions` function 

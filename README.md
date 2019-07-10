@@ -2,7 +2,7 @@
 
 
 Accelerating Magnetic Resonance Imaging (MRI) by acquiring fewer measurements has the
-potential to reduce medical costs, minimize stress to patients and make MR imaging 
+potential to reduce medical costs, minimize stress to patients and make MR imaging
 possible in applications where it is currently prohibitively slow or expensive.
 
 [fastMRI](http://fastMRI.org) is collaborative research project from Facebook AI Research (FAIR)
@@ -92,11 +92,11 @@ for epoch in range(num_epochs):
 
 ## Submitting to Leaderboard
 Run your model on the provided test data and create a zip file containing your
-predictions. The `common/utils.py` file has a `save_reconstructions` function 
+predictions. The `common/utils.py` file has a `save_reconstructions` function
 that saves the data in the correct format.
 
 Upload the zip file to any publicly accessible cloud storage (e.g. Amazon S3,
-Dropbox etc). Submit a link to the zip file on the [challenge website](fastmri.org/submit).
+Dropbox etc). Submit a link to the zip file on the [challenge website](http://fastmri.org/submit).
 You will need to create an account before submitting.
 
 ## License

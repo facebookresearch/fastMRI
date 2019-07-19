@@ -56,7 +56,7 @@ Run `pytest`.
 ## Training a model
 This [jupyter notebook](https://github.com/facebookresearch/fastMRI/blob/master/fastMRI_tutorial.ipynb) contains a simple tutorial explaining how to get started working with the data.
 
-The following is explains how to work with the provided PyTorch data loaders and transforms and training your models. Please look at https://github.com/facebookresearch/fastMRI/master/models/unet/train_unet.py for a more concrete example.
+The following is explains how to work with the provided PyTorch data loaders and transforms and training your models. Please look at https://github.com/facebookresearch/fastMRI/blob/master/models/unet/train_unet.py for a more concrete example.
 ```
 from common import transforms, mri_data as data
 

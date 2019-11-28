@@ -5,7 +5,7 @@ Accelerating Magnetic Resonance Imaging (MRI) by acquiring fewer measurements ha
 potential to reduce medical costs, minimize stress to patients and make MR imaging
 possible in applications where it is currently prohibitively slow or expensive.
 
-[fastMRI](http://fastMRI.org) is collaborative research project from Facebook AI Research (FAIR)
+[fastMRI](http://fastMRI.org) is a collaborative research project from Facebook AI Research (FAIR)
 and NYU Langone Health to investigate the use of AI to make MRI scans faster.
 NYU Langone Health has released fully anonymized Knee MRI datasets that can
 be downloaded from [the fastMRI dataset page](https://fastmri.med.nyu.edu/).
@@ -56,7 +56,7 @@ Run `pytest`.
 ## Training a model
 This [jupyter notebook](https://github.com/facebookresearch/fastMRI/blob/master/fastMRI_tutorial.ipynb) contains a simple tutorial explaining how to get started working with the data.
 
-The following is explains how to work with the provided PyTorch data loaders and transforms and training your models. Please look at https://github.com/facebookresearch/fastMRI/blob/master/models/unet/train_unet.py for a more concrete example.
+The following explains how to work with the provided PyTorch data loaders and transforms and training your models. Please look at https://github.com/facebookresearch/fastMRI/blob/master/models/unet/train_unet.py for a more concrete example.
 ```
 from common import transforms, mri_data as data
 

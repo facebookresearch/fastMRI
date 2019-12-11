@@ -7,7 +7,7 @@ possible in applications where it is currently prohibitively slow or expensive.
 
 [fastMRI](http://fastMRI.org) is a collaborative research project from Facebook AI Research (FAIR)
 and NYU Langone Health to investigate the use of AI to make MRI scans faster.
-NYU Langone Health has released fully anonymized Knee MRI datasets that can
+NYU Langone Health has released fully anonymized knee and brain MRI datasets that can
 be downloaded from [the fastMRI dataset page](https://fastmri.med.nyu.edu/).
 
 

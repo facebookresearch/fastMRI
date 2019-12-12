@@ -14,7 +14,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from common.args import Args
-from common.subsample import MaskFunc
+from common.subsample import mask_for_mask_type
 from common.utils import save_reconstructions
 from data import transforms
 from data.mri_data import SliceData
@@ -64,8 +64,10 @@ class DataTransform:
             masked_kspace = kspace
         # Inverse Fourier Transform to get zero filled solution
         image = transforms.ifft2(masked_kspace)
-        # Crop input image
-        image = transforms.complex_center_crop(image, (self.resolution, self.resolution))
+        # Crop input image to given resolution if larger
+        smallest_width = min(args.resolution, image.shape[-2])
+        smallest_height = min(args.resolution, image.shape[-3])
+        image = transforms.complex_center_crop(image, (smallest_height, smallest_width))
         # Absolute value
         image = transforms.complex_abs(image)
         # Apply Root-Sum-of-Squares if multicoil data
@@ -80,7 +82,7 @@ class DataTransform:
 def create_data_loaders(args):
     mask_func = None
     if args.mask_kspace:
-        mask_func = MaskFunc(args.center_fractions, args.accelerations)
+        mask_func = mask_for_mask_type(args.mask_type, args.center_fractions, args.accelerations)
     data = SliceData(
         root=args.data_path / f'{args.challenge}_{args.data_split}',
         transform=DataTransform(args.resolution, args.challenge, mask_func),

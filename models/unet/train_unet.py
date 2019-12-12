@@ -19,7 +19,7 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader
 
 from common.args import Args
-from common.subsample import MaskFunc
+from common.subsample import mask_for_mask_type
 from data import transforms
 from data.mri_data import SliceData
 from models.unet.unet_model import UnetModel
@@ -68,14 +68,20 @@ class DataTransform:
                 std (float): Standard deviation value used for normalization.
                 norm (float): L2 norm of the entire volume.
         """
+        target = transforms.to_tensor(target)
         kspace = transforms.to_tensor(kspace)
         # Apply mask
         seed = None if not self.use_seed else tuple(map(ord, fname))
         masked_kspace, mask = transforms.apply_mask(kspace, self.mask_func, seed)
         # Inverse Fourier Transform to get zero filled solution
         image = transforms.ifft2(masked_kspace)
-        # Crop input image
-        image = transforms.complex_center_crop(image, (self.resolution, self.resolution))
+        # Crop input image to given resolution if larger
+        smallest_width = min(min(args.resolution, image.shape[-2]), target.shape[-1])
+        smallest_height = min(min(args.resolution, image.shape[-3]), target.shape[-2])
+        crop_size = (smallest_height, smallest_width)
+        image = transforms.complex_center_crop(image, crop_size)
+        target = transforms.center_crop(target, crop_size)
+
         # Absolute value
         image = transforms.complex_abs(image)
         # Apply Root-Sum-of-Squares if multicoil data
@@ -85,7 +91,6 @@ class DataTransform:
         image, mean, std = transforms.normalize_instance(image, eps=1e-11)
         image = image.clamp(-6, 6)
 
-        target = transforms.to_tensor(target)
         # Normalize target
         target = transforms.normalize(target, mean, std, eps=1e-11)
         target = target.clamp(-6, 6)
@@ -93,8 +98,8 @@ class DataTransform:
 
 
 def create_datasets(args):
-    train_mask = MaskFunc(args.center_fractions, args.accelerations)
-    dev_mask = MaskFunc(args.center_fractions, args.accelerations)
+    train_mask = mask_for_mask_type(args.mask_type, args.center_fractions, args.accelerations)
+    dev_mask = mask_for_mask_type(args.mask_type, args.center_fractions, args.accelerations)
 
     train_data = SliceData(
         root=args.data_path / f'{args.challenge}_train',

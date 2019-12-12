@@ -23,7 +23,9 @@ def save_zero_filled(data_dir, out_dir, which_challenge, resolution):
             # Inverse Fourier Transform to get zero filled solution
             image = transforms.ifft2(masked_kspace)
             # Crop input image
-            image = transforms.complex_center_crop(image, (resolution, resolution))
+            smallest_width = min(resolution, image.shape[-2])
+            smallest_height = min(resolution, image.shape[-3])
+            image = transforms.complex_center_crop(image, (smallest_height, smallest_width))
             # Absolute value
             image = transforms.complex_abs(image)
             # Apply Root-Sum-of-Squares if multicoil data

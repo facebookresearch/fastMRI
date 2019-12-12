@@ -38,14 +38,48 @@ REG_PARAM = {
     },
 
     'multicoil': {
-        'CORPD_FBK': {
-            4: 0.01,
-            8: 0.01
-        },
-        'CORPDFS_FBK': {
-            4: 0.001,
-            8: 0.01
-        },
+
+        # Knee
+       'CORPD_FBK': {
+           4: 0.01,
+           8: 0.01,
+       },
+
+        # Knee
+       'CORPDFS_FBK': {
+           4: 0.001,
+           8: 0.01,
+       },
+
+        # Brain
+       'AXT1': {
+           4: 0.001,
+           8: 0.01,
+       },
+
+        # Brain
+       'AXT1PRE': {
+           4: 0.001,
+           8: 0.01,
+       },
+
+        # Brain
+       'AXT1POST': {
+           4: 0.01,
+           8: 0.01,
+       },
+
+        # Brain
+       'AXT2': {
+           4: 0.01,
+           8: 0.01,
+       },
+
+        # Brain
+       'AXFLAIR': {
+           4: 0.01,
+           8: 0.001,
+       },
     },
 }
 
@@ -94,7 +128,7 @@ def cs_total_variation(args, kspace, acquisition, acceleration, num_low_freqs):
     reconstruction algorithm using the BART toolkit.
     """
 
-    if acquisition not in {'CORPD_FBK', 'CORPDFS_FBK'}:
+    if acquisition not in REG_PARAM[args.challenge]:
         raise ValueError(f'Invalid acquisition protocol: {acquisition}')
     if acceleration not in {4, 8}:
         raise ValueError(f'Invalid acceleration factor: {acceleration}')
@@ -112,8 +146,10 @@ def cs_total_variation(args, kspace, acquisition, acceleration, num_low_freqs):
     pred = bart.bart(1, f'pics -d0 -S -R T:7:0:{reg_wt} -i {args.num_iters}', kspace, sens_maps)
     pred = torch.from_numpy(np.abs(pred[0]))
 
-    # Crop the predicted image to the correct size
-    return transforms.center_crop(pred, (args.resolution, args.resolution))
+    # Crop the predicted image to selected resolution if bigger
+    smallest_width = min(args.resolution, pred.shape[-1])
+    smallest_height = min(args.resolution, pred.shape[-2])
+    return transforms.center_crop(pred, (smallest_height, smallest_width))
 
 
 def run_model(i):

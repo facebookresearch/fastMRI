@@ -34,6 +34,8 @@ class Args(argparse.ArgumentParser):
                           help='Fraction of total volumes to include')
 
         # Mask parameters
+        self.add_argument('--mask-type', choices=['random', 'equispaced'], default='random',
+                          help='The type of mask function to use')
         self.add_argument('--accelerations', nargs='+', default=[4, 8], type=int,
                           help='Ratio of k-space columns to be sampled. If multiple values are '
                                'provided, then one of those is chosen uniformly at random for '

@@ -100,7 +100,8 @@ if __name__ == '__main__':
                         help='Path to reconstructions')
     parser.add_argument('--challenge', choices=['singlecoil', 'multicoil'], required=True,
                         help='Which challenge')
-    parser.add_argument('--acquisition', choices=['CORPD_FBK', 'CORPDFS_FBK'], default=None,
+    parser.add_argument('--acquisition', choices=['CORPD_FBK', 'CORPDFS_FBK', 'AXT1', 'AXT1PRE',
+                        'AXT1POST', 'AXT2', 'AXFLAIR'], default=None,
                         help='If set, only volumes of the specified acquisition type are used '
                              'for evaluation. By default, all volumes are included.')
     args = parser.parse_args()

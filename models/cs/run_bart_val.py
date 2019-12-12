@@ -18,7 +18,7 @@ import torch
 import bart
 from common import utils
 from common.args import Args
-from common.subsample import MaskFunc
+from common.subsample import create_mask_for_mask_type
 from common.utils import tensor_to_complex_np
 from data import transforms
 from data.mri_data import SliceData
@@ -63,7 +63,7 @@ class DataTransform:
 
 
 def create_data_loader(args):
-    dev_mask = MaskFunc(args.center_fractions, args.accelerations)
+    dev_mask = create_mask_for_mask_type(args.mask_type, args.center_fractions, args.accelerations)
     data = SliceData(
         root=args.data_path / f'{args.challenge}_val',
         transform=DataTransform(dev_mask),
@@ -93,8 +93,10 @@ def cs_total_variation(args, kspace):
     )
     pred = torch.from_numpy(np.abs(pred[0]))
 
-    # Crop the predicted image to the correct size
-    return transforms.center_crop(pred, (args.resolution, args.resolution))
+    # Crop the predicted image to selected resolution if bigger
+    smallest_width = min(args.resolution, pred.shape[-1])
+    smallest_height = min(args.resolution, pred.shape[-2])
+    return transforms.center_crop(pred, (smallest_height, smallest_width))
 
 
 def run_model(i):

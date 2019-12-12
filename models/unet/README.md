@@ -5,13 +5,14 @@ in PyTorch.
 
 To start training the model, run:
 ```bash
-python models/unet/train_unet.py --challenge CHALLENGE --data-path DATA --exp-dir checkpoint
+python models/unet/train_unet.py --challenge CHALLENGE --data-path DATA --exp-dir checkpoint --mask-type MASK_TYPE
 ```
-where `CHALLENGE` is either `singlecoil` or `multicoil`.
+where `CHALLENGE` is either `singlecoil` or `multicoil`. And `MASK_TYPE` is either `random` (for knee)
+or `equispaced` (for brain).
 
 To run the model on validation data:
 ```bash
-python models/unet/run_unet.py --data-path DATA --data-split val --checkpoint checkpoint/best_model.pt --challenge CHALLENGE --out-dir reconstructions_val --mask-kspace
+python models/unet/run_unet.py --data-path DATA --data-split val --checkpoint checkpoint/best_model.pt --challenge CHALLENGE --out-dir reconstructions_val --mask-kspace --mask-type MASK_TYPE
 ```
 The outputs will be saved to `reconstructions_val`. To evaluate the results, run:
 ```bash

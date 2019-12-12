@@ -10,7 +10,7 @@ import pytest
 import torch
 
 from common import utils
-from common.subsample import MaskFunc
+from common.subsample import RandomMaskFunc
 from data import transforms
 
 
@@ -25,7 +25,7 @@ def create_input(shape):
     ([2, 64, 64, 2], [0.04, 0.08], [8, 4]),
 ])
 def test_apply_mask(shape, center_fractions, accelerations):
-    mask_func = MaskFunc(center_fractions, accelerations)
+    mask_func = RandomMaskFunc(center_fractions, accelerations)
     expected_mask = mask_func(shape, seed=123)
     input = create_input(shape)
     output, mask = transforms.apply_mask(input, mask_func, seed=123)

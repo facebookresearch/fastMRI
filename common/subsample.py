@@ -20,7 +20,7 @@ def mask_for_mask_type(mask_type_str, center_fractions, accelerations):
 
 class RandomMaskFunc():
     """
-    MaskFunc creates a sub-sampling mask of a given shape.
+    RandomMaskFunc creates a sub-sampling mask of a given shape.
 
     The mask selects a subset of columns from the input k-space data. If the k-space data has N
     columns, the mask picks out:
@@ -31,7 +31,7 @@ class RandomMaskFunc():
     This ensures that the expected number of columns selected is equal to (N / acceleration)
 
     It is possible to use multiple center_fractions and accelerations, in which case one possible
-    (center_fraction, acceleration) is chosen uniformly at random each time the MaskFunc object is
+    (center_fraction, acceleration) is chosen uniformly at random each time the RandomMaskFunc object is
     called.
 
     For example, if accelerations = [4, 8] and center_fractions = [0.08, 0.04], then there
@@ -93,6 +93,22 @@ class RandomMaskFunc():
         return mask
 
 class EquispacedMaskFunc():
+    """
+    EquispacedMaskFunc creates a sub-sampling mask of a given shape.
+
+    The mask selects a subset of columns from the input k-space data. If the k-space data has N
+    columns, the mask picks out:
+        1. N_low_freqs = (N * center_fraction) columns in the center corresponding to
+           low-frequencies
+        2. The other columns are selected with equal spacing at a proportion that reaches the
+           desired acceleration rate taking into consideration the number of low frequencies. This
+           ensures that the expected number of columns selected is equal to (N / acceleration)
+
+    It is possible to use multiple center_fractions and accelerations, in which case one possible
+    (center_fraction, acceleration) is chosen uniformly at random each time the EquispacedMaskFunc
+    object is called.
+    """
+
     def __init__(self, center_fractions, accelerations):
         """
         Args:
@@ -112,7 +128,16 @@ class EquispacedMaskFunc():
         self.accelerations = accelerations
         self.rng = np.random.RandomState()
 
-    def __call__(self, shape, seed, offset=None):
+    def __call__(self, shape, seed):
+        """
+        Args:
+            shape (iterable[int]): The shape of the mask to be created. The shape should have
+                at least 3 dimensions. Samples are drawn along the second last dimension.
+            seed (int, optional): Seed for the random number generator. Setting the seed
+                ensures the same mask is generated each time for the same shape.
+        Returns:
+            torch.Tensor: A mask of the specified shape.
+        """
        if len(shape) < 3:
            raise ValueError('Shape should have 3 or more dimensions')
 
@@ -132,8 +157,7 @@ class EquispacedMaskFunc():
 
        # Determine acceleration rate by adjusting for the number of low frequencies
        adjusted_accel = (acceleration * (num_low_freqs - num_cols)) / (num_low_freqs * acceleration - num_cols)
-       if offset == None:
-           offset = self.rng.randint(0, round(adjusted_accel))
+       offset = self.rng.randint(0, round(adjusted_accel))
 
        accel_samples = np.arange(offset, num_cols - 1, adjusted_accel)
        accel_samples = np.around(accel_samples).astype(np.uint)

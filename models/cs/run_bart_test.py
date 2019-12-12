@@ -38,30 +38,44 @@ REG_PARAM = {
     },
 
     'multicoil': {
+
+        # Knee
        'CORPD_FBK': {
            4: 0.01,
            8: 0.01,
        },
+
+        # Knee
        'CORPDFS_FBK': {
            4: 0.001,
            8: 0.01,
        },
+
+        # Brain
        'AXT1': {
            4: 0.001,
            8: 0.01,
        },
+
+        # Brain
        'AXT1PRE': {
            4: 0.001,
            8: 0.01,
        },
+
+        # Brain
        'AXT1POST': {
            4: 0.01,
            8: 0.01,
        },
+
+        # Brain
        'AXT2': {
            4: 0.01,
            8: 0.01,
        },
+
+        # Brain
        'AXFLAIR': {
            4: 0.01,
            8: 0.001,

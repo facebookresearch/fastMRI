@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 
-def mask_for_mask_type(mask_type_str, center_fractions, accelerations):
+def create_mask_for_mask_type(mask_type_str, center_fractions, accelerations):
     if mask_type_str == 'random':
         return RandomMaskFunc(center_fractions, accelerations)
     elif mask_type_str == 'equispaced':
@@ -18,7 +18,33 @@ def mask_for_mask_type(mask_type_str, center_fractions, accelerations):
         raise Exception(f"{mask_type_str} not supported")
 
 
-class RandomMaskFunc():
+class MaskFunc():
+    def __init__(self, center_fractions, accelerations):
+        """
+        Args:
+            center_fractions (List[float]): Fraction of low-frequency columns to be retained.
+                If multiple values are provided, then one of these numbers is chosen uniformly
+                each time.
+
+            accelerations (List[int]): Amount of under-sampling. This should have the same length
+                as center_fractions. If multiple values are provided, then one of these is chosen
+                uniformly each time.
+        """
+        if len(center_fractions) != len(accelerations):
+            raise ValueError('Number of center fractions should match number of accelerations')
+
+        self.center_fractions = center_fractions
+        self.accelerations = accelerations
+        self.rng = np.random.RandomState()
+
+    def choose_acceleration(self):
+        choice = self.rng.randint(0, len(self.accelerations))
+        center_fraction = self.center_fractions[choice]
+        acceleration = self.accelerations[choice]
+        return center_fraction, acceleration
+
+
+class RandomMaskFunc(MaskFunc):
     """
     RandomMaskFunc creates a sub-sampling mask of a given shape.
 
@@ -73,10 +99,7 @@ class RandomMaskFunc():
 
         self.rng.seed(seed)
         num_cols = shape[-2]
-
-        choice = self.rng.randint(0, len(self.accelerations))
-        center_fraction = self.center_fractions[choice]
-        acceleration = self.accelerations[choice]
+        center_fraction, acceleration = self.choose_acceleration()
 
         # Create the mask
         num_low_freqs = int(round(num_cols * center_fraction))
@@ -92,7 +115,7 @@ class RandomMaskFunc():
 
         return mask
 
-class EquispacedMaskFunc():
+class EquispacedMaskFunc(MaskFunc):
     """
     EquispacedMaskFunc creates a sub-sampling mask of a given shape.
 
@@ -108,26 +131,6 @@ class EquispacedMaskFunc():
     (center_fraction, acceleration) is chosen uniformly at random each time the EquispacedMaskFunc
     object is called.
     """
-
-    def __init__(self, center_fractions, accelerations):
-        """
-        Args:
-            center_fractions (List[float]): Fraction of low-frequency columns to be retained.
-                If multiple values are provided, then one of these numbers is chosen uniformly
-                each time.
-
-            accelerations (List[int]): Amount of under-sampling. This should have the same length
-                as center_fractions. If multiple values are provided, then one of these is chosen
-                uniformly each time. An acceleration of 4 retains 25% of the columns, but they may
-                not be spaced evenly.
-        """
-        if len(center_fractions) != len(accelerations):
-            raise ValueError('Number of center fractions should match number of accelerations')
-
-        self.center_fractions = center_fractions
-        self.accelerations = accelerations
-        self.rng = np.random.RandomState()
-
     def __call__(self, shape, seed):
         """
         Args:
@@ -138,34 +141,30 @@ class EquispacedMaskFunc():
         Returns:
             torch.Tensor: A mask of the specified shape.
         """
-       if len(shape) < 3:
+        if len(shape) < 3:
            raise ValueError('Shape should have 3 or more dimensions')
 
-       self.rng.seed(seed)
-       num_cols = shape[-2]
+        self.rng.seed(seed)
+        center_fraction, acceleration = self.choose_acceleration()
+        num_cols = shape[-2]
+        num_low_freqs = int(round(num_cols * center_fraction))
 
-       choice = self.rng.randint(0, len(self.accelerations))
-       center_fraction = self.center_fractions[choice]
-       acceleration = self.accelerations[choice]
-       num_cols = shape[-2]
-       num_low_freqs = int(round(num_cols * center_fraction))
+        # Create the mask
+        mask = np.zeros(num_cols, dtype=np.float32)
+        pad = (num_cols - num_low_freqs + 1) // 2
+        mask[pad:pad + num_low_freqs] = True
 
-       # Create the mask
-       mask = np.zeros(num_cols, dtype=np.float32)
-       pad = (num_cols - num_low_freqs + 1) // 2
-       mask[pad:pad + num_low_freqs] = True
+        # Determine acceleration rate by adjusting for the number of low frequencies
+        adjusted_accel = (acceleration * (num_low_freqs - num_cols)) / (num_low_freqs * acceleration - num_cols)
+        offset = self.rng.randint(0, round(adjusted_accel))
 
-       # Determine acceleration rate by adjusting for the number of low frequencies
-       adjusted_accel = (acceleration * (num_low_freqs - num_cols)) / (num_low_freqs * acceleration - num_cols)
-       offset = self.rng.randint(0, round(adjusted_accel))
+        accel_samples = np.arange(offset, num_cols - 1, adjusted_accel)
+        accel_samples = np.around(accel_samples).astype(np.uint)
+        mask[accel_samples] = True
 
-       accel_samples = np.arange(offset, num_cols - 1, adjusted_accel)
-       accel_samples = np.around(accel_samples).astype(np.uint)
-       mask[accel_samples] = True
+        # Reshape the mask
+        mask_shape = [1 for _ in shape]
+        mask_shape[-2] = num_cols
+        mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
 
-       # Reshape the mask
-       mask_shape = [1 for _ in shape]
-       mask_shape[-2] = num_cols
-       mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
-
-       return mask
+        return mask

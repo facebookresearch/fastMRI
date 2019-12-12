@@ -14,7 +14,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from common.args import Args
-from common.subsample import mask_for_mask_type
+from common.subsample import create_mask_for_mask_type
 from common.utils import save_reconstructions
 from data import transforms
 from data.mri_data import SliceData
@@ -82,7 +82,7 @@ class DataTransform:
 def create_data_loaders(args):
     mask_func = None
     if args.mask_kspace:
-        mask_func = mask_for_mask_type(args.mask_type, args.center_fractions, args.accelerations)
+        mask_func = create_mask_for_mask_type(args.mask_type, args.center_fractions, args.accelerations)
     data = SliceData(
         root=args.data_path / f'{args.challenge}_{args.data_split}',
         transform=DataTransform(args.resolution, args.challenge, mask_func),

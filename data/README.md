@@ -63,7 +63,7 @@ from common import subsample
 from data import transforms, mri_data
 
 # Create a mask function
-mask_func = subsample.MaskFunc(center_fractions=[0.08, 0.04], accelerations=[4, 8])
+mask_func = subsample.RandomMaskFunc(center_fractions=[0.08, 0.04], accelerations=[4, 8])
 
 def data_transform(kspace, target, data_attributes, filename, slice_num):
     # Transform the data into appropriate format

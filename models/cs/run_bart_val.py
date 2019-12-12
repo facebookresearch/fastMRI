@@ -18,7 +18,7 @@ import torch
 import bart
 from common import utils
 from common.args import Args
-from common.subsample import mask_for_mask_type
+from common.subsample import create_mask_for_mask_type
 from common.utils import tensor_to_complex_np
 from data import transforms
 from data.mri_data import SliceData
@@ -63,7 +63,7 @@ class DataTransform:
 
 
 def create_data_loader(args):
-    dev_mask = mask_for_mask_type(args.mask_type, args.center_fractions, args.accelerations)
+    dev_mask = create_mask_for_mask_type(args.mask_type, args.center_fractions, args.accelerations)
     data = SliceData(
         root=args.data_path / f'{args.challenge}_val',
         transform=DataTransform(dev_mask),

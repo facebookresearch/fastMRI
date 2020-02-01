@@ -86,8 +86,8 @@ def evaluate(args, recons_key):
           args.predictions_path / tgt_file.name) as recons:
             if args.acquisition and args.acquisition != target.attrs['acquisition']:
                 continue
-            target = target[recons_key].value
-            recons = recons['reconstruction'].value
+            target = target[recons_key][()]
+            recons = recons['reconstruction'][()]
             metrics.push(target, recons)
     return metrics
 

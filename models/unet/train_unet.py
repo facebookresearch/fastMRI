@@ -177,18 +177,8 @@ class UnetMRIModel(MRIModel):
         return parser
 
 
-def main(args):
-    if args.mode == 'test':
-        assert args.checkpoint is not None
-        model = UnetMRIModel.load_from_checkpoint(str(args.checkpoint))
-        model.hparams.sample_rate = 1.
-        logger = False
-    else:
-        load_version = 0 if args.resume else None
-        logger = TestTubeLogger(save_dir=args.exp_dir, name=args.exp, version=load_version)
-        model = UnetMRIModel(args)
-
-    trainer = Trainer(
+def create_trainer(args, logger):
+    return Trainer(
         logger=logger,
         default_save_path=args.exp_dir,
         checkpoint_callback=True,
@@ -199,9 +189,20 @@ def main(args):
         val_check_interval=1.,
         early_stop_callback=False
     )
+
+
+def main(args):
     if args.mode == 'train':
+        load_version = 0 if args.resume else None
+        logger = TestTubeLogger(save_dir=args.exp_dir, name=args.exp, version=load_version)
+        trainer = create_trainer(args, logger)
+        model = UnetMRIModel(args)
         trainer.fit(model)
     else:  # args.mode == 'test'
+        assert args.checkpoint is not None
+        model = UnetMRIModel.load_from_checkpoint(str(args.checkpoint))
+        model.hparams.sample_rate = 1.
+        trainer = create_trainer(args, logger=False)
         trainer.test(model)
 
 

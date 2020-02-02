@@ -19,6 +19,26 @@ from data.mri_data import SliceData
 
 
 class MRIModel(pl.LightningModule):
+    """
+    Abstract super class for Deep Learning based reconstruction models.
+    This is a subclass of the LightningModule class from pytorch_lightning, with
+    some additional functionality specific to fastMRI:
+        - fastMRI data loaders
+        - Evaluating reconstructions
+        - Visualization
+        - Saving test reconstructions
+
+    To implement a new reconstruction model, inherit from this class and implement the
+    following methods:
+        - train_data_transform, val_data_transform, test_data_transform:
+            Create and return data transformer objects for each data split
+        - training_step, validation_step, test_step:
+            Define what happens in one step of training, validation and testing respectively
+        - configure_optimizers:
+            Create and return the optimizers
+    Other methods from LightningModule can be overridden as needed.
+    """
+
     def __init__(self, hparams):
         super().__init__()
         self.hparams = hparams
@@ -87,21 +107,22 @@ class MRIModel(pl.LightningModule):
             image -= image.min()
             return image / image.max()
 
-        def save_image(image, tag):
+        def _save_image(image, tag):
             grid = torchvision.utils.make_grid(torch.Tensor(image), nrow=4, pad_value=1)
             self.logger.experiment.add_image(tag, grid)
 
         num_logs = len(val_logs)
-        step = (num_logs + 15) // 16
+        num_viz_images = 16
+        step = (num_logs + num_viz_images - 1) // num_viz_images
         outputs, targets = [], []
         for i in range(0, num_logs, step):
             outputs.append(_normalize(val_logs[i]['output'][0]))
             targets.append(_normalize(val_logs[i]['target'][0]))
         outputs = np.stack(outputs)
         targets = np.stack(targets)
-        save_image(targets, 'Target')
-        save_image(outputs, 'Reconstruction')
-        save_image(np.abs(targets - outputs), 'Error')
+        _save_image(targets, 'Target')
+        _save_image(outputs, 'Reconstruction')
+        _save_image(np.abs(targets - outputs), 'Error')
 
     def validation_end(self, val_logs):
         self._visualize(val_logs)

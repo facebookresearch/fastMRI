@@ -111,6 +111,9 @@ class MRIModel(pl.LightningModule):
             grid = torchvision.utils.make_grid(torch.Tensor(image), nrow=4, pad_value=1)
             self.logger.experiment.add_image(tag, grid)
 
+        # Only process first size to simplify visualization.
+        visualize_size = val_logs[0]['output'].shape
+        val_logs = [x for x in val_logs if x['output'].shape == visualize_size]
         num_logs = len(val_logs)
         num_viz_images = 16
         step = (num_logs + num_viz_images - 1) // num_viz_images

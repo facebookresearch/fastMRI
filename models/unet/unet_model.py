@@ -89,11 +89,16 @@ class UnetModel(nn.Module):
             ch *= 2
         self.conv = ConvBlock(ch, ch, drop_prob)
 
-        self.up_sample_layers = nn.ModuleList()
+        self.up_conv = nn.ModuleList()
+        self.up_transpose_conv = nn.ModuleList()
         for i in range(num_pool_layers - 1):
-            self.up_sample_layers += [ConvBlock(ch * 2, ch // 2, drop_prob)]
+            self.up_transpose_conv += [nn.ConvTranspose2d(ch, ch, kernel_size=2, stride=2, bias=False)]
+            self.up_conv += [ConvBlock(ch * 2, ch // 2, drop_prob)]
             ch //= 2
-        self.up_sample_layers += [ConvBlock(ch * 2, ch, drop_prob)]
+
+        self.up_transpose_conv += [nn.ConvTranspose2d(ch, ch, kernel_size=2, stride=2, bias=False)]
+        self.up_conv += [ConvBlock(ch * 2, ch, drop_prob)]
+
         self.conv2 = nn.Sequential(
             nn.Conv2d(ch, ch // 2, kernel_size=1),
             nn.Conv2d(ch // 2, out_chans, kernel_size=1),
@@ -120,10 +125,20 @@ class UnetModel(nn.Module):
         output = self.conv(output)
 
         # Apply up-sampling layers
-        for layer in self.up_sample_layers:
+        for transpose_conv, conv in zip(self.up_transpose_conv, self.up_conv):
             downsample_layer = stack.pop()
-            layer_size = (downsample_layer.shape[-2], downsample_layer.shape[-1])
-            output = F.interpolate(output, size=layer_size, mode='bilinear', align_corners=False)
+            output = transpose_conv(output)
+
+            # Reflect pad on the right/botton if needed to handle odd input dimensions.
+            padding = [0, 0, 0, 0]
+            if output.shape[-1] != downsample_layer.shape[-1]:
+                padding[1] = 1 # Padding right
+            if output.shape[-2] != downsample_layer.shape[-2]:
+                padding[3] = 1 # Padding bottom
+            if sum(padding) != 0:
+                output = F.pad(output, padding, "reflect")
+
             output = torch.cat([output, downsample_layer], dim=1)
-            output = layer(output)
+            output = conv(output)
+
         return self.conv2(output)

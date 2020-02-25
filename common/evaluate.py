@@ -12,7 +12,7 @@ from argparse import ArgumentParser
 import h5py
 import numpy as np
 from runstats import Statistics
-from skimage.measure import compare_psnr, compare_ssim
+from skimage.metrics import structural_similarity, peak_signal_noise_ratio
 
 
 def mse(gt, pred):
@@ -27,12 +27,12 @@ def nmse(gt, pred):
 
 def psnr(gt, pred):
     """ Compute Peak Signal to Noise Ratio metric (PSNR) """
-    return compare_psnr(gt, pred, data_range=gt.max())
+    return peak_signal_noise_ratio(gt, pred, data_range=gt.max())
 
 
 def ssim(gt, pred):
     """ Compute Structural Similarity Index Metric (SSIM). """
-    return compare_ssim(
+    return structural_similarity(
         gt.transpose(1, 2, 0), pred.transpose(1, 2, 0), multichannel=True, data_range=gt.max()
     )
 
@@ -86,8 +86,8 @@ def evaluate(args, recons_key):
           args.predictions_path / tgt_file.name) as recons:
             if args.acquisition and args.acquisition != target.attrs['acquisition']:
                 continue
-            target = target[recons_key].value
-            recons = recons['reconstruction'].value
+            target = target[recons_key][()]
+            recons = recons['reconstruction'][()]
             metrics.push(target, recons)
     return metrics
 

@@ -1,4 +1,4 @@
-# fastMRI - GG
+# fastMRI
 
 
 Accelerating Magnetic Resonance Imaging (MRI) by acquiring fewer measurements has the

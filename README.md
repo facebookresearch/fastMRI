@@ -1,4 +1,4 @@
-# fastMRI -Git Test
+# fastMRI
 
 
 Accelerating Magnetic Resonance Imaging (MRI) by acquiring fewer measurements has the

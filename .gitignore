@@ -5,3 +5,4 @@ logs
 *.cfl
 *.hdr
 *.vscode
+recon-workspace.code-workspace

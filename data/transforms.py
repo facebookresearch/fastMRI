@@ -158,37 +158,7 @@ def root_sum_of_squares_complex(data, dim=0):
     Returns:
         torch.Tensor: The RSS value
     """
-    if data.shape[dim] == 1:
-        raise Exception("BUG: RSS called on a dimension of size 1")
-    # Pytorches norm is more numerically stable for float16 than squaring/sqrt ops
-    #return data.norm(dim=dim).norm(dim=-1)
     return torch.sqrt(complex_abs_sq(data).sum(dim))
-    # a = data.abs().max()
-    # xda = data.div(a)
-    # return torch.sqrt(xda.pow(2).sum(dim=(-1, dim))).mul(a)
-    #return data.add(1e-4).norm(dim=dim).norm(dim=-1)
-    # shape = list(data.shape)[:-1]
-    # shape[dim] *= 2
-    # data_viewed = data.unsqueeze(dim+1).transpose(dim+1, -1).view(shape)
-    # a = data_viewed.abs(dim=dim).max(dim=dim, keep_dim=True)
-    # xda = data_viewed.div(a)
-    # return xda.norm(dim=dim, keep_dim=True).div(a).squeeze(dim=dim)
-    #return torch.sqrt(complex_abs_sq(data.float()).sum(dim)).type_as(data)
-    # def hook(g):
-    #     if torch.any(torch.isnan(g)):
-    #         pdb.set_trace()
-    #         print(g.shape)
-        #     rss.register_hook(hook)
-
-    #rss = data.float().norm(dim=dim).norm(dim=-1)
-    #rss_half = rss.type_as(data)
-
-    #if rss.requires_grad:
-    #    print(f"in min: {data.min().item()} max: {data.max().item()} var:{data.var().item()}")
-    #    print(f"out min: {rss_half.min().item()} max: {rss_half.max().item()} var:{rss_half.var().item()}")
-
-    #return rss_half
-    # xda = data.div(a)
 
 
 def center_crop(data, shape):

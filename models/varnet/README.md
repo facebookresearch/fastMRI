@@ -1,6 +1,6 @@
 ## End-to-End Variational Networks for Accelerated MRI Reconstruction Model
 
-This directory contains an implementation for the method described in `End-to-End Variational Networks for Accelerated MRI Reconstruction Model` in PyTorch.
+This directory contains a PyTorch implementation for the method described in `End-to-End Variational Networks for Accelerated MRI Reconstruction Model`.
 
 To start training the model, run:
 ```bash

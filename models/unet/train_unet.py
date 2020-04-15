@@ -11,7 +11,6 @@ import random
 import numpy as np
 import torch
 from pytorch_lightning import Trainer
-from pytorch_lightning.logging import TestTubeLogger
 from torch.nn import functional as F
 from torch.optim import RMSprop
 
@@ -77,6 +76,7 @@ class DataTransform:
         if target is not None:
             smallest_width = min(smallest_width, target.shape[-1])
             smallest_height = min(smallest_height, target.shape[-2])
+
         crop_size = (smallest_height, smallest_width)
         image = transforms.complex_center_crop(image, crop_size)
         # Absolute value
@@ -166,7 +166,7 @@ class UnetMRIModel(MRIModel):
         parser.add_argument('--num-pools', type=int, default=4, help='Number of U-Net pooling layers')
         parser.add_argument('--drop-prob', type=float, default=0.0, help='Dropout probability')
         parser.add_argument('--num-chans', type=int, default=32, help='Number of U-Net channels')
-        parser.add_argument('--batch-size', default=16, type=int, help='Mini batch size')
+        parser.add_argument('--batch-size', default=1, type=int, help='Mini batch size')
         parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
         parser.add_argument('--lr-step-size', type=int, default=40,
                             help='Period of learning rate decay')
@@ -177,13 +177,13 @@ class UnetMRIModel(MRIModel):
         return parser
 
 
-def create_trainer(args, logger):
+def create_trainer(args):
     return Trainer(
-        logger=logger,
         default_save_path=args.exp_dir,
         checkpoint_callback=True,
-        max_nb_epochs=args.num_epochs,
+        max_epochs=args.num_epochs,
         gpus=args.gpus,
+        num_nodes=args.nodes,
         distributed_backend='ddp',
         check_val_every_n_epoch=1,
         val_check_interval=1.,
@@ -191,36 +191,39 @@ def create_trainer(args, logger):
     )
 
 
-def main(args):
+def run(args):
     if args.mode == 'train':
-        load_version = 0 if args.resume else None
-        logger = TestTubeLogger(save_dir=args.exp_dir, name=args.exp, version=load_version)
-        trainer = create_trainer(args, logger)
+        trainer = create_trainer(args)
         model = UnetMRIModel(args)
         trainer.fit(model)
-    else:  # args.mode == 'test'
+    else:  # args.mode == 'test' or args.mode == 'challenge'
         assert args.checkpoint is not None
         model = UnetMRIModel.load_from_checkpoint(str(args.checkpoint))
         model.hparams.sample_rate = 1.
-        trainer = create_trainer(args, logger=False)
+        trainer = create_trainer(args)
+        model.hparams = args
         trainer.test(model)
 
-
-if __name__ == '__main__':
+def main(args=None):
     parser = Args()
-    parser.add_argument('--mode', choices=['train', 'test'], default='train')
+    parser.add_argument('--mode', choices=['train', 'test', 'challenge'], default='train')
     parser.add_argument('--num-epochs', type=int, default=50, help='Number of training epochs')
     parser.add_argument('--gpus', type=int, default=1)
+    parser.add_argument('--nodes', type=int, default=1)
     parser.add_argument('--exp-dir', type=pathlib.Path, default='experiments',
                         help='Path where model and results should be saved')
     parser.add_argument('--exp', type=str, help='Name of the experiment')
     parser.add_argument('--checkpoint', type=pathlib.Path,
-                        help='Path to pre-trained model. Use with --mode test')
-    parser.add_argument('--resume', action='store_true',
-                        help='If set, resume the training from a previous model checkpoint. ')
+                        help='Path to pre-trained model. Use with --mode {test,challenge}')
     parser = UnetMRIModel.add_model_specific_args(parser)
-    args = parser.parse_args()
+    if args is not None:
+        parser.set_defaults(**args)
+
+    args, _ = parser.parse_known_args()
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    main(args)
+    run(args)
+
+if __name__ == '__main__':
+    main()

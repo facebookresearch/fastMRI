@@ -170,11 +170,11 @@ class VarNetBlock(nn.Module):
             x = T.ifft2(x)
             return T.complex_mul(x, T.complex_conj(sens_maps)).sum(dim=1, keepdim=True)
 
-        def soft_dc(x, input):
+        def soft_dc(x):
             return torch.where(mask, x - ref_kspace, self.zero) * self.dc_weight
 
         return current_kspace - \
-                soft_dc(current_kspace, input) - \
+                soft_dc(current_kspace) - \
                 sens_expand(self.model(sens_reduce(current_kspace)))
 
 

@@ -8,6 +8,7 @@ LICENSE file in the root directory of this source tree.
 import pathlib
 import random
 
+import numpy as np
 import h5py
 from torch.utils.data import Dataset
 
@@ -75,8 +76,9 @@ class SliceData(Dataset):
         fname, slice, padding_left, padding_right = self.examples[i]
         with h5py.File(fname, 'r') as data:
             kspace = data['kspace'][slice]
+            mask = np.asarray(data['mask']) if 'mask' in data else None
             target = data[self.recons_key][slice] if self.recons_key in data else None
             attrs = dict(data.attrs)
             attrs['padding_left'] = padding_left
             attrs['padding_right'] = padding_right
-            return self.transform(kspace, target, attrs, fname.name, slice)
+            return self.transform(kspace, mask, target, attrs, fname.name, slice)

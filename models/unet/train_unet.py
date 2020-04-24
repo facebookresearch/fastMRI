@@ -44,11 +44,12 @@ class DataTransform:
         self.which_challenge = which_challenge
         self.use_seed = use_seed
 
-    def __call__(self, kspace, target, attrs, fname, slice):
+    def __call__(self, kspace, mask, target, attrs, fname, slice):
         """
         Args:
             kspace (numpy.array): Input k-space of shape (num_coils, rows, cols, 2) for multi-coil
                 data or (rows, cols, 2) for single coil data.
+            mask (numpy.array): Mask from the test dataset
             target (numpy.array): Target image
             attrs (dict): Acquisition related information stored in the HDF5 object.
             fname (str): File name

@@ -47,22 +47,25 @@ class DataTransform:
         Args:
             kspace (numpy.array): Input k-space of shape (num_coils, rows, cols, 2) for multi-coil
                 data or (rows, cols, 2) for single coil data.
+            mask (numpy.array): Mask from the test dataset
             target (numpy.array): Target image
             attrs (dict): Acquisition related information stored in the HDF5 object.
             fname (str): File name
             slice (int): Serial number of the slice.
         Returns:
             (tuple): tuple containing:
-                image (torch.Tensor): Zero-filled input image.
+                masked_kspace (torch.Tensor): Masked k-space
+                mask (torch.Tensor): Mask
                 target (torch.Tensor): Target image converted to a torch Tensor.
-                mean (float): Mean value used for normalization.
-                std (float): Standard deviation value used for normalization.
+                fname (str): File name
+                slice (int): Serial number of the slice.
+                max_value (numpy.array): Maximum value in the image volume
         """
         if target is not None:
             target = T.to_tensor(target)
             max_value = attrs['max']
         else:
-            target = torch.zeros([self.resolution,self.resolution],dtype=torch.float32)
+            target = torch.tensor(0)
             max_value = 0.0
         kspace = T.to_tensor(kspace)
         seed = None if not self.use_seed else tuple(map(ord, fname))
@@ -269,9 +272,9 @@ class VariationalNetworkModel(MRIModel):
         }
 
     def test_step(self, batch, batch_idx):
-        masked_kspace, mask, target, fname, slice, _ = batch
+        masked_kspace, mask, _, fname, slice, _ = batch
         output = self.forward(masked_kspace, mask)
-        _, output = T.center_crop_to_smallest(target, output)
+        output = T.center_crop(output,(self.hparams.resolution,self.hparams.resolution))
         return {
             'fname': fname,
             'slice': slice,
@@ -315,7 +318,7 @@ class VariationalNetworkModel(MRIModel):
         return parser
 
 
-def create_trainer(args, logger=True):
+def create_trainer(args):
     return Trainer(
         default_save_path=args.exp_dir,
         checkpoint_callback=True,
@@ -341,7 +344,7 @@ def run(args):
         assert args.checkpoint is not None
         model = VariationalNetworkModel.load_from_checkpoint(str(args.checkpoint))
         model.hparams.sample_rate = 1.
-        trainer = create_trainer(args, logger=False)
+        trainer = create_trainer(args)
         model.hparams = args
         trainer.test(model)
 

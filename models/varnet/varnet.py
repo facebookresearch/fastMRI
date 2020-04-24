@@ -28,7 +28,7 @@ class DataTransform:
     Data Transformer for training Var Net models.
     """
 
-    def __init__(self, mask_func, resolution, use_seed=True):
+    def __init__(self, resolution, mask_func=None, use_seed=True):
         """
         Args:
             mask_func (common.subsample.MaskFunc): A function that can create a mask of
@@ -42,7 +42,7 @@ class DataTransform:
         self.resolution = resolution
         self.use_seed = use_seed
 
-    def __call__(self, kspace, target, attrs, fname, slice):
+    def __call__(self, kspace, mask, target, attrs, fname, slice):
         """
         Args:
             kspace (numpy.array): Input k-space of shape (num_coils, rows, cols, 2) for multi-coil
@@ -58,13 +58,28 @@ class DataTransform:
                 mean (float): Mean value used for normalization.
                 std (float): Standard deviation value used for normalization.
         """
-        target = T.to_tensor(target)
+        if target is not None:
+            target = T.to_tensor(target)
+            max_value = attrs['max']
+        else:
+            target = torch.zeros([self.resolution,self.resolution],dtype=torch.float32)
+            max_value = 0.0
         kspace = T.to_tensor(kspace)
         seed = None if not self.use_seed else tuple(map(ord, fname))
         acq_start = attrs['padding_left']
         acq_end = attrs['padding_right']
-        masked_kspace, mask = T.apply_mask(kspace, self.mask_func, seed, (acq_start, acq_end))
-        max_value = attrs['max']
+        if self.mask_func:
+            masked_kspace, mask = T.apply_mask(kspace, self.mask_func, seed, (acq_start, acq_end))
+        else:
+            masked_kspace = kspace
+            shape = np.array(kspace.shape)
+            num_cols = shape[-2]
+            shape[:-3] = 1
+            mask_shape = [1 for _ in shape]
+            mask_shape[-2] = num_cols
+            mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
+            mask[:,:,:acq_start] = 0
+            mask[:,:,acq_end:] = 0
         return masked_kspace, mask.byte(), target, fname, slice, max_value
 
 
@@ -254,14 +269,13 @@ class VariationalNetworkModel(MRIModel):
         }
 
     def test_step(self, batch, batch_idx):
-        input, _, mean, std, fname, slice = batch
-        output = self.forward(input)
-        mean = mean.unsqueeze(1).unsqueeze(2)
-        std = std.unsqueeze(1).unsqueeze(2)
+        masked_kspace, mask, target, fname, slice, _ = batch
+        output = self.forward(masked_kspace, mask)
+        _, output = T.center_crop_to_smallest(target, output)
         return {
             'fname': fname,
             'slice': slice,
-            'output': (output * std + mean).cpu().numpy(),
+            'output': output.cpu().numpy(),
         }
 
     def configure_optimizers(self):
@@ -272,15 +286,15 @@ class VariationalNetworkModel(MRIModel):
     def train_data_transform(self):
         mask = create_mask_for_mask_type(self.hparams.mask_type, self.hparams.center_fractions,
                                          self.hparams.accelerations)
-        return DataTransform(mask, self.hparams.resolution, use_seed=False)
+        return DataTransform(self.hparams.resolution, mask, use_seed=False)
 
     def val_data_transform(self):
         mask = create_mask_for_mask_type(self.hparams.mask_type, self.hparams.center_fractions,
                                          self.hparams.accelerations)
-        return DataTransform(mask, self.hparams.resolution)
+        return DataTransform(self.hparams.resolution, mask)
 
     def test_data_transform(self):
-        return DataTransform(self.hparams.resolution, self.hparams.challenge)
+        return DataTransform(self.hparams.resolution)
 
     @staticmethod
     def add_model_specific_args(parser):
@@ -301,7 +315,7 @@ class VariationalNetworkModel(MRIModel):
         return parser
 
 
-def create_trainer(args):
+def create_trainer(args, logger=True):
     return Trainer(
         default_save_path=args.exp_dir,
         checkpoint_callback=True,
@@ -328,6 +342,7 @@ def run(args):
         model = VariationalNetworkModel.load_from_checkpoint(str(args.checkpoint))
         model.hparams.sample_rate = 1.
         trainer = create_trainer(args, logger=False)
+        model.hparams = args
         trainer.test(model)
 
 

@@ -206,6 +206,7 @@ def main(args):
         trainer.test(model)
 
 
+
 if __name__ == '__main__':
     parser = Args()
     parser.add_argument('--mode', choices=['train', 'test'], default='train')

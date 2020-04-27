@@ -72,6 +72,28 @@ class DataTransform:
             masked_kspace = kspace
         
 
+        
+        # Crop 320x320 region. No normalization used.
+        # NOTE: self.resolution is 320 by default. 
+        image = transforms.ifft2(masked_kspace)
+        smallest_width = min(self.resolution, image.shape[-2])
+        smallest_height = min(self.resolution, image.shape[-3])
+        if target is not None:
+            smallest_width = min(smallest_width, target.shape[-1])
+            smallest_height = min(smallest_height, target.shape[-2])
+        crop_size = (smallest_height, smallest_width)
+        image = transforms.complex_center_crop(image, crop_size)
+
+        # Crop target
+        if target is not None:
+            target = transforms.to_tensor(target)
+            target = transforms.center_crop(target, crop_size)
+
+        else:
+            target = torch.Tensor([0])
+
+        masked_kspace = transforms.fft2(image)
+
         return masked_kspace, target, fname, slice
 
 
@@ -157,51 +179,14 @@ class UnetMRIModel(MRIModel):
         # The output is normalized during the forward pass
         output = self.forward(input)
 
-        # Crop 320x320 region as postprocessing. No normalization used.
-        # NOTE: self.resolution is 320 by default. 
-        smallest_width = min(self.resolution, output.shape[-1])
-        smallest_height = min(self.resolution, output.shape[-2])
-        if target is not None:
-            smallest_width = min(smallest_width, target.shape[-1])
-            smallest_height = min(smallest_height, target.shape[-2])
-        crop_size = (smallest_height, smallest_width)
-        image = transforms.complex_center_crop(image, crop_size)
-
-        # Crop target
-        if target is not None:
-            target = transforms.to_tensor(target)
-            target = transforms.center_crop(target, crop_size)
-
-        else:
-            target = torch.Tensor([0])
-
         # Loss as stated in the paper! J(x) = - SSIM(x, \hat{x}) + \lambda*||x - \hat{x}|| -> \lamda = 0.001
         loss = 0.001*F.l1_loss(output, target) - ssim(output, target)
         logs = {'loss': loss.item()}
         return dict(loss=loss, log=logs)
 
     def validation_step(self, batch, batch_idx):
-        input, target, mean, std, fname, slice = batch
+        input, target, fname, slice = batch
         output = self.forward(input)
-        
-        # Crop 320x320 region as postprocessing. No normalization used.
-        # NOTE: self.resolution is 320 by default. 
-        smallest_width = min(self.resolution, output.shape[-1])
-        smallest_height = min(self.resolution, output.shape[-2])
-        if target is not None:
-            smallest_width = min(smallest_width, target.shape[-1])
-            smallest_height = min(smallest_height, target.shape[-2])
-        crop_size = (smallest_height, smallest_width)
-        image = transforms.complex_center_crop(image, crop_size)
-
-        # Crop target
-        if target is not None:
-            target = transforms.to_tensor(target)
-            target = transforms.center_crop(target, crop_size)
-        else:
-            target = torch.Tensor([0])
-
-        
         return {
             'fname': fname,
             'slice': slice,
@@ -211,17 +196,8 @@ class UnetMRIModel(MRIModel):
         }
 
     def test_step(self, batch, batch_idx):
-        input, _, mean, std, fname, slice = batch
+        input, _, fname, slice = batch
         output = self.forward(input)
-        
-        # Crop 320x320 region as postprocessing. No normalization used.
-        # NOTE: self.resolution is 320 by default. 
-        smallest_width = min(self.resolution, output.shape[-1])
-        smallest_height = min(self.resolution, output.shape[-2])
-
-        crop_size = (smallest_height, smallest_width)
-        image = transforms.complex_center_crop(image, crop_size)
-
         return {
             'fname': fname,
             'slice': slice,

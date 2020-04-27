@@ -116,6 +116,8 @@ class GrappaModel(nn.Module):
         pred = transforms.apply_grappa(input_ksp=input_ksp, kernel=self.grappa_kernel, ref_ksp=ref_ksp, mask=mask.float())
         return F.mse_loss(pred, ref_ksp)
 
+    def get_grappa_kernel(self):
+        return self.grappa_kernel
 
 
 
@@ -177,13 +179,14 @@ class UnetMRIModel(MRIModel):
         grappa_loss = []
         # Optimization over a set 
         for epoch in range(20):
-            loss = model.loss(unet_kspace, ref_ksp, mask)            
+            loss = grappa_model.loss(unet_kspace, ref_ksp, mask)            
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             train_loss.append(loss.item())
 
         print(train_loss)
+        min_grappa = grappa_model.get_grappa_kernel()
 
         # Use min grappa for kernel 
         kspace_grappa = transforms.apply_grappa(input_ksp=unet_kspace, kernel=min_grappa, ref_ksp=ref_ksp, mask=mask.float())

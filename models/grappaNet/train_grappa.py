@@ -77,6 +77,9 @@ class DataTransform:
         # Crop 320x320 region. No normalization used.
         # NOTE: self.resolution is 320 by default. 
         image = transforms.ifft2(masked_kspace)
+        image_ref = transforms.ifft2(ref_ksp)
+        image_mask = transforms.ifft2(mask)
+        
         smallest_width = min(self.resolution, image.shape[-2])
         smallest_height = min(self.resolution, image.shape[-3])
         if target is not None:
@@ -84,6 +87,8 @@ class DataTransform:
             smallest_height = min(smallest_height, target.shape[-2])
         crop_size = (smallest_height, smallest_width)
         image = transforms.complex_center_crop(image, crop_size)
+        image_ref = transforms.complex_center_crop(image_ref, crop_size)
+        image_mask = transforms.complex_center_crop(image_mask, crop_size)
 
         # Crop target
         if target is not None:
@@ -94,6 +99,8 @@ class DataTransform:
             target = torch.Tensor([0])
 
         masked_kspace = transforms.fft2(image)
+        ref_ksp = transforms.fft2(image_ref)
+        mask = transforms.fft2(image_mask)
 
         return masked_kspace, target, ref_ksp, mask, fname, slice
 

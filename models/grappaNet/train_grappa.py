@@ -188,11 +188,10 @@ class UnetMRIModel(MRIModel):
         # IFT + RSS
 
         image = transforms.ifft2(unet_kspace)
-
         # Absolute value
         image = transforms.complex_abs(image)
         # Apply Root-Sum-of-Squares 
-        image = transforms.root_sum_of_squares(image)
+        image = transforms.root_sum_of_squares(image, 1)
 
         return image
 
@@ -201,21 +200,24 @@ class UnetMRIModel(MRIModel):
 
         # The output is normalized during the forward pass
         output = self.forward(input, ref_ksp, mask)
-
+        print(output.size())
+        print(target.size())
         # Loss as stated in the paper! J(x) = - SSIM(x, \hat{x}) + \lambda*||x - \hat{x}|| -> \lamda = 0.001
-        loss = 0.001*F.l1_loss(output, target) - ssim(output, target)
+        loss = 0.001*F.l1_loss(output, target) - ssim(output.detach().cpu().numpy(), target.cpu().numpy())
         logs = {'loss': loss.item()}
         return dict(loss=loss, log=logs)
 
     def validation_step(self, batch, batch_idx):
         input, target, ref_ksp, mask, fname, slice = batch
         output = self.forward(input, ref_ksp, mask)
+        print(output.size())
+        print(target.size())
         return {
             'fname': fname,
             'slice': slice,
-            'output': output.cpu().numpy(),
+            'output': output.detach().cpu().numpy(),
             'target': target.cpu().numpy(),
-            'val_loss': 0.001*F.l1_loss(output, target) - ssim(output, target),
+            'val_loss': 0.001*F.l1_loss(output, target) - ssim(output.cpu().numpy(), target.cpu().numpy()),
         }
 
     def test_step(self, batch, batch_idx):
@@ -247,9 +249,9 @@ class UnetMRIModel(MRIModel):
 
     @staticmethod
     def add_model_specific_args(parser):
-        parser.add_argument('--num-pools', type=int, default=4, help='Number of U-Net pooling layers')
+        parser.add_argument('--num-pools', type=int, default=2, help='Number of U-Net pooling layers')
         parser.add_argument('--drop-prob', type=float, default=0.0, help='Dropout probability')
-        parser.add_argument('--num-chans', type=int, default=32, help='Number of U-Net channels')
+        parser.add_argument('--num-chans', type=int, default=4, help='Number of U-Net channels')
         parser.add_argument('--batch-size', default=16, type=int, help='Mini batch size')
         parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
         parser.add_argument('--lr-step-size', type=int, default=40,

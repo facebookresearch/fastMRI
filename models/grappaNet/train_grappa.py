@@ -90,7 +90,7 @@ class DataTransform:
 
         # Fix mask size
         h_from = (mask.shape[-2] - crop_size[0]) // 2
-        h_to = h_from + shape[0]
+        h_to = h_from + crop_size[0]
         mask = mask[..., h_from:h_to, :]
 
         # Crop target
@@ -153,11 +153,14 @@ class UnetMRIModel(MRIModel):
 
         # First blue block CNN
         input = input.squeeze(1)
-        unet_kspace = self.unet_kspace_f1(input.view(input.size(0), input.size(1)*input.size(-1), input.size(2), input.size(3)))
+        unet_size = [input.size(0), input.size(1)*input.size(-1), input.size(2), input.size(3)]
+        unet_kspace = self.unet_kspace_f1(input.view(unet_size))
+        unet_kspace = unet_kspace.view(input.size())
         unet_image_space = transforms.ifft2(transforms.kspace_dc(unet_kspace, ref_ksp, mask))
-        unet_image_space = self.unet_image_f1(unet_image_space)
+        unet_image_space = self.unet_image_f1(unet_image_space.view(unet_size))
+        unet_image_space = unet_image_space.view(input.size())
         unet_kspace = transforms.kspace_dc(transforms.fft2(unet_image_space), ref_ksp, mask)
-
+        print("ALEN ES CHOTO")
 
         # input is already masked, need to do least squares between input and input['kspace'] grappa is 5x4 kernel.
         # scipy.optimize.minimize use this and flatten input kernel grappa for f callable. Need to find mingrappa
@@ -168,9 +171,11 @@ class UnetMRIModel(MRIModel):
         kspace_grappa = transforms.apply_grappa(input_ksp=unet_kspace, kernel=min_grappa, ref_ksp=ref_ksp, mask=mask.float())
         
         # Send blue block CNN
-        unet_kspace = self.unet_kspace_f2(kspace_grappa)
+        unet_kspace = self.unet_kspace_f2(kspace_grappa.view(unet_size)) # Dim mismatch?
+        unet_kspace = unet_kspace.view(input.size())
         unet_image_space = transforms.ifft2(transforms.kspace_dc(unet_kspace, ref_ksp, mask))
-        unet_image_space = self.unet_image_f2(unet_image_space)
+        unet_image_space = self.unet_image_f2(unet_image_space.view(unet_size))
+        unet_image_space = unet_image_space.view(input.size())
         unet_kspace = transforms.kspace_dc(transforms.fft2(unet_image_space), ref_ksp, mask)
 
         # IFT + RSS

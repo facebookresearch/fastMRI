@@ -78,7 +78,6 @@ class DataTransform:
         # NOTE: self.resolution is 320 by default. 
         image = transforms.ifft2(masked_kspace)
         image_ref = transforms.ifft2(ref_ksp)
-        image_mask = transforms.ifft2(mask)
         
         smallest_width = min(self.resolution, image.shape[-2])
         smallest_height = min(self.resolution, image.shape[-3])
@@ -88,7 +87,7 @@ class DataTransform:
         crop_size = (smallest_height, smallest_width)
         image = transforms.complex_center_crop(image, crop_size)
         image_ref = transforms.complex_center_crop(image_ref, crop_size)
-        image_mask = transforms.complex_center_crop(image_mask, crop_size)
+        mask = transforms.center_crop(mask, crop_size)
 
         # Crop target
         if target is not None:
@@ -100,7 +99,6 @@ class DataTransform:
 
         masked_kspace = transforms.fft2(image)
         ref_ksp = transforms.fft2(image_ref)
-        mask = transforms.fft2(image_mask)
 
         return masked_kspace, target, ref_ksp, mask, fname, slice
 
@@ -123,15 +121,15 @@ class UnetMRIModel(MRIModel):
             drop_prob=hparams.drop_prob
         )
         self.unet_image_f1 = UnetModel(
-            in_chans=15,
-            out_chans=15,
+            in_chans=30,
+            out_chans=30,
             chans=hparams.num_chans,
             num_pool_layers=hparams.num_pools,
             drop_prob=hparams.drop_prob
         )
         self.unet_image_f2 = UnetModel(
-            in_chans=15,
-            out_chans=15,
+            in_chans=30,
+            out_chans=30,
             chans=hparams.num_chans,
             num_pool_layers=hparams.num_pools,
             drop_prob=hparams.drop_prob
@@ -152,7 +150,6 @@ class UnetMRIModel(MRIModel):
         # First blue block CNN
         input = input.squeeze(1)
         unet_kspace = self.unet_kspace_f1(input.view(input.size(0), input.size(1)*input.size(-1), input.size(2), input.size(3)))
-        unet_kspace = unet_kspace.view(input.size())
         unet_image_space = transforms.ifft2(transforms.kspace_dc(unet_kspace, ref_ksp, mask))
         unet_image_space = self.unet_image_f1(unet_image_space)
         unet_kspace = transforms.kspace_dc(transforms.fft2(unet_image_space), ref_ksp, mask)
@@ -167,8 +164,7 @@ class UnetMRIModel(MRIModel):
         kspace_grappa = transforms.apply_grappa(input_ksp=unet_kspace, kernel=min_grappa, ref_ksp=ref_ksp, mask=mask.float())
         
         # Send blue block CNN
-        unet_kspace = self.unet_kspace_f2(kspace_grappa.view(input.size(0), input.size(1)*input.size(-1), input.size(2), input.size(3)))
-        unet_kspace = unet_kspace.view(input.size())
+        unet_kspace = self.unet_kspace_f2(kspace_grappa)
         unet_image_space = transforms.ifft2(transforms.kspace_dc(unet_kspace, ref_ksp, mask))
         unet_image_space = self.unet_image_f2(unet_image_space)
         unet_kspace = transforms.kspace_dc(transforms.fft2(unet_image_space), ref_ksp, mask)

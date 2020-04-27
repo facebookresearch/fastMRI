@@ -7,6 +7,7 @@ LICENSE file in the root directory of this source tree.
 
 import numpy as np
 import torch
+from torch.nn import functional as F
 
 
 def to_tensor(data):
@@ -47,6 +48,12 @@ def apply_mask(data, mask_func, seed=None):
     mask = mask_func(shape, seed)
     return torch.where(mask == 0, torch.Tensor([0]), data), mask
 
+def kspace_dc(pred_kspace, ref_kspace, mask):
+    return (1 - mask) * pred_kspace + mask * ref_kspace
+
+
+def image_dc(pred_image, ref_kspace, mask):
+    return T.ifft2(kspace_dc(T.fft2(pred_image), ref_kspace, mask))
 
 def fft2(data):
     """
@@ -240,3 +247,46 @@ def ifftshift(x, dim=None):
     else:
         shift = [(x.shape[i] + 1) // 2 for i in dim]
     return roll(x, shift, dim)
+
+def complex_to_chans(data):
+    batch, chans, rows, cols, dims = data.shape
+    result = data.permute(0, 1, 4, 2, 3).contiguous().view([batch, chans * dims, rows, cols])
+    return result
+
+def chans_to_complex(data):
+    batch, chans, rows, cols = data.shape
+    assert chans % 2 == 0
+    result = data.view([batch, chans // 2, 2, rows, cols]).permute(0, 1, 3, 4, 2).contiguous()
+    return result
+
+def subsample(input_ksp, accel_factor):
+    for n in range(1, accel_factor):
+        input_ksp[:, :, :, n::accel_factor, :] = 0
+    return input_ksp
+
+def apply_grappa(input_ksp, kernel, ref_ksp, mask, sample_accel=None):
+    batch = input_ksp.dim() == 5
+    if not batch:
+        input_ksp = input_ksp.unsqueeze(0)
+        kernel = kernel.unsqueeze(0)
+
+    kernel = kernel.to(input_ksp.device)
+    if sample_accel is not None:
+        input_ksp = subsample(input_ksp, sample_accel)
+
+    input_ksp_ = complex_to_chans(input_ksp)
+    pad = (kernel.shape[-2] // 2, kernel.shape[-2] // 2, kernel.shape[-1] // 2, kernel.shape[-1] // 2)
+    input_ksp_ = F.pad(input_ksp_, pad, mode='reflect')
+    # input_ksp_ = F.pad(input_ksp_, pad, mode='constant')
+    result_ksp = [
+        F.conv2d(input_ksp_[b].unsqueeze(0), kernel[b])
+        for b in range(input_ksp_.shape[0])
+    ]
+    result_ksp = torch.cat(result_ksp)
+    result_ksp = chans_to_complex(result_ksp)
+    result_ksp = kspace_dc(result_ksp, ref_ksp, mask)
+
+    if not batch:
+        result_ksp = result_ksp.squeeze(0)
+    return result_ksp
+

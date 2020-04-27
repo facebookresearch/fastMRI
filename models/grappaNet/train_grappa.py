@@ -101,29 +101,29 @@ class UnetMRIModel(MRIModel):
     def __init__(self, hparams):
         super().__init__(hparams)
         self.unet_kspace_f1 = UnetModel(
-            in_chans=1,
-            out_chans=1,
+            in_chans=30,
+            out_chans=30,
             chans=hparams.num_chans,
             num_pool_layers=hparams.num_pools,
             drop_prob=hparams.drop_prob
         )
         self.unet_kspace_f2 = UnetModel(
-            in_chans=1,
-            out_chans=1,
+            in_chans=30,
+            out_chans=30,
             chans=hparams.num_chans,
             num_pool_layers=hparams.num_pools,
             drop_prob=hparams.drop_prob
         )
         self.unet_image_f1 = UnetModel(
-            in_chans=1,
-            out_chans=1,
+            in_chans=15,
+            out_chans=15,
             chans=hparams.num_chans,
             num_pool_layers=hparams.num_pools,
             drop_prob=hparams.drop_prob
         )
         self.unet_image_f2 = UnetModel(
-            in_chans=1,
-            out_chans=1,
+            in_chans=15,
+            out_chans=15,
             chans=hparams.num_chans,
             num_pool_layers=hparams.num_pools,
             drop_prob=hparams.drop_prob
@@ -142,9 +142,11 @@ class UnetMRIModel(MRIModel):
         
 
         # First blue block CNN
-        unet_kspace = self.unet_kspace_f1(input.unsqueeze(1)).squeeze(1)
+        input = input.squeeze(1)
+        unet_kspace = self.unet_kspace_f1(input.view(input.size(0), input.size(1)*input.size(-1), input.size(2), input.size(3)))
+        unet_kspace = unet_kspace.view(input.size())
         unet_image_space = transforms.ifft2(transforms.kspace_dc(unet_kspace, input['kspace'], input['mask']))
-        unet_image_space = self.unet_image_f1(unet_image_space.unsqueeze(1)).squeeze(1)
+        unet_image_space = self.unet_image_f1(unet_image_space)
         unet_kspace = transforms.kspace_dc(transforms.fft2(unet_image_space), input['kspace'], input['mask'])
 
 
@@ -157,9 +159,10 @@ class UnetMRIModel(MRIModel):
         kspace_grappa = transforms.apply_grappa(input_ksp=unet_kspace, kernel=min_grappa, ref_ksp=input['kspace'], mask=input['mask'].float())
         
         # Send blue block CNN
-        unet_kspace = self.unet_kspace_f2(input.unsqueeze(1)).squeeze(1)
+        unet_kspace = self.unet_kspace_f2(kspace_grappa.view(input.size(0), input.size(1)*input.size(-1), input.size(2), input.size(3)))
+        unet_kspace = unet_kspace.view(input.size())
         unet_image_space = transforms.ifft2(transforms.kspace_dc(unet_kspace, input['kspace'], input['mask']))
-        unet_image_space = self.unet_image_f2(unet_image_space.unsqueeze(1)).squeeze(1)
+        unet_image_space = self.unet_image_f2(unet_image_space)
         unet_kspace = transforms.kspace_dc(transforms.fft2(unet_image_space), input['kspace'], input['mask'])
 
         # IFT + RSS
@@ -226,7 +229,7 @@ class UnetMRIModel(MRIModel):
     def add_model_specific_args(parser):
         parser.add_argument('--num-pools', type=int, default=4, help='Number of U-Net pooling layers')
         parser.add_argument('--drop-prob', type=float, default=0.0, help='Dropout probability')
-        parser.add_argument('--num-chans', type=int, default=192, help='Number of U-Net channels')
+        parser.add_argument('--num-chans', type=int, default=32, help='Number of U-Net channels')
         parser.add_argument('--batch-size', default=16, type=int, help='Mini batch size')
         parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
         parser.add_argument('--lr-step-size', type=int, default=40,

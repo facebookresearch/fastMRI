@@ -12,10 +12,11 @@ import numpy as np
 import torch
 from pytorch_lightning import Trainer
 from pytorch_lightning.logging import TestTubeLogger
+import pytorch_lightning as pl
 from torch.nn import functional as F
 from torch.optim import RMSprop
+from torch.optim import Adam
 
-from scipy.optimize import minimize
 from common.args import Args
 from common.evaluate import ssim
 from common.subsample import create_mask_for_mask_type
@@ -106,6 +107,17 @@ class DataTransform:
 
         return masked_kspace, target, ref_ksp, mask, fname, slice
 
+class GrappaModel(nn.Module):
+    def __init__(self, kernel_size):
+        super().__init__()
+        self.grappa_kernel = nn.Parameter(torch.zeros(kernel_size), requires_grad=True)
+        
+    def loss(self, input_ksp, ref_ksp, mask):
+        pred = transforms.apply_grappa(input_ksp=input_ksp, kernel=self.grappa_kernel, ref_ksp=ref_ksp, mask=mask.float())
+        return F.mse_loss(pred, ref_ksp)
+
+
+
 
 class UnetMRIModel(MRIModel):
     def __init__(self, hparams):
@@ -140,18 +152,10 @@ class UnetMRIModel(MRIModel):
         )
 
     
-    def residuals(self, g, input, ref_ksp, mask):
-        # Reshape G to its original shape.
-        b, coils, height, width, cmplx = input.size()
-        g = g.reshape(b, coils * cmplx, coils*cmplx, 5, 5) 
-        # Apply grappa and calculate norm
-        kspace_grappa = transforms.apply_grappa(input_ksp=input, kernel=torch.Tensor(g), ref_ksp=ref_ksp, mask=mask.float())
-        norm = (np.linalg.norm((kspace_grappa - ref_ksp).cpu().numpy())**2)
-        print(norm)
-        return(norm)
 
     def forward(self, input, ref_ksp, mask):
         
+
 
         # First blue block CNN
         input = input.squeeze(1)
@@ -162,17 +166,24 @@ class UnetMRIModel(MRIModel):
         unet_image_space = self.unet_image_f1(unet_image_space.view(unet_size))
         unet_image_space = unet_image_space.view(input.size())
         unet_kspace = transforms.kspace_dc(transforms.fft2(unet_image_space), ref_ksp, mask)
-        print("ALEN ES CHOTO")
 
         # input is already masked, need to do least squares between input and input['kspace'] grappa is 5x4 kernel.
         # scipy.optimize.minimize use this and flatten input kernel grappa for f callable. Need to find mingrappa
-        a,b,c,d,e = input.size()
-        min_grappa = torch.randn(a, b*e, b*e, 5, 5)
-        #grappa = torch.randn(25 * unet_kspace.size(0) * (unet_kspace.size(1) ** 2) * (unet_kspace.size(-1) ** 2))
-       # res = minimize(self.residuals, grappa, args=(input, ref_ksp, mask))
-       # min_grappa = torch.Tensor(res.x)
+        batch, coils, height, width, cmplx = input.size()
         
-       # print("ALEN ES CHOTO OPTIMIZED")
+        kernel_size = (batch, coils*cmplx, coils*cmplx, 5, 5)
+        grappa_model = GrappaModel(kernel_size).cuda()
+        optimizer = Adam(grappa_model.parameters())
+        grappa_loss = []
+        # Optimization over a set 
+        for epoch in range(20):
+            loss = model.loss(unet_kspace, ref_ksp, mask)            
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            train_loss.append(loss.item())
+
+        print(train_loss)
 
         # Use min grappa for kernel 
         kspace_grappa = transforms.apply_grappa(input_ksp=unet_kspace, kernel=min_grappa, ref_ksp=ref_ksp, mask=mask.float())

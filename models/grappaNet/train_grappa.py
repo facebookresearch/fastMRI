@@ -64,12 +64,13 @@ class DataTransform:
                 std (float): Standard deviation value used for normalization.
         """
         kspace = transforms.to_tensor(kspace)
+        ref_ksp = kspace.clone()
         # Apply mask
         if self.mask_func:
             seed = None if not self.use_seed else tuple(map(ord, fname))
             masked_kspace, mask = transforms.apply_mask(kspace, self.mask_func, seed)
         else:
-            masked_kspace = kspace
+            masked_kspace, mask = kspace, None
         
 
         
@@ -94,7 +95,7 @@ class DataTransform:
 
         masked_kspace = transforms.fft2(image)
 
-        return masked_kspace, target, fname, slice
+        return masked_kspace, target, ref_ksp, mask, fname, slice
 
 
 class UnetMRIModel(MRIModel):
@@ -130,24 +131,24 @@ class UnetMRIModel(MRIModel):
         )
 
     
-    def residuals(self, g, input):
+    def residuals(self, g, input, ref_ksp, mask):
         # Reshape G to its original shape.
         g = g.reshape(5, 4) 
         # Apply grappa and calculate norm
-        kspace_grappa = transforms.apply_grappa(input_ksp=input, kernel=g, ref_ksp=input['kspace'], mask=input['mask'].float())
+        kspace_grappa = transforms.apply_grappa(input_ksp=input, kernel=g, ref_ksp=ref_ksp, mask=mask.float())
         return np.linalg.norm(kspace_grappa - input['kspace'])**2
 
 
-    def forward(self, input):
+    def forward(self, input, ref_ksp, mask):
         
 
         # First blue block CNN
         input = input.squeeze(1)
         unet_kspace = self.unet_kspace_f1(input.view(input.size(0), input.size(1)*input.size(-1), input.size(2), input.size(3)))
         unet_kspace = unet_kspace.view(input.size())
-        unet_image_space = transforms.ifft2(transforms.kspace_dc(unet_kspace, input['kspace'], input['mask']))
+        unet_image_space = transforms.ifft2(transforms.kspace_dc(unet_kspace, ref_ksp, mask))
         unet_image_space = self.unet_image_f1(unet_image_space)
-        unet_kspace = transforms.kspace_dc(transforms.fft2(unet_image_space), input['kspace'], input['mask'])
+        unet_kspace = transforms.kspace_dc(transforms.fft2(unet_image_space), ref_ksp, mask)
 
 
         # input is already masked, need to do least squares between input and input['kspace'] grappa is 5x4 kernel.
@@ -156,14 +157,14 @@ class UnetMRIModel(MRIModel):
         res = minimize(residuals, grappa, args=(input), tol=1e-6)
         min_grappa = res.x
         # Use min grappa for kernel 
-        kspace_grappa = transforms.apply_grappa(input_ksp=unet_kspace, kernel=min_grappa, ref_ksp=input['kspace'], mask=input['mask'].float())
+        kspace_grappa = transforms.apply_grappa(input_ksp=unet_kspace, kernel=min_grappa, ref_ksp=ref_ksp, mask=mask.float())
         
         # Send blue block CNN
         unet_kspace = self.unet_kspace_f2(kspace_grappa.view(input.size(0), input.size(1)*input.size(-1), input.size(2), input.size(3)))
         unet_kspace = unet_kspace.view(input.size())
-        unet_image_space = transforms.ifft2(transforms.kspace_dc(unet_kspace, input['kspace'], input['mask']))
+        unet_image_space = transforms.ifft2(transforms.kspace_dc(unet_kspace, ref_ksp, mask))
         unet_image_space = self.unet_image_f2(unet_image_space)
-        unet_kspace = transforms.kspace_dc(transforms.fft2(unet_image_space), input['kspace'], input['mask'])
+        unet_kspace = transforms.kspace_dc(transforms.fft2(unet_image_space), ref_ksp, mask)
 
         # IFT + RSS
 
@@ -177,10 +178,10 @@ class UnetMRIModel(MRIModel):
         return image
 
     def training_step(self, batch, batch_idx):
-        input, target, _, _ = batch
+        input, target, ref_ksp, mask, _, _ = batch
 
         # The output is normalized during the forward pass
-        output = self.forward(input)
+        output = self.forward(input, ref_ksp, mask)
 
         # Loss as stated in the paper! J(x) = - SSIM(x, \hat{x}) + \lambda*||x - \hat{x}|| -> \lamda = 0.001
         loss = 0.001*F.l1_loss(output, target) - ssim(output, target)
@@ -188,8 +189,8 @@ class UnetMRIModel(MRIModel):
         return dict(loss=loss, log=logs)
 
     def validation_step(self, batch, batch_idx):
-        input, target, fname, slice = batch
-        output = self.forward(input)
+        input, target, ref_ksp, mask, fname, slice = batch
+        output = self.forward(input, ref_ksp, mask)
         return {
             'fname': fname,
             'slice': slice,
@@ -199,8 +200,8 @@ class UnetMRIModel(MRIModel):
         }
 
     def test_step(self, batch, batch_idx):
-        input, _, fname, slice = batch
-        output = self.forward(input)
+        input, _, ref_ksp, mask, fname, slice = batch
+        output = self.forward(input, ref_ksp, mask)
         return {
             'fname': fname,
             'slice': slice,

@@ -142,11 +142,13 @@ class UnetMRIModel(MRIModel):
     
     def residuals(self, g, input, ref_ksp, mask):
         # Reshape G to its original shape.
-        g = g.reshape(5, 4) 
+        b, coils, height, width, cmplx = input.size()
+        g = g.reshape(b, coils * cmplx, coils*cmplx, 5, 5) 
         # Apply grappa and calculate norm
-        kspace_grappa = transforms.apply_grappa(input_ksp=input, kernel=g, ref_ksp=ref_ksp, mask=mask.float())
-        return np.linalg.norm(kspace_grappa - input['kspace'])**2
-
+        kspace_grappa = transforms.apply_grappa(input_ksp=input, kernel=torch.Tensor(g), ref_ksp=ref_ksp, mask=mask.float())
+        norm = (np.linalg.norm((kspace_grappa - ref_ksp).cpu().numpy())**2)
+        print(norm)
+        return(norm)
 
     def forward(self, input, ref_ksp, mask):
         
@@ -164,9 +166,14 @@ class UnetMRIModel(MRIModel):
 
         # input is already masked, need to do least squares between input and input['kspace'] grappa is 5x4 kernel.
         # scipy.optimize.minimize use this and flatten input kernel grappa for f callable. Need to find mingrappa
-        grappa = np.random.rand(20)
-        res = minimize(residuals, grappa, args=(input), tol=1e-6)
-        min_grappa = res.x
+        a,b,c,d,e = input.size()
+        min_grappa = torch.randn(a, b*e, b*e, 5, 5)
+        #grappa = torch.randn(25 * unet_kspace.size(0) * (unet_kspace.size(1) ** 2) * (unet_kspace.size(-1) ** 2))
+       # res = minimize(self.residuals, grappa, args=(input, ref_ksp, mask))
+       # min_grappa = torch.Tensor(res.x)
+        
+       # print("ALEN ES CHOTO OPTIMIZED")
+
         # Use min grappa for kernel 
         kspace_grappa = transforms.apply_grappa(input_ksp=unet_kspace, kernel=min_grappa, ref_ksp=ref_ksp, mask=mask.float())
         
@@ -206,7 +213,7 @@ class UnetMRIModel(MRIModel):
         return {
             'fname': fname,
             'slice': slice,
-            'output': output.numpy(),
+            'output': output.cpu().numpy(),
             'target': target.cpu().numpy(),
             'val_loss': 0.001*F.l1_loss(output, target) - ssim(output, target),
         }

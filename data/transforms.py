@@ -278,12 +278,14 @@ def apply_grappa(input_ksp, kernel, ref_ksp, mask, sample_accel=None):
     pad = (kernel.shape[-2] // 2, kernel.shape[-2] // 2, kernel.shape[-1] // 2, kernel.shape[-1] // 2)
     input_ksp_ = F.pad(input_ksp_, pad, mode='reflect')
     # input_ksp_ = F.pad(input_ksp_, pad, mode='constant')
+    
     result_ksp = [
         F.conv2d(input_ksp_[b].unsqueeze(0), kernel[b])
         for b in range(input_ksp_.shape[0])
     ]
     result_ksp = torch.cat(result_ksp)
     result_ksp = chans_to_complex(result_ksp)
+
     result_ksp = kspace_dc(result_ksp, ref_ksp, mask)
 
     if not batch:

@@ -87,7 +87,11 @@ class DataTransform:
         crop_size = (smallest_height, smallest_width)
         image = transforms.complex_center_crop(image, crop_size)
         image_ref = transforms.complex_center_crop(image_ref, crop_size)
-        mask = transforms.center_crop(mask, crop_size)
+
+        # Fix mask size
+        h_from = (mask.shape[-2] - crop_size[0]) // 2
+        h_to = h_from + shape[0]
+        mask = mask[..., h_from:h_to, :]
 
         # Crop target
         if target is not None:

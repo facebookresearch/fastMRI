@@ -23,7 +23,7 @@ from common.subsample import create_mask_for_mask_type
 from data import transforms
 from models.mri_model import MRIModel
 from models.grappaNet.grappa_unet_model import UnetModel
-
+import torch.nn as nn
 
 class DataTransform:
     """
@@ -110,7 +110,7 @@ class DataTransform:
 class GrappaModel(nn.Module):
     def __init__(self, kernel_size):
         super().__init__()
-        self.grappa_kernel = nn.Parameter(torch.zeros(kernel_size), requires_grad=True)
+        self.grappa_kernel = nn.Parameter(torch.ones(kernel_size), requires_grad=True)
         
     def loss(self, input_ksp, ref_ksp, mask):
         pred = transforms.apply_grappa(input_ksp=input_ksp, kernel=self.grappa_kernel, ref_ksp=ref_ksp, mask=mask.float())
@@ -174,18 +174,19 @@ class UnetMRIModel(MRIModel):
         batch, coils, height, width, cmplx = input.size()
         
         kernel_size = (batch, coils*cmplx, coils*cmplx, 5, 5)
-        grappa_model = GrappaModel(kernel_size).cuda()
+        grappa_model = GrappaModel(kernel_size).to(unet_kspace.device)
         optimizer = Adam(grappa_model.parameters())
         grappa_loss = []
         # Optimization over a set 
-        for epoch in range(20):
-            loss = grappa_model.loss(unet_kspace, ref_ksp, mask)            
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            train_loss.append(loss.item())
+        with torch.enable_grad():
+            grappa_model.train()
+            for epoch in range(20):
+                loss = grappa_model.loss(unet_kspace, ref_ksp, mask)
+                optimizer.zero_grad()
+                loss.backward(retain_graph=True)
+                optimizer.step()
+                grappa_loss.append(loss.item())
 
-        print(train_loss)
         min_grappa = grappa_model.get_grappa_kernel()
 
         # Use min grappa for kernel 
@@ -217,21 +218,21 @@ class UnetMRIModel(MRIModel):
         print(output.size())
         print(target.size())
         # Loss as stated in the paper! J(x) = - SSIM(x, \hat{x}) + \lambda*||x - \hat{x}|| -> \lamda = 0.001
-        loss = 0.001*F.l1_loss(output, target) - ssim(output.detach().cpu().numpy(), target.cpu().numpy())
+        #loss = 0.001*F.l1_loss(output, target) - ssim(output.detach().cpu().numpy(), target.cpu().numpy())
+        loss = F.l1_loss(output, target)
         logs = {'loss': loss.item()}
         return dict(loss=loss, log=logs)
 
     def validation_step(self, batch, batch_idx):
         input, target, ref_ksp, mask, fname, slice = batch
         output = self.forward(input, ref_ksp, mask)
-        print(output.size())
-        print(target.size())
         return {
             'fname': fname,
             'slice': slice,
             'output': output.detach().cpu().numpy(),
             'target': target.cpu().numpy(),
-            'val_loss': 0.001*F.l1_loss(output, target) - ssim(output.cpu().numpy(), target.cpu().numpy()),
+            'val_loss': F.l1_loss(output, target),
+            #'val_loss': 0.001*F.l1_loss(output, target) - ssim(output.cpu().numpy(), target.cpu().numpy()),
         }
 
     def test_step(self, batch, batch_idx):

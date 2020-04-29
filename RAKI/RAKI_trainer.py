@@ -26,11 +26,12 @@ class RAKI_trainer:
         optimizer = optim.Adam([{'params': first_layer_params, 'lr': '100'}, {'params': remaining_params}, ], lr=10)
         # setup data for training
         real_masked_kspace = transforms.complex_to_chans(masked_input_kspace)
+        real_masked_kspaces = torch.cat([real_masked_kspace, real_masked_kspace], dim=0)
         # train model
         self.model.train()
         for i in range(self.epochs):
             optimizer.zero_grad()
-            reconstructed_lines = self.model(real_masked_kspace)
+            reconstructed_lines = self.model(real_masked_kspaces)
             loss = self.calculate_loss(reconstructed_lines, masked_input_kspace, ref_kspace, mask)
             print("RAKI loss at epoch %d: %d", i, loss)
             loss.backward()
@@ -50,10 +51,11 @@ class RAKI_trainer:
         return transforms.fft2(image)
 
     def calculate_loss(self, reconstructed_lines, masked_kspace, ref_kspace, mask):
-        print(ref_kspace.size())
         combined_ref_kspace = self.multicoil_to_combined_kspace(ref_kspace)
         print(reconstructed_lines.size())
         target_line = torch.where(mask == 0, combined_ref_kspace, torch.zeros_like(combined_ref_kspace))
+        target_line = transforms.complex_to_chans(target_line).squeeze(0).unsqueeze(1)
+        target_line = transforms.center_crop(target_line, reconstructed_lines.size())
         print(target_line.size())
         #reconstructed_kspace = torch.where(mask == 0, transforms.chans_to_complex(reconstructed_lines), masked_kspace)
         #combined_reconstructed_kspace = self.multicoil_to_combined_kspace(reconstructed_kspace)

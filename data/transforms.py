@@ -45,8 +45,8 @@ def apply_mask(data, mask_func, seed=None):
     """
     shape = np.array(data.shape)
     shape[:-3] = 1
-    mask = mask_func(shape, seed)
-    return torch.where(mask == 0, torch.Tensor([0]), data), mask
+    mask, acceleration = mask_func(shape, seed)
+    return torch.where(mask == 0, torch.Tensor([0]), data), mask, acceleration
 
 def kspace_dc(pred_kspace, ref_kspace, mask):
     return (1 - mask) * pred_kspace + mask * ref_kspace

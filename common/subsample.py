@@ -167,4 +167,4 @@ class EquispacedMaskFunc(MaskFunc):
         mask_shape[-2] = num_cols
         mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
 
-        return mask
+        return mask, acceleration

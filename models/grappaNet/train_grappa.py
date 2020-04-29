@@ -31,7 +31,7 @@ class DataTransform:
     Data Transformer for training U-Net models.
     """
 
-    def __init__(self, resolution, which_challenge, mask_func=None, acceleration=4, use_seed=True):
+    def __init__(self, resolution, which_challenge, mask_func=None, use_seed=True):
         """
         Args:
             mask_func (common.subsample.MaskFunc): A function that can create a mask of
@@ -48,7 +48,6 @@ class DataTransform:
         self.resolution = resolution
         self.which_challenge = which_challenge
         self.use_seed = use_seed
-        self.acceleration = acceleration
 
     def __call__(self, kspace, target, attrs, fname, slice):
         """
@@ -71,7 +70,7 @@ class DataTransform:
         # Apply mask
         if self.mask_func:
             seed = None if not self.use_seed else tuple(map(ord, fname))
-            masked_kspace, mask = transforms.apply_mask(kspace, self.mask_func, seed)
+            masked_kspace, mask, acceleration = transforms.apply_mask(kspace, self.mask_func, seed)
         else:
             masked_kspace, mask = kspace, None
         
@@ -107,7 +106,7 @@ class DataTransform:
         masked_kspace = transforms.fft2(image)
         ref_ksp = transforms.fft2(image_ref)
 
-        return masked_kspace, target, ref_ksp, mask, self.acceleration, fname, slice
+        return masked_kspace, target, ref_ksp, mask, acceleration, fname, slice
 
 class GrappaModel(nn.Module):
     def __init__(self, kernel_size):
@@ -127,6 +126,8 @@ class UnetMRIModel(MRIModel):
     def __init__(self, hparams):
         super().__init__(hparams)
         self.use_grappa = hparams.use_grappa
+        print(hparams)
+        print(self.use_grappa)
         if self.use_grappa:
             self.unet_kspace_f1 = UnetModel(
                 in_chans=30,
@@ -160,11 +161,18 @@ class UnetMRIModel(MRIModel):
     def forward(self, input_ksp, ref_ksp, mask, acceleration):
         input_ksp = input_ksp.squeeze(1)
         unet_size = [input_ksp.size(0), input_ksp.size(1) * input_ksp.size(-1), input_ksp.size(2), input_ksp.size(3)]
+        print(input_ksp.size())
         if self.use_grappa:
+            print(self.use_grappa)
             second_block_input = self.train_grappa_kernel(input_ksp, ref_ksp, mask, unet_size)
         else:
-            second_block_input = RAKI_trainer(acceleration).train(input_ksp, ref_ksp, mask)
-
+            second_block_input = []
+            for input_ksp_i, ref_ksp_i, acceleration_i, mask_i in zip(input_ksp, ref_ksp, acceleration, mask):
+                second_block_input.append(RAKI_trainer(acceleration_i).train(input_ksp_i.unsqueeze(0), ref_ksp_i.unsqueeze(0), mask_i.unsqueeze(0)))
+                print(input_ksp_i.size())
+            second_block_input = torch.cat(second_block_input)
+            print(second_block_input.size())
+                
         # Second blue block CNN
         unet_kspace = self.unet_kspace_f2(second_block_input.view(unet_size)) # Dim mismatch?
         unet_kspace = unet_kspace.view(input_ksp.size())
@@ -217,7 +225,6 @@ class UnetMRIModel(MRIModel):
 
     def training_step(self, batch, batch_idx):
         input, target, ref_ksp, mask, acceleration, _, _ = batch
-
         # The output is normalized during the forward pass
         output = self.forward(input, ref_ksp, mask, acceleration)
         print(output.size())
@@ -255,14 +262,15 @@ class UnetMRIModel(MRIModel):
         return [optim], [scheduler]
 
     def train_data_transform(self):
-        mask, acceleration = create_mask_for_mask_type(self.hparams.mask_type, self.hparams.center_fractions,
+        mask = create_mask_for_mask_type(self.hparams.mask_type, self.hparams.center_fractions,
                                          self.hparams.accelerations)
-        return DataTransform(self.hparams.resolution, self.hparams.challenge, mask, acceleration, use_seed=False)
+        return DataTransform(self.hparams.resolution, self.hparams.challenge, mask, use_seed=False)
 
     def val_data_transform(self):
-        mask, acceleration = create_mask_for_mask_type(self.hparams.mask_type, self.hparams.center_fractions,
+        print(self.hparams.accelerations)
+        mask = create_mask_for_mask_type(self.hparams.mask_type, self.hparams.center_fractions,
                                          self.hparams.accelerations)
-        return DataTransform(self.hparams.resolution, self.hparams.challenge, mask, acceleration)
+        return DataTransform(self.hparams.resolution, self.hparams.challenge, mask)
 
     def test_data_transform(self):
         return DataTransform(self.hparams.resolution, self.hparams.challenge)
@@ -280,8 +288,6 @@ class UnetMRIModel(MRIModel):
                             help='Multiplicative factor of learning rate decay')
         parser.add_argument('--weight-decay', type=float, default=0.,
                             help='Strength of weight decay regularization')
-        parser.add_argument('--use-grappa', type=bool, default=True,
-                            help='Set to false in order to use RAKI reconstruction')
         return parser
 
 
@@ -327,6 +333,7 @@ if __name__ == '__main__':
                         help='Path to pre-trained model. Use with --mode test')
     parser.add_argument('--resume', action='store_true',
                         help='If set, resume the training from a previous model checkpoint. ')
+    parser.add_argument('--use-grappa', type=int, help='Decide method to approximate kspace. Set True for Grappa and False for RAKI')
     parser = UnetMRIModel.add_model_specific_args(parser)
     args = parser.parse_args()
     random.seed(args.seed)

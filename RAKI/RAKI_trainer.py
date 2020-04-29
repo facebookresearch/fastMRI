@@ -8,8 +8,9 @@ import torch.nn.functional as F
 
 
 class RAKI_trainer:
-    def __init__(self, accelaration_rate, epochs=100):
-        self.model = RAKI(accelaration_rate)
+    def __init__(self, acceleration_rate, epochs=100):
+        self.model = RAKI(acceleration_rate.item())
+        self.model.to(acceleration_rate.device)
         self.epochs = epochs
 
     def train(self, masked_input_kspace, ref_kspace, mask):
@@ -40,19 +41,20 @@ class RAKI_trainer:
 
     def initialize_conv_weights(self, module):
         if type(module) == nn.Conv2d:
-            module.weight.data = utils.truncated_normal(torch.zeros(module.weight.size(), dtype=torch.float32,
-                                                                    requires_grad=True), std=0.1)
+            module.weight.data = utils.truncated_normal(torch.zeros(module.weight.size(), requires_grad=True, dtype=torch.float32, device=torch.device('cuda:0')), std=0.1)
 
     def multicoil_to_combined_kspace(self, k_space):
         image = transforms.ifft2(k_space)
-        # Absolute value
-        image = transforms.complex_abs(image)
         # Apply Root-Sum-of-Squares
         image = transforms.root_sum_of_squares(image, 1)
         return transforms.fft2(image)
 
     def calculate_loss(self, reconstructed_lines, masked_kspace, ref_kspace, mask):
+        print(ref_kspace.size())
         combined_ref_kspace = self.multicoil_to_combined_kspace(ref_kspace)
-        reconstructed_kspace = torch.where(mask == 0, transforms.chans_to_complex(reconstructed_lines), masked_kspace)
-        combined_reconstructed_kspace = self.multicoil_to_combined_kspace(reconstructed_kspace)
-        return F.mse_loss(combined_reconstructed_kspace, combined_ref_kspace)
+        print(reconstructed_lines.size())
+        target_line = torch.where(mask == 0, combined_ref_kspace, torch.zeros_like(combined_ref_kspace))
+        print(target_line.size())
+        #reconstructed_kspace = torch.where(mask == 0, transforms.chans_to_complex(reconstructed_lines), masked_kspace)
+        #combined_reconstructed_kspace = self.multicoil_to_combined_kspace(reconstructed_kspace)
+        return F.mse_loss(reconstructed_lines, target_line)

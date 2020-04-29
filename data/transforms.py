@@ -292,3 +292,24 @@ def apply_grappa(input_ksp, kernel, ref_ksp, mask, sample_accel=None):
         result_ksp = result_ksp.squeeze(0)
     return result_ksp
 
+def center_crop_or_pad(data, shape):
+        """
+        Apply a center crop on pad (inferred from shape) on the data.
+        """
+        new_shape = list(data.shape)
+        new_shape[-2:] = shape
+
+        def crop_or_pad_indices(old_length, new_length):
+        # Returns indices of size new_length or the max/min size of the data they're
+        # accessing for both the resulting and data array.
+            result_from = max((new_length - old_length) // 2, 0)
+            result_to = min((new_length + old_length) // 2, new_length)
+            data_from = max((old_length - new_length) // 2, 0)
+            data_to = min((old_length + new_length) // 2, old_length)
+            return result_from, result_to, data_from, data_to
+
+        h_indices = crop_or_pad_indices(data.shape[-2], shape[-2])
+        w_indices = crop_or_pad_indices(data.shape[-1], shape[-1])
+        result = torch.zeros(new_shape).to(data.device)
+        result[..., h_indices[0]:h_indices[1], w_indices[0]:w_indices[1]] = data[..., h_indices[2]:h_indices[3], w_indices[2]:w_indices[3]]
+        return result

@@ -25,6 +25,7 @@ from models.mri_model import MRIModel
 from models.grappaNet.grappa_unet_model import UnetModel
 import torch.nn as nn
 from RAKI.RAKI_trainer import RAKI_trainer
+import pytorch_ssim
 
 class DataTransform:
     """
@@ -161,17 +162,13 @@ class UnetMRIModel(MRIModel):
     def forward(self, input_ksp, ref_ksp, mask, acceleration):
         input_ksp = input_ksp.squeeze(1)
         unet_size = [input_ksp.size(0), input_ksp.size(1) * input_ksp.size(-1), input_ksp.size(2), input_ksp.size(3)]
-        print(input_ksp.size())
         if self.use_grappa:
-            print(self.use_grappa)
             second_block_input = self.train_grappa_kernel(input_ksp, ref_ksp, mask, unet_size)
         else:
             second_block_input = []
             for input_ksp_i, ref_ksp_i, acceleration_i, mask_i in zip(input_ksp, ref_ksp, acceleration, mask):
                 second_block_input.append(RAKI_trainer(acceleration_i).train(input_ksp_i.unsqueeze(0), ref_ksp_i.unsqueeze(0), mask_i.unsqueeze(0)))
-                print(input_ksp_i.size())
             second_block_input = torch.cat(second_block_input)
-            print(second_block_input.size())
                 
         # Second blue block CNN
         unet_kspace = self.unet_kspace_f2(second_block_input.view(unet_size)) # Dim mismatch?
@@ -225,25 +222,25 @@ class UnetMRIModel(MRIModel):
 
     def training_step(self, batch, batch_idx):
         input, target, ref_ksp, mask, acceleration, _, _ = batch
+        print(input.size())
         # The output is normalized during the forward pass
         output = self.forward(input, ref_ksp, mask, acceleration)
-        print(output.size())
-        print(target.size())
         # Loss as stated in the paper! J(x) = - SSIM(x, \hat{x}) + \lambda*||x - \hat{x}|| -> \lamda = 0.001
         #loss = 0.001*F.l1_loss(output, target) - ssim(output.detach().cpu().numpy(), target.cpu().numpy())
-        loss = F.l1_loss(output, target)
+        loss = .001*F.l1_loss(output, target) - pytorch_ssim.ssim(target.unsqueeze(1), output.unsqueeze(1))
         logs = {'loss': loss.item()}
         return dict(loss=loss, log=logs)
 
     def validation_step(self, batch, batch_idx):
         input, target, ref_ksp, mask, acceleration, fname, slice = batch
+        print(input.size())
         output = self.forward(input, ref_ksp, mask, acceleration)
         return {
             'fname': fname,
             'slice': slice,
             'output': output.detach().cpu().numpy(),
             'target': target.cpu().numpy(),
-            'val_loss': F.l1_loss(output, target),
+            'val_loss': .001*F.l1_loss(output, target) - pytorch_ssim.ssim(target.unsqueeze(1), output.unsqueeze(1)),
             #'val_loss': 0.001*F.l1_loss(output, target) - ssim(output.cpu().numpy(), target.cpu().numpy()),
         }
 
@@ -267,7 +264,6 @@ class UnetMRIModel(MRIModel):
         return DataTransform(self.hparams.resolution, self.hparams.challenge, mask, use_seed=False)
 
     def val_data_transform(self):
-        print(self.hparams.accelerations)
         mask = create_mask_for_mask_type(self.hparams.mask_type, self.hparams.center_fractions,
                                          self.hparams.accelerations)
         return DataTransform(self.hparams.resolution, self.hparams.challenge, mask)

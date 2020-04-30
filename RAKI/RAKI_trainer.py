@@ -5,16 +5,24 @@ from RAKI.RAKI_model import RAKI
 import RAKI.Utilities as utils
 import data.transforms as transforms
 import torch.nn.functional as F
+import numpy as np
 
 
 class RAKI_trainer:
-    def __init__(self, acceleration_rate, epochs=200):
-        self.model = RAKI(acceleration_rate.item())
+    def __init__(self, acceleration_rate, epochs=100):
+        self.kx_1 = 5 
+        self.ky_1 = 2
+        self.kx_2 = 1
+        self.ky_2 = 1
+        self.kx_3 = 3
+        self.ky_3 = 2
+        self.model = RAKI(self.kx_1, self.ky_1, self.kx_2, self.ky_2, self.kx_3, self.ky_3, acceleration_rate.item())
         self.model.to(acceleration_rate.device)
         self.epochs = epochs
+        self.acceleration_rate = acceleration_rate
+
 
     def train(self, masked_input_kspace, ref_kspace, mask):
-
         # initialize weights based on a truncated normal distribution
         self.model.apply(self.initialize_conv_weights)
         # Set the learning rate of first conv layer to 100 and the remaining conv layers to 10
@@ -34,38 +42,29 @@ class RAKI_trainer:
             for i in range(self.epochs):
                 optimizer.zero_grad()
                 reconstructed_lines = self.model(real_masked_kspaces)
-                loss = self.calculate_loss(reconstructed_lines, masked_input_kspace, ref_kspace, mask)
-                print("RAKI loss at epoch {}: {}".format(i, loss))
-                loss.backward(retain_graph=True)
+                loss = F.mse_loss(self.reconstruct_kspace(real_masked_kspace, reconstructed_lines), transforms.complex_to_chans(ref_kspace).squeeze(0))
+                if i == self.epochs - 1:
+                    loss.backward()
+                else:
+                    loss.backward(retain_graph=True)
                 optimizer.step()
 
         self.model.eval()
-         
-        prediction = self.model(real_masked_kspaces)
-        prediction = torch.where(mask == 0, prediction, ref_kspace)
-        return torch.where(mask == 0, transforms.chans_to_complex(self.model(real_masked_kspace)), masked_input_kspace)
+        reconstructed_kspace = self.reconstruct_kspace(real_masked_kspace, self.model(real_masked_kspaces)).unsqueeze(0)
+        return reconstructed_kspace
 
     def initialize_conv_weights(self, module):
         if type(module) == nn.Conv2d:
             module.weight.data = utils.truncated_normal(torch.zeros(module.weight.size(), requires_grad=True, dtype=torch.float32, device=torch.device('cuda:0')), std=0.1)
 
-    def reconstruct_kspace(self, prediction, ref_ksp, mask):
-        real_ref_ksp = transforms.complex_to_chans(ref_ksp).squeeze(0)
-        reconstruct_filled = 
+    def reconstruct_kspace(self, input_real_kspace, reconstructed_lines):
+        kspace_recon = input_real_kspace.clone().squeeze(0)
+        target_x_start = np.int32(np.ceil(self.kx_1/2) + np.floor(self.kx_2/2) + np.floor(self.kx_3/2) -1)
+        target_x_end_kspace = input_real_kspace.size(-2) - target_x_start
+        for ind_acc in range(0, self.acceleration_rate.item() - 1):
+            target_y_start = np.int32((np.ceil(self.ky_1/2)-1) + np.int32((np.ceil(self.ky_2/2)-1)) + np.int32(np.ceil(self.ky_3/2)-1)) * self.acceleration_rate.item() + ind_acc + 1             
+            target_y_end_kspace = input_real_kspace.size(-1) - np.int32((np.floor(self.ky_1/2)) + (np.floor(self.ky_2/2)) + np.floor(self.ky_3/2)) * self.acceleration_rate.item() + ind_acc
+            indexed_recon_lines = reconstructed_lines[:, ind_acc, :, ::self.acceleration_rate.item()]
+            kspace_recon[:,target_x_start:target_x_end_kspace,target_y_start:target_y_end_kspace+1:self.acceleration_rate.item()] = indexed_recon_lines
+        return kspace_recon
 
-    def multicoil_to_combined_kspace(self, k_space):
-        image = transforms.ifft2(k_space)
-        # Apply Root-Sum-of-Squares
-        image = transforms.root_sum_of_squares(image, 1)
-        return transforms.fft2(image)
-
-    def calculate_loss(self, reconstructed_lines, masked_kspace, ref_kspace, mask):
-        #combined_ref_kspace = self.multicoil_to_combined_kspace(ref_kspace)
-        real_ref_kspace = transforms.complex_to_chans(ref_kspace)
-        target_line = torch.where(mask.squeeze(0) == 0, real_ref_kspace, torch.zeros_like(real_ref_kspace)).squeeze(0).unsqueeze(1)
-        #target_line = torch.where(mask == 0, combined_ref_kspace, torch.zeros_like(combined_ref_kspace))
-        #target_line = transforms.complex_to_chans(target_line).squeeze(0).unsqueeze(1)
-        target_line = transforms.center_crop(target_line, (reconstructed_lines.size(-2), reconstructed_lines.size(-1)))
-        #reconstructed_kspace = torch.where(mask == 0, transforms.chans_tcomplex(reconstructed_lines), masked_kspace)
-        #combined_reconstructed_kspace = self.multicoil_to_combined_kspace(reconstructed_kspace)
-        return F.mse_loss(reconstructed_lines, target_line)

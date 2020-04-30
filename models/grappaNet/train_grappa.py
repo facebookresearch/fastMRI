@@ -197,11 +197,10 @@ class UnetMRIModel(MRIModel):
         unet_image_space = self.unet_image_f1(unet_image_space.view(unet_size))
         unet_image_space = unet_image_space.view(input_ksp.size())
         unet_kspace = transforms.kspace_dc(transforms.fft2(unet_image_space), ref_ksp, mask)
-
         # Sample the unet in 2x. To apply GRAPPA in the 2x unet space. R'-fold.
         mask_fun_2x = create_mask_for_mask_type(self.hparams.mask_type, [0.16], [2])
-        unet_kspace, _, _ = transforms.apply_mask(unet_kspace, mask_fun_2x)
-
+        unet_kspace, _, _ = transforms.apply_mask(unet_kspace.cpu(), mask_fun_2x)
+        unet_kspace = unet_kspace.to(input_ksp.device)
         # input is already masked, need to do least squares between input and input['kspace'] grappa is 5x4 kernel.
         # scipy.optimize.minimize use this and flatten input kernel grappa for f callable. Need to find mingrappa
         batch, coils, height, width, cmplx = input_ksp.size()
@@ -209,19 +208,20 @@ class UnetMRIModel(MRIModel):
         kernel_size = (batch, coils*cmplx, coils*cmplx, 5, 5)
         grappa_model = GrappaModel(kernel_size).to(unet_kspace.device)
         optimizer = Adam(grappa_model.parameters())
-        
+        ref_ksp.to(unet_kspace.device)
+        mask.to(unet_kspace.device)
         # Optimization over a set for Grappa estimation
         second_block_input = []
-        for unet_ksp_i, input_ksp_i, ref_ksp_i, mask_i in zip(unet_ksp, input_ksp, ref_ksp, mask):
+        for unet_ksp_i, input_ksp_i, ref_ksp_i, mask_i in zip(unet_kspace, input_ksp, ref_ksp, mask):
             with torch.enable_grad():
                 grappa_model.train()
-                for epoch in range(200):
-                    loss = grappa_model.loss(input_kspace_i, ref_ksp_i, mask_i)
+                for epoch in range(100):
+                    loss = grappa_model.loss(input_ksp_i.unsqueeze(0), ref_ksp_i.unsqueeze(0), mask_i.unsqueeze(0))
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
-            min_grappa = grappa_model.get_grappa_kernel()
-            second_block_input.append(transforms.apply_grappa(input_ksp=unet_ksp_i, kernel=min_grappa, ref_ksp=ref_ksp_i, mask=mask_i.float()))
+            min_grappa = grappa_model.get_grappa_kernel().to(unet_kspace.device)
+            second_block_input.append(transforms.apply_grappa(input_ksp=unet_ksp_i.unsqueeze(0), kernel=min_grappa, ref_ksp=ref_ksp_i.unsqueeze(0), mask=mask_i.unsqueeze(0).float()))
 
         second_block_input = torch.cat(second_block_input)
 
@@ -232,7 +232,6 @@ class UnetMRIModel(MRIModel):
 
     def training_step(self, batch, batch_idx):
         input, target, ref_ksp, mask, acceleration, _, _ = batch
-        print(input.size())
         # The output is normalized during the forward pass
         output = self.forward(input, ref_ksp, mask, acceleration)
         # Loss as stated in the paper! J(x) = - SSIM(x, \hat{x}) + \lambda*||x - \hat{x}|| -> \lamda = 0.001

@@ -51,7 +51,7 @@ class RAKI_trainer:
 
         self.model.eval()
         reconstructed_kspace = self.reconstruct_kspace(real_masked_kspace, self.model(real_masked_kspaces)).unsqueeze(0)
-        return reconstructed_kspace
+        return reconstructed_kspace.detach()
 
     def initialize_conv_weights(self, module):
         if type(module) == nn.Conv2d:

@@ -1,0 +1,1 @@
+{"name": "unet", "version": 130, "tags_path": "experiments/unet/version_130/meta_tags.csv", "metrics_path": "experiments/unet/version_130/metrics.csv", "autosave": false, "description": null, "created_at": "2020-04-30 08:10:04.018155", "exp_hash": "unet_v130"}

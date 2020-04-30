@@ -1,0 +1,25 @@
+key,value
+seed,42
+resolution,320
+challenge,multicoil
+data_path,data_knee
+sample_rate,0.02
+mask_type,random
+accelerations,"[4, 8]"
+center_fractions,"[0.08, 0.04]"
+mode,train
+num_epochs,20
+gpus,1
+exp_dir,experiments
+exp,unet
+checkpoint,None
+resume,False
+use_grappa,0
+num_pools,2
+drop_prob,0.0
+num_chans,4
+batch_size,16
+lr,0.001
+lr_step_size,40
+lr_gamma,0.1
+weight_decay,0.0

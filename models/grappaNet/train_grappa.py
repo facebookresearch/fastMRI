@@ -199,7 +199,7 @@ class UnetMRIModel(MRIModel):
         unet_kspace = transforms.kspace_dc(transforms.fft2(unet_image_space), ref_ksp, mask)
 
         # Sample the unet in 2x. To apply GRAPPA in the 2x unet space. R'-fold.
-        mask_fun_2x = create_mask_for_mask_type(self.hparams.mask_type, 0.16, 2)
+        mask_fun_2x = create_mask_for_mask_type(self.hparams.mask_type, [0.16], [2])
         unet_kspace, _, _ = transforms.apply_mask(unet_kspace, mask_fun_2x)
 
         # input is already masked, need to do least squares between input and input['kspace'] grappa is 5x4 kernel.
@@ -218,7 +218,7 @@ class UnetMRIModel(MRIModel):
                 for epoch in range(200):
                     loss = grappa_model.loss(input_kspace_i, ref_ksp_i, mask_i)
                     optimizer.zero_grad()
-                    loss.backward(retain_graph=True)
+                    loss.backward()
                     optimizer.step()
             min_grappa = grappa_model.get_grappa_kernel()
             second_block_input.append(transforms.apply_grappa(input_ksp=unet_ksp_i, kernel=min_grappa, ref_ksp=ref_ksp_i, mask=mask_i.float()))

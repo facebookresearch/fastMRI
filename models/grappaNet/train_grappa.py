@@ -231,7 +231,9 @@ class UnetMRIModel(MRIModel):
         return second_block_input
 
     def training_step(self, batch, batch_idx):
+        
         input, target, ref_ksp, mask, acceleration, _, _ = batch
+        print(input.size())
         # The output is normalized during the forward pass
         output = self.forward(input, ref_ksp, mask, acceleration)
         # Loss as stated in the paper! J(x) = - SSIM(x, \hat{x}) + \lambda*||x - \hat{x}|| -> \lamda = 0.001
@@ -242,7 +244,6 @@ class UnetMRIModel(MRIModel):
 
     def validation_step(self, batch, batch_idx):
         input, target, ref_ksp, mask, acceleration, fname, slice = batch
-        print(input.size())
         output = self.forward(input, ref_ksp, mask, acceleration)
         return {
             'fname': fname,
@@ -319,7 +320,7 @@ def main(args):
         trainer.fit(model)
     else:  # args.mode == 'test'
         assert args.checkpoint is not None
-        model = UnetMRIModel.load_from_checkpoint(str(args.checkpoint))
+        model = UnetMRIModel.load_from_checkpoint(checkpoint_path=str(args.checkpoint))
         model.hparams.sample_rate = 1.
         trainer = create_trainer(args, logger=False)
         trainer.test(model)

@@ -5,5 +5,4 @@ logs
 *.png
 *.cfl
 *.hdr
-*.vscode
 recon-workspace.code-workspace

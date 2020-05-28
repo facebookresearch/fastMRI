@@ -1,17 +1,13 @@
-import math
 import torch
-import pdb
-import collections
 import numpy as np
 from torch.utils.data import Sampler
 import torch.distributed as dist
 
+
 class VolumeSampler(Sampler):
     """
-        Based on pytorch DistributedSampler
-        The difference is that all instances from the same
-        volume need to go to the same node.
-        dataset examples is a list of tuples (fname, instance),
+        Based on pytorch DistributedSampler, the difference is that all instances from the same
+        volume need to go to the same node. Dataset example is a list of tuples (fname, instance),
         where fname is essentially the volume name (actually a filename).
     """
 
@@ -38,11 +34,10 @@ class VolumeSampler(Sampler):
             self.total_size += 1
 
         self.indices = np.array(self.indices)
-
         self.num_samples = len(self.indices)
 
     def __iter__(self):
-        # deterministically shuffle based on epoch
+        # Deterministically shuffle based on epoch
         g = torch.Generator()
         g.manual_seed(self.epoch)
         ordering = torch.randperm(self.num_samples, generator=g).tolist()

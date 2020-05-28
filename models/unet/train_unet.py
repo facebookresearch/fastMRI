@@ -7,6 +7,7 @@ LICENSE file in the root directory of this source tree.
 
 import pathlib
 import random
+import os
 
 import numpy as np
 import torch
@@ -181,14 +182,11 @@ class UnetMRIModel(MRIModel):
 def create_trainer(args):
     return Trainer(
         default_save_path=args.exp_dir,
-        checkpoint_callback=True,
         max_epochs=args.num_epochs,
         gpus=args.gpus,
         num_nodes=args.nodes,
         distributed_backend='ddp',
-        check_val_every_n_epoch=1,
-        val_check_interval=1.,
-        early_stop_callback=False
+        early_stop_callback=False,
     )
 
 

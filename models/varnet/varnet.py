@@ -7,6 +7,7 @@ LICENSE file in the root directory of this source tree.
 
 import math
 import pathlib
+import os
 import random
 
 import numpy as np
@@ -81,8 +82,8 @@ class DataTransform:
             mask_shape = [1 for _ in shape]
             mask_shape[-2] = num_cols
             mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
-            mask[:,:,:acq_start] = 0
-            mask[:,:,acq_end:] = 0
+            mask[:, :, :acq_start] = 0
+            mask[:, :, acq_end:] = 0
         return masked_kspace, mask.byte(), target, fname, slice, max_value
 
 
@@ -257,7 +258,8 @@ class VariationalNetworkModel(MRIModel):
         masked_kspace, mask, target, fname, _, max_value = batch
         output = self.forward(masked_kspace, mask)
         target, output = T.center_crop_to_smallest(target, output)
-        return {'loss': self.ssim_loss(output.unsqueeze(1), target.unsqueeze(1), data_range=max_value)}
+        ssim_loss = self.ssim_loss(output.unsqueeze(1), target.unsqueeze(1), data_range=max_value)
+        return {'loss': ssim_loss, 'log': { 'train_loss': ssim_loss.item()}}
 
     def validation_step(self, batch, batch_idx):
         masked_kspace, mask, target, fname, slice, max_value = batch
@@ -274,7 +276,9 @@ class VariationalNetworkModel(MRIModel):
     def test_step(self, batch, batch_idx):
         masked_kspace, mask, _, fname, slice, _ = batch
         output = self.forward(masked_kspace, mask)
-        output = T.center_crop(output,(self.hparams.resolution,self.hparams.resolution))
+        b, h, w = output.shape
+        crop_size = min(w, self.hparams.resolution)
+        output = T.center_crop(output, (crop_size, crop_size))
         return {
             'fname': fname,
             'slice': slice,
@@ -297,7 +301,9 @@ class VariationalNetworkModel(MRIModel):
         return DataTransform(self.hparams.resolution, mask)
 
     def test_data_transform(self):
-        return DataTransform(self.hparams.resolution)
+        mask = create_mask_for_mask_type(self.hparams.mask_type, self.hparams.center_fractions,
+                                         self.hparams.accelerations)
+        return DataTransform(self.hparams.resolution, mask)
 
     @staticmethod
     def add_model_specific_args(parser):
@@ -321,16 +327,12 @@ class VariationalNetworkModel(MRIModel):
 def create_trainer(args):
     return Trainer(
         default_save_path=args.exp_dir,
-        checkpoint_callback=True,
         max_epochs=args.num_epochs,
         gpus=args.gpus,
         num_nodes=args.nodes,
         weights_summary=None,
         distributed_backend='ddp',
-        check_val_every_n_epoch=1,
-        val_check_interval=1.,
-        early_stop_callback=False,
-        num_sanity_val_steps=0,
+        replace_sampler_ddp=False,
     )
 
 def run(args):
@@ -343,9 +345,9 @@ def run(args):
     else:  # args.mode == 'test' or args.mode == 'challenge'
         assert args.checkpoint is not None
         model = VariationalNetworkModel.load_from_checkpoint(str(args.checkpoint))
+        model.hparams = args
         model.hparams.sample_rate = 1.
         trainer = create_trainer(args)
-        model.hparams = args
         trainer.test(model)
 
 
@@ -357,7 +359,7 @@ def main(args=None):
     parser.add_argument('--nodes', type=int, default=1)
     parser.add_argument('--exp-dir', type=pathlib.Path, default='experiments',
                         help='Path where model and results should be saved')
-    parser.add_argument('--exp', type=str, help='Name of the experiment')
+    parser.add_argument('--exp', type=str, help='Name of the experiment', default='default')
     parser.add_argument('--checkpoint', type=pathlib.Path,
                         help='Path to pre-trained model. Use with --mode test')
     parser = VariationalNetworkModel.add_model_specific_args(parser)

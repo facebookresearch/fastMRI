@@ -185,8 +185,9 @@ def create_trainer(args):
         max_epochs=args.num_epochs,
         gpus=args.gpus,
         num_nodes=args.nodes,
+        weights_summary=None,
         distributed_backend='ddp',
-        early_stop_callback=False,
+        replace_sampler_ddp=False,
     )
 
 

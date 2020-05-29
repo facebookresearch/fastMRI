@@ -12,6 +12,10 @@ class VolumeSampler(Sampler):
     """
 
     def __init__(self, dataset):
+        """
+        Args:
+            dataset: Dataset used for sampling.
+        """
         self.dataset = dataset
         self.world_size = dist.get_world_size()
         self.rank = dist.get_rank()
@@ -25,14 +29,13 @@ class VolumeSampler(Sampler):
         self.volumes = self.all_volumes_split[self.rank]
         self.indices = []
 
-        self.total_size = 0
         for i, example in enumerate(self.dataset.examples):
             vname = example[0]
             if vname in self.volumes:
                 self.indices.append(i)
 
-            self.total_size += 1
 
+        self.total_size = len(self.dataset.examples)
         self.indices = np.array(self.indices)
         self.num_samples = len(self.indices)
 

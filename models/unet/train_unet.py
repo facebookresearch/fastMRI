@@ -39,7 +39,8 @@ class DataTransform:
                 a given volume every time.
         """
         if which_challenge not in ('singlecoil', 'multicoil'):
-            raise ValueError(f'Challenge should either be "singlecoil" or "multicoil"')
+            raise ValueError(
+                f'Challenge should either be "singlecoil" or "multicoil"')
         self.mask_func = mask_func
         self.resolution = resolution
         self.which_challenge = which_challenge
@@ -66,7 +67,8 @@ class DataTransform:
         # Apply mask
         if self.mask_func:
             seed = None if not self.use_seed else tuple(map(ord, fname))
-            masked_kspace, mask = transforms.apply_mask(kspace, self.mask_func, seed)
+            masked_kspace, mask = transforms.apply_mask(
+                kspace, self.mask_func, seed)
         else:
             masked_kspace = kspace
 
@@ -146,8 +148,10 @@ class UnetMRIModel(MRIModel):
         }
 
     def configure_optimizers(self):
-        optim = RMSprop(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
-        scheduler = torch.optim.lr_scheduler.StepLR(optim, self.hparams.lr_step_size, self.hparams.lr_gamma)
+        optim = RMSprop(self.parameters(), lr=self.hparams.lr,
+                        weight_decay=self.hparams.weight_decay)
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optim, self.hparams.lr_step_size, self.hparams.lr_gamma)
         return [optim], [scheduler]
 
     def train_data_transform(self):
@@ -165,11 +169,16 @@ class UnetMRIModel(MRIModel):
 
     @staticmethod
     def add_model_specific_args(parser):
-        parser.add_argument('--num-pools', type=int, default=4, help='Number of U-Net pooling layers')
-        parser.add_argument('--drop-prob', type=float, default=0.0, help='Dropout probability')
-        parser.add_argument('--num-chans', type=int, default=32, help='Number of U-Net channels')
-        parser.add_argument('--batch-size', default=1, type=int, help='Mini batch size')
-        parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
+        parser.add_argument('--num-pools', type=int, default=4,
+                            help='Number of U-Net pooling layers')
+        parser.add_argument('--drop-prob', type=float,
+                            default=0.0, help='Dropout probability')
+        parser.add_argument('--num-chans', type=int,
+                            default=32, help='Number of U-Net channels')
+        parser.add_argument('--batch-size', default=1,
+                            type=int, help='Mini batch size')
+        parser.add_argument('--lr', type=float,
+                            default=0.001, help='Learning rate')
         parser.add_argument('--lr-step-size', type=int, default=40,
                             help='Period of learning rate decay')
         parser.add_argument('--lr-gamma', type=float, default=0.1,
@@ -180,13 +189,14 @@ class UnetMRIModel(MRIModel):
 
 
 def create_trainer(args):
+    backend = 'ddp' if args.gpus > 0 else 'ddp_cpu'
     return Trainer(
         default_save_path=args.exp_dir,
         max_epochs=args.num_epochs,
         gpus=args.gpus,
         num_nodes=args.nodes,
         weights_summary=None,
-        distributed_backend='ddp',
+        distributed_backend=backend,
         replace_sampler_ddp=False,
     )
 
@@ -204,10 +214,13 @@ def run(args):
         model.hparams = args
         trainer.test(model)
 
+
 def main(args=None):
     parser = Args()
-    parser.add_argument('--mode', choices=['train', 'test', 'challenge'], default='train')
-    parser.add_argument('--num-epochs', type=int, default=50, help='Number of training epochs')
+    parser.add_argument(
+        '--mode', choices=['train', 'test', 'challenge'], default='train')
+    parser.add_argument('--num-epochs', type=int, default=50,
+                        help='Number of training epochs')
     parser.add_argument('--gpus', type=int, default=1)
     parser.add_argument('--nodes', type=int, default=1)
     parser.add_argument('--exp-dir', type=pathlib.Path, default='experiments',
@@ -224,6 +237,7 @@ def main(args=None):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     run(args)
+
 
 if __name__ == '__main__':
     main()

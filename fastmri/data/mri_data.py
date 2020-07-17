@@ -114,8 +114,8 @@ class SliceDataset(Dataset):
             kspace = data["kspace"]
             num_slices = kspace.shape[0]
             self.examples += [
-                (fname, slice, padding_left, padding_right)
-                for slice in range(num_slices)
+                (fname, slice_ind, padding_left, padding_right)
+                for slice_ind in range(num_slices)
             ]
 
     def __len__(self):

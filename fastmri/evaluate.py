@@ -12,6 +12,7 @@ from argparse import ArgumentParser
 import h5py
 import numpy as np
 from runstats import Statistics
+from pytorch_lightning.metrics.metric import TensorMetric
 from skimage.metrics import structural_similarity, peak_signal_noise_ratio
 from data import transforms
 
@@ -39,6 +40,14 @@ def ssim(gt, pred):
         multichannel=True,
         data_range=gt.max(),
     )
+
+
+class DistributedMetric(TensorMetric):
+    def __init__(self):
+        super().__init__(name="DistributedMetric")
+
+    def forward(self, x):
+        return x
 
 
 METRIC_FUNCS = dict(MSE=mse, NMSE=nmse, PSNR=psnr, SSIM=ssim,)

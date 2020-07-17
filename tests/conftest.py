@@ -1,7 +1,17 @@
 import pathlib
 
+import numpy as np
 import pytest
+import torch
 import yaml
+
+
+def create_input(shape):
+    x = np.arange(np.product(shape)).reshape(shape)
+    x = torch.from_numpy(x).float()
+
+    return x
+
 
 # knee data parameters
 @pytest.fixture

@@ -1,11 +1,13 @@
+import os
+from argparse import ArgumentParser
+
 import pytorch_lightning as pl
 import torch
 from torch.nn import functional as F
-from torch.optim import RMSprop
 
 import fastmri
-from fastmri.data.subsample import create_mask_for_mask_type
 from fastmri.data import transforms
+from fastmri.data.subsample import create_mask_for_mask_type
 from fastmri.models import Unet
 
 from .base_module import BaseModule
@@ -116,7 +118,9 @@ class UnetModule(pl.LightningModule):
         }
 
     def configure_optimizers(self):
-        optim = RMSprop(self.parameters(), lr=self.lr, weight_decay=self.weight_decay,)
+        optim = torch.optim.RMSprop(
+            self.parameters(), lr=self.lr, weight_decay=self.weight_decay,
+        )
         scheduler = torch.optim.lr_scheduler.StepLR(
             optim, self.lr_step_size, self.lr_gamma
         )
@@ -138,6 +142,40 @@ class UnetModule(pl.LightningModule):
 
     def test_data_transform(self):
         return DataTransform(self.resolution, self.challenge)
+
+    @staticmethod
+    def add_model_specific_args(parent_parser):  # pragma: no-cover
+        """
+        Define parameters that only apply to this model
+        """
+        parser = ArgumentParser(parents=[parent_parser])
+        parser = super().add_model_specific_args(parser)
+
+        # param overwrites
+
+        # network params
+        parser.add_argument("--in_chans", default=1, type=int)
+        parser.add_argument("--out_chans", default=1, type=int)
+        parser.add_argument("--chans", default=1, type=int)
+        parser.add_argument("--num_pool_layers", default=4, type=int)
+        parser.add_argument("--drop_prob", default=0.0, type=float)
+
+        # data params
+        parser.add_argument(
+            "--mask_type", choices=["random", "equispaced"], default="random", type=str
+        )
+        parser.add_argument("--center_fractions", nargs="+", default=[0.08], type=float)
+        parser.add_argument("--accelerations", nargs="+", default=[4], type=int)
+        parser.add_argument("--resolution", default=384, type=int)
+        parser.add_argument("--num_workers", default=4, type=int)
+
+        # training params (opt)
+        parser.add_argument("--lr", default=0.001, type=float)
+        parser.add_argument("--lr_step_size", default=40, type=int)
+        parser.add_argument("--lr_gamma", default=0.1, type=float)
+        parser.add_argument("--weight_decay", default=0.0, type=float)
+
+        return parser
 
 
 class DataTransform(object):

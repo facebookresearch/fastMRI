@@ -24,9 +24,12 @@ class Unet(nn.Module):
         """
         Args:
             in_chans (int): Number of channels in the input to the U-Net model.
-            out_chans (int): Number of channels in the output to the U-Net model.
-            chans (int): Number of output channels of the first convolution layer.
-            num_pool_layers (int): Number of down-sampling and up-sampling layers.
+            out_chans (int): Number of channels in the output to the U-Net
+                model.
+            chans (int): Number of output channels of the first convolution
+                layer.
+            num_pool_layers (int): Number of down-sampling and up-sampling
+                layers.
             drop_prob (float): Dropout probability.
         """
         super().__init__()
@@ -39,14 +42,14 @@ class Unet(nn.Module):
 
         self.down_sample_layers = nn.ModuleList([ConvBlock(in_chans, chans, drop_prob)])
         ch = chans
-        for i in range(num_pool_layers - 1):
+        for _ in range(num_pool_layers - 1):
             self.down_sample_layers += [ConvBlock(ch, ch * 2, drop_prob)]
             ch *= 2
         self.conv = ConvBlock(ch, ch * 2, drop_prob)
 
         self.up_conv = nn.ModuleList()
         self.up_transpose_conv = nn.ModuleList()
-        for i in range(num_pool_layers - 1):
+        for _ in range(num_pool_layers - 1):
             self.up_transpose_conv += [TransposeConvBlock(ch * 2, ch)]
             self.up_conv += [ConvBlock(ch * 2, ch, drop_prob)]
             ch //= 2

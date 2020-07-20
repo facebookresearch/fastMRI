@@ -5,6 +5,8 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+import pathlib
+from argparse import ArgumentParser
 from collections import defaultdict
 
 import numpy as np
@@ -14,9 +16,9 @@ import torchvision
 from torch.utils.data import DataLoader, DistributedSampler
 
 import fastmri
+from fastmri import evaluate
 from fastmri.data import SliceDataset
 from fastmri.data.volume_sampler import VolumeSampler
-from fastmri import evaluate
 from fastmri.evaluate import DistributedMetricAverage
 
 
@@ -66,7 +68,8 @@ class BaseModule(pl.LightningModule):
                 files.
             exp_name (str): Name of this experiment - this will store logs in
                 exp_dir / {exp_name}.
-            sample_rate (float, default=1.0): Sampling rate for this experiment.
+            sample_rate (float, default=1.0): Fraction of models from the
+                dataset to use.
             batch_size (int, default=1): Batch size.
             num_workers (int, default=4): Number of workers for PyTorch dataloader.
             use_ddp (boolean, default=False): Set this to true if you use a 'ddp'
@@ -213,3 +216,41 @@ class BaseModule(pl.LightningModule):
         )
 
         return dict()
+
+    @staticmethod
+    def add_model_specific_args(parent_parser):  # pragma: no-cover
+        """
+        Define parameters that only apply to this model
+        """
+        parser = ArgumentParser(parents=[parent_parser])
+
+        # data arguments
+        parser.add_argument(
+            "--data_path", default=pathlib.Path("datasets/"), type=pathlib.Path
+        )
+        parser.add_argument(
+            "--challenge",
+            choices=["singlecoil", "multicoil"],
+            default="singlecoil",
+            type=str,
+        )
+        parser.add_argument(
+            "--sample_rate", default=1.0, type=float,
+        )
+        parser.add_argument(
+            "--batch_size", default=1, type=int,
+        )
+        parser.add_argument(
+            "--num_workers", default=4, type=float,
+        )
+        parser.add_argument("--use_ddp", default=False, type=bool)
+
+        # logging params
+        parser.add_argument(
+            "--exp_dir", default=pathlib.Path("logs/"), type=pathlib.Path
+        )
+        parser.add_argument(
+            "--exp_dir", default="my_experiment", type=str,
+        )
+
+        return parser

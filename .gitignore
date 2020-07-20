@@ -7,3 +7,5 @@ logs
 *.cfl
 *.hdr
 recon-workspace.code-workspace
+datasets/
+logs/

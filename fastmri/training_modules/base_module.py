@@ -21,7 +21,8 @@ from fastmri.evaluate import DistributedMetricAverage
 
 
 class BaseModule(pl.LightningModule):
-    """Abstract super class for deep larning reconstruction models.
+    """
+    Abstract super class for deep larning reconstruction models.
     
     This is a subclass of the LightningModule class from pytorch_lightning,
     with some additional functionality specific to fastMRI:
@@ -41,23 +42,6 @@ class BaseModule(pl.LightningModule):
             Create and return the optimizers
 
     Other methods from LightningModule can be overridden as needed.
-
-    Args:
-        data_path (pathlib.Path): Path to root data directory. For example, if
-            knee/path is the root directory with subdirectories
-            multicoil_train and multicoil_val, you would input knee/path for
-            data_path.
-        challenge (str): Name of challenge from ('multicoil', 'singlecoil').
-        exp_dir (pathlib.Path): Top directory for where you want to store log
-            files.
-        exp_name (str): Name of this experiment - this will store logs in
-            exp_dir / {exp_name}.
-        sample_rate (float, default=1.0): Sampling rate for this experiment.
-        batch_size (int, default=1): Batch size.
-        num_workers (int, default=4): Number of workers for PyTorch dataloader.
-        use_ddp (boolean, default=False): Set this to true if you use a 'ddp'
-            backend for the PyTorch Lightning trainer - this will make
-            aggregation for ssim and other metrics perform as expected. 
     """
 
     def __init__(
@@ -71,6 +55,24 @@ class BaseModule(pl.LightningModule):
         num_workers=4,
         use_ddp=False,
     ):
+        """
+        Args:
+            data_path (pathlib.Path): Path to root data directory. For example, if
+                knee/path is the root directory with subdirectories
+                multicoil_train and multicoil_val, you would input knee/path for
+                data_path.
+            challenge (str): Name of challenge from ('multicoil', 'singlecoil').
+            exp_dir (pathlib.Path): Top directory for where you want to store log
+                files.
+            exp_name (str): Name of this experiment - this will store logs in
+                exp_dir / {exp_name}.
+            sample_rate (float, default=1.0): Sampling rate for this experiment.
+            batch_size (int, default=1): Batch size.
+            num_workers (int, default=4): Number of workers for PyTorch dataloader.
+            use_ddp (boolean, default=False): Set this to true if you use a 'ddp'
+                backend for the PyTorch Lightning trainer - this will make
+                aggregation for ssim and other metrics perform as expected. 
+        """
         super().__init__()
 
         self.data_path = data_path

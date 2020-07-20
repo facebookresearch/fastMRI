@@ -5,18 +5,20 @@ from torch.utils.data import Sampler
 
 
 class VolumeSampler(Sampler):
-    """Sampler for volumetric MRI data.
+    """
+    Sampler for volumetric MRI data.
 
     Based on pytorch DistributedSampler, the difference is that all instances
     from the same MRI volume need to go to the same node for distributed
     training. Dataset example is a list of tuples (fname, instance), where
     fname is essentially the volume name (actually a filename).
-
-    Args:
-        dataset (torch.utils.data.Dataset): An MRI dataset (e.g., SliceData).
     """
 
     def __init__(self, dataset):
+        """
+        Args:
+            dataset (torch.utils.data.Dataset): An MRI dataset (e.g., SliceData).
+        """
         self.dataset = dataset
         self.world_size = dist.get_world_size()
         self.rank = dist.get_rank()

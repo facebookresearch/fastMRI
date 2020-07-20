@@ -14,7 +14,8 @@ from torch.utils.data import Dataset
 
 
 def fetch_data_dir(split, knee_path=None, brain_path=None):
-    """Data directory fetcher.
+    """
+    Data directory fetcher.
 
     This is a brute-force simple way to configure data directories for a
     project. Simply overwrite the variables for `knee_path` and `brain_path`
@@ -57,7 +58,8 @@ def fetch_data_dir(split, knee_path=None, brain_path=None):
 
 
 class SliceDataset(Dataset):
-    """A PyTorch Dataset that provides access to MR image slices.
+    """
+    A PyTorch Dataset that provides access to MR image slices.
 
     Args:
         root (pathlib.Path): Path to the dataset.

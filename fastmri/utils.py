@@ -2,8 +2,11 @@ import h5py
 
 
 def save_reconstructions(reconstructions, out_dir):
-    """Saves the reconstructions from a model into h5 files that is appropriate
-    for submission to the leaderboard.
+    """
+    Save reconstruction images.
+
+    This function writes to h5 files that are appropriate for submission to the
+    leaderboard.
 
     Args:
         reconstructions (dict[str, np.array]): A dictionary mapping input

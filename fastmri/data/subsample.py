@@ -19,21 +19,23 @@ def create_mask_for_mask_type(mask_type_str, center_fractions, accelerations):
 
 
 class MaskFunc(object):
-    """An object for GRAPPA-style sampling masks.
+    """
+    An object for GRAPPA-style sampling masks.
 
     This crates a sampling mask that densely samples the center while
     subsampling outer k-space regions based on the undersampling factor.
-    
-    Args:
-        center_fractions (List[float]): Fraction of low-frequency columns to be
-            retained. If multiple values are provided, then one of these
-            numbers is chosen uniformly each time. 
-        accelerations (List[int]): Amount of under-sampling. This should have
-            the same length as center_fractions. If multiple values are
-            provided, then one of these is chosen uniformly each time.
     """
 
     def __init__(self, center_fractions, accelerations):
+        """
+        Args:
+            center_fractions (List[float]): Fraction of low-frequency columns to be
+                retained. If multiple values are provided, then one of these
+                numbers is chosen uniformly each time. 
+            accelerations (List[int]): Amount of under-sampling. This should have
+                the same length as center_fractions. If multiple values are
+                provided, then one of these is chosen uniformly each time.
+        """
         if len(center_fractions) != len(accelerations):
             raise ValueError(
                 "Number of center fractions should match number of accelerations"
@@ -72,18 +74,11 @@ class RandomMaskFunc(MaskFunc):
     then there is a 50% probability that 4-fold acceleration with 8% center
     fraction is selected and a 50% probability that 8-fold acceleration with 4%
     center fraction is selected.
-
-    Args:
-        center_fractions (List[float]): Fraction of low-frequency columns to be
-            retained. If multiple values are provided, then one of these
-            numbers is chosen uniformly each time. 
-        accelerations (List[int]): Amount of under-sampling. This should have
-            the same length as center_fractions. If multiple values are
-            provided, then one of these is chosen uniformly each time.
     """
 
     def __call__(self, shape, seed=None):
-        """Create the mask.
+        """
+        Create the mask.
 
         Args:
             shape (iterable[int]): The shape of the mask to be created. The
@@ -119,7 +114,8 @@ class RandomMaskFunc(MaskFunc):
 
 
 class EquispacedMaskFunc(MaskFunc):
-    """EquispacedMaskFunc creates a sub-sampling mask of a given shape.
+    """
+    EquispacedMaskFunc creates a sub-sampling mask of a given shape.
 
     The mask selects a subset of columns from the input k-space data. If the
     k-space data has N columns, the mask picks out:
@@ -133,14 +129,6 @@ class EquispacedMaskFunc(MaskFunc):
     It is possible to use multiple center_fractions and accelerations, in which
     case one possible (center_fraction, acceleration) is chosen uniformly at
     random each time the EquispacedMaskFunc object is called.
-
-    Args:
-        center_fractions (List[float]): Fraction of low-frequency columns to be
-            retained. If multiple values are provided, then one of these
-            numbers is chosen uniformly each time. 
-        accelerations (List[int]): Amount of under-sampling. This should have
-            the same length as center_fractions. If multiple values are
-            provided, then one of these is chosen uniformly each time.
     """
 
     def __call__(self, shape, seed):

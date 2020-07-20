@@ -12,7 +12,7 @@ from argparse import ArgumentParser
 import h5py
 import numpy as np
 from runstats import Statistics
-from pytorch_lightning.metrics.metric import TensorMetric
+from pytorch_lightning.metrics.metric import NumpyMetric
 from skimage.metrics import structural_similarity, peak_signal_noise_ratio
 from data import transforms
 
@@ -32,19 +32,24 @@ def psnr(gt, pred):
     return peak_signal_noise_ratio(gt, pred, data_range=gt.max())
 
 
-def ssim(gt, pred):
+def ssim(gt, pred, maxval=None):
     """Compute Structural Similarity Index Metric (SSIM)"""
-    return structural_similarity(
-        gt.transpose(1, 2, 0),
-        pred.transpose(1, 2, 0),
-        multichannel=True,
-        data_range=gt.max(),
-    )
+    maxval = gt.max() if maxval is None else maxval
+
+    ssim = 0
+    for slice_num in range(gt.shape[0]):
+        ssim = ssim + structural_similarity(
+            gt[slice_num], pred[slice_num], data_range=maxval
+        )
+
+    ssim = ssim / gt.shape[0]
+
+    return ssim
 
 
-class DistributedMetric(TensorMetric):
+class DistributedMetricAverage(NumpyMetric):
     def __init__(self):
-        super().__init__(name="DistributedMetric")
+        super().__init__(name="DistributedMetricAverage", reduce_op="mean")
 
     def forward(self, x):
         return x
@@ -54,14 +59,16 @@ METRIC_FUNCS = dict(MSE=mse, NMSE=nmse, PSNR=psnr, SSIM=ssim,)
 
 
 class Metrics(object):
-    """Maintains running statistics for a given collection of metrics.
-
-    Args:
-        metric_funcs (dict): A dict where the keys are metric names and the
-            values are Python functions for evaluating that metric.
+    """
+    Maintains running statistics for a given collection of metrics.
     """
 
     def __init__(self, metric_funcs):
+        """
+        Args:
+            metric_funcs (dict): A dict where the keys are metric names and the
+                values are Python functions for evaluating that metric.
+        """
         self.metrics = {metric: Statistics() for metric in metric_funcs}
 
     def push(self, target, recons):

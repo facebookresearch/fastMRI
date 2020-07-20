@@ -14,14 +14,13 @@ import torchvision
 from torch.utils.data import DataLoader, DistributedSampler
 
 import fastmri
-from common.utils import save_reconstructions
-from data.mri_data import SliceData
-from data.volume_sampler import VolumeSampler
+from fastmri.data import SliceDataset
+from fastmri.data.volume_sampler import VolumeSampler
 from fastmri import evaluate
-from .evaluate import DistributedMetric
+from fastmri.evaluate import DistributedMetricAverage
 
 
-class TrainingModule(pl.LightningModule):
+class BaseModule(pl.LightningModule):
     """Abstract super class for deep larning reconstruction models.
     
     This is a subclass of the LightningModule class from pytorch_lightning,
@@ -42,49 +41,80 @@ class TrainingModule(pl.LightningModule):
             Create and return the optimizers
 
     Other methods from LightningModule can be overridden as needed.
+
+    Args:
+        data_path (pathlib.Path): Path to root data directory. For example, if
+            knee/path is the root directory with subdirectories
+            multicoil_train and multicoil_val, you would input knee/path for
+            data_path.
+        challenge (str): Name of challenge from ('multicoil', 'singlecoil').
+        exp_dir (pathlib.Path): Top directory for where you want to store log
+            files.
+        exp_name (str): Name of this experiment - this will store logs in
+            exp_dir / {exp_name}.
+        sample_rate (float, default=1.0): Sampling rate for this experiment.
+        batch_size (int, default=1): Batch size.
+        num_workers (int, default=4): Number of workers for PyTorch dataloader.
+        use_ddp (boolean, default=False): Set this to true if you use a 'ddp'
+            backend for the PyTorch Lightning trainer - this will make
+            aggregation for ssim and other metrics perform as expected. 
     """
 
-    def __init__(self, hparams):
+    def __init__(
+        self,
+        data_path,
+        challenge,
+        exp_dir,
+        exp_name,
+        sample_rate=1.0,
+        batch_size=1,
+        num_workers=4,
+        use_ddp=False,
+    ):
         super().__init__()
-        self.hparams = hparams
 
-        val_dataloader = self.val_dataloader()
+        self.data_path = data_path
+        self.challenge = challenge
+        self.exp_dir = exp_dir
+        self.exp_name = exp_name
+        self.sample_rate = sample_rate
+        self.use_ddp = use_ddp
 
-        nmse_metrics = dict()
-        ssim_metrics = dict()
-        psnr_metrics = dict()
-        slice_counts = dict()
-        for (fname, slice_ind, _, _) in val_dataloader.dataset.examples:
-            if nmse_metrics.get(fname) is None:
-                nmse_metrics[fname] = DistributedMetric()
-                ssim_metrics[fname] = DistributedMetric()
-                psnr_metrics[fname] = DistributedMetric()
-
-                slice_counts[fname] = slice_ind + 1
-            elif slice_ind + 1 > slice_counts[fname]:
-                slice_counts[fname] = slice_ind + 1
-
-        self.nmse_metrics = nmse_metrics
-        self.ssim_metrics = ssim_metrics
-        self.psnr_metrics = psnr_metrics
-        self.slice_counts = slice_counts
+        self.distr_metric_funs = {
+            "nmse": DistributedMetricAverage(),
+            "ssim": DistributedMetricAverage(),
+            "psnr": DistributedMetricAverage(),
+        }
 
     def _create_data_loader(self, data_transform, data_partition, sample_rate=None):
-        sample_rate = sample_rate or self.hparams.sample_rate
-        dataset = SliceData(
-            root=self.hparams.data_path / f"{self.hparams.challenge}_{data_partition}",
+        sample_rate = sample_rate or self.sample_rate
+        dataset = SliceDataset(
+            root=self.data_path / f"{self.challenge}_{data_partition}",
             transform=data_transform,
             sample_rate=sample_rate,
-            challenge=self.hparams.challenge,
+            challenge=self.challenge,
         )
 
-        return DataLoader(
+        is_train = data_partition == "train"
+
+        # ensure that entire volumes go to the same GPU in the ddp setting
+        sampler = None
+        if self.use_ddp:
+            if is_train:
+                sampler = DistributedSampler(dataset)
+            else:
+                sampler = VolumeSampler(dataset)
+
+        dataloader = DataLoader(
             dataset=dataset,
-            batch_size=self.hparams.batch_size,
-            num_workers=self.hparams.num_workers,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
             pin_memory=False,
-            drop_last=(data_partition == "train"),
+            drop_last=is_train,
+            sampler=sampler,
         )
+
+        return dataloader
 
     def train_data_transform(self):
         raise NotImplementedError
@@ -127,14 +157,17 @@ class TrainingModule(pl.LightningModule):
             metrics["ssim"].append(evaluate.ssim(target, output))
             metrics["psnr"].append(evaluate.psnr(target, output))
 
-        metrics = {metric: np.mean(values) for metric, values in metrics.items()}
+        metrics = {
+            metric: self.distr_metric_funs[metric](np.mean(values))
+            for metric, values in metrics.items()
+        }
 
         return dict(log=metrics, **metrics)
 
     def _visualize(self, val_logs):
         def _normalize(image):
             image = image[np.newaxis]
-            image -= image.min()
+            image = image - image.min()
             return image / image.max()
 
         def _save_image(image, tag):
@@ -148,9 +181,11 @@ class TrainingModule(pl.LightningModule):
         num_viz_images = 16
         step = (num_logs + num_viz_images - 1) // num_viz_images
         outputs, targets = [], []
+
         for i in range(0, num_logs, step):
             outputs.append(_normalize(val_logs[i]["output"][0]))
             targets.append(_normalize(val_logs[i]["target"][0]))
+
         outputs = np.stack(outputs)
         targets = np.stack(targets)
         _save_image(targets, "Target")
@@ -163,12 +198,16 @@ class TrainingModule(pl.LightningModule):
 
     def test_epoch_end(self, test_logs):
         outputs = defaultdict(list)
+
         for log in test_logs:
             for i, (fname, slice) in enumerate(zip(log["fname"], log["slice"])):
                 outputs[fname].append((slice, log["output"][i]))
+
         for fname in outputs:
             outputs[fname] = np.stack([out for _, out in sorted(outputs[fname])])
-        save_reconstructions(
-            outputs, self.hparams.exp_dir / self.hparams.exp / "reconstructions"
+
+        fastmri.save_reconstructions(
+            outputs, self.exp_dir / self.exp_name / "reconstructions"
         )
+
         return dict()

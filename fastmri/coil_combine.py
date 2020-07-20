@@ -4,7 +4,8 @@ import fastmri
 
 
 def rss(data, dim=0):
-    """Compute the Root Sum of Squares (RSS).
+    """
+    Compute the Root Sum of Squares (RSS).
 
     RSS is computed assuming that dim is the coil dimension.
 
@@ -19,7 +20,8 @@ def rss(data, dim=0):
 
 
 def rss_complex(data, dim=0):
-    """Compute the Root Sum of Squares (RSS) for complex inputs.
+    """
+    Compute the Root Sum of Squares (RSS) for complex inputs.
 
     RSS is computed assuming that dim is the coil dimension.
 

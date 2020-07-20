@@ -2,7 +2,8 @@ import torch
 
 
 def complex_mul(x, y):
-    """Complex multiplication.
+    """
+    Complex multiplication.
 
     This multiplies two complex tensors assuming that they are both stored as
     real arrays with the last dimension being the complex dimension.
@@ -22,7 +23,8 @@ def complex_mul(x, y):
 
 
 def complex_conj(x):
-    """Complex conjugate.
+    """
+    Complex conjugate.
 
     This applies the complex conjugate assuming that the input array has the
     last dimension as the complex dimension.
@@ -40,7 +42,8 @@ def complex_conj(x):
 
 
 def fft2c(data):
-    """Apply centered 2 dimensional Fast Fourier Transform.
+    """
+    Apply centered 2 dimensional Fast Fourier Transform.
 
     Args:
         data (torch.Tensor): Complex valued input data containing at least 3
@@ -60,7 +63,8 @@ def fft2c(data):
 
 
 def ifft2c(data):
-    """Apply centered 2-dimensional Inverse Fast Fourier Transform.
+    """
+    Apply centered 2-dimensional Inverse Fast Fourier Transform.
 
     Args:
         data (torch.Tensor): Complex valued input data containing at least 3
@@ -80,7 +84,8 @@ def ifft2c(data):
 
 
 def complex_abs(data):
-    """Compute the absolute value of a complex valued input tensor.
+    """
+    Compute the absolute value of a complex valued input tensor.
 
     Args:
         data (torch.Tensor): A complex valued tensor, where the size of the
@@ -95,7 +100,8 @@ def complex_abs(data):
 
 
 def complex_abs_sq(data):
-    """Compute the squared absolute value of a complex tensor.
+    """
+    Compute the squared absolute value of a complex tensor.
 
     Args:
         data (torch.Tensor): A complex valued tensor, where the size of the
@@ -112,7 +118,8 @@ def complex_abs_sq(data):
 
 
 def roll(x, shift, dim):
-    """Similar to np.roll but applies to PyTorch Tensors.
+    """
+    Similar to np.roll but applies to PyTorch Tensors.
 
     Args:
         x (torch.Tensor): A PyTorch tensor.
@@ -136,7 +143,8 @@ def roll(x, shift, dim):
 
 
 def fftshift(x, dim=None):
-    """Similar to np.fft.fftshift but applies to PyTorch Tensors
+    """
+    Similar to np.fft.fftshift but applies to PyTorch Tensors
 
     Args:
         x (torch.Tensor): A PyTorch tensor.
@@ -157,7 +165,8 @@ def fftshift(x, dim=None):
 
 
 def ifftshift(x, dim=None):
-    """Similar to np.fft.ifftshift but applies to PyTorch Tensors
+    """
+    Similar to np.fft.ifftshift but applies to PyTorch Tensors
 
     Args:
         x (torch.Tensor): A PyTorch tensor.

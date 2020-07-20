@@ -10,7 +10,8 @@ import torch
 
 
 def to_tensor(data):
-    """Convert numpy array to PyTorch tensor.
+    """
+    Convert numpy array to PyTorch tensor.
     
     For complex arrays, the real and imaginary parts are stacked along the last
     dimension.
@@ -28,7 +29,8 @@ def to_tensor(data):
 
 
 def tensor_to_complex_np(data):
-    """Converts a complex torch tensor to numpy array.
+    """
+    Converts a complex torch tensor to numpy array.
 
     Args:
         data (torch.Tensor): Input data to be converted to numpy.
@@ -42,7 +44,8 @@ def tensor_to_complex_np(data):
 
 
 def apply_mask(data, mask_func, seed=None, padding=None):
-    """Subsample given k-space by multiplying with a mask.
+    """
+    Subsample given k-space by multiplying with a mask.
 
     Args:
         data (torch.Tensor): The input k-space data. This should have at least 3 dimensions, where
@@ -77,7 +80,8 @@ def mask_center(x, mask_from, mask_to):
 
 
 def center_crop(data, shape):
-    """Apply a center crop to the input real image or batch of real images.
+    """
+    Apply a center crop to the input real image or batch of real images.
 
     Args:
         data (torch.Tensor): The input tensor to be center cropped. It should
@@ -101,7 +105,8 @@ def center_crop(data, shape):
 
 
 def complex_center_crop(data, shape):
-    """Apply a center crop to the input image or batch of complex images.
+    """
+    Apply a center crop to the input image or batch of complex images.
 
     Args:
         data (torch.Tensor): The complex input tensor to be center cropped. It
@@ -126,7 +131,8 @@ def complex_center_crop(data, shape):
 
 
 def center_crop_to_smallest(x, y):
-    """Apply a center crop on the larger image to the size of the smaller.
+    """
+    Apply a center crop on the larger image to the size of the smaller.
 
     The minimum is taken over dim=-1 and dim=-2. If x is smaller than y at
     dim=-1 and y is smaller than x at dim=-2, then the returned dimension will
@@ -148,7 +154,8 @@ def center_crop_to_smallest(x, y):
 
 
 def normalize(data, mean, stddev, eps=0.0):
-    """Normalize the given tensor.
+    """
+    Normalize the given tensor.
 
     Applies the formula (data - mean) / (stddev + eps).
 
@@ -165,7 +172,8 @@ def normalize(data, mean, stddev, eps=0.0):
 
 
 def normalize_instance(data, eps=0.0):
-    """Normalize the given tensor  with instance norm/
+    """
+    Normalize the given tensor  with instance norm/
 
     Applies the formula (data - mean) / (stddev + eps), where mean and stddev
     are computed from the data itself.

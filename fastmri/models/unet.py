@@ -10,7 +10,7 @@ from torch import nn
 from torch.nn import functional as F
 
 
-class UNet(nn.Module):
+class Unet(nn.Module):
     """
     PyTorch implementation of a U-Net model.
 
@@ -20,7 +20,7 @@ class UNet(nn.Module):
         computing and computer-assisted intervention, pages 234–241. Springer, 2015.
     """
 
-    def __init__(self, in_chans, out_chans, chans, num_pool_layers, drop_prob):
+    def __init__(self, in_chans, out_chans, chans=32, num_pool_layers=4, drop_prob=0.0):
         """
         Args:
             in_chans (int): Number of channels in the input to the U-Net model.
@@ -59,36 +59,36 @@ class UNet(nn.Module):
             )
         ]
 
-    def forward(self, input):
+    def forward(self, image):
         """
         Args:
-            input (torch.Tensor): Input tensor of shape [batch_size, self.in_chans, height, width]
+            image (torch.Tensor): Input tensor of shape [batch_size, self.in_chans, height, width]
 
         Returns:
             (torch.Tensor): Output tensor of shape [batch_size, self.out_chans, height, width]
         """
         stack = []
-        output = input
+        output = image
 
-        # Apply down-sampling layers
-        for i, layer in enumerate(self.down_sample_layers):
+        # apply down-sampling layers
+        for layer in self.down_sample_layers:
             output = layer(output)
             stack.append(output)
             output = F.avg_pool2d(output, kernel_size=2, stride=2, padding=0)
 
         output = self.conv(output)
 
-        # Apply up-sampling layers
+        # apply up-sampling layers
         for transpose_conv, conv in zip(self.up_transpose_conv, self.up_conv):
             downsample_layer = stack.pop()
             output = transpose_conv(output)
 
-            # Reflect pad on the right/botton if needed to handle odd input dimensions.
+            # reflect pad on the right/botton if needed to handle odd input dimensions.
             padding = [0, 0, 0, 0]
             if output.shape[-1] != downsample_layer.shape[-1]:
-                padding[1] = 1  # Padding right
+                padding[1] = 1  # padding right
             if output.shape[-2] != downsample_layer.shape[-2]:
-                padding[3] = 1  # Padding bottom
+                padding[3] = 1  # padding bottom
             if sum(padding) != 0:
                 output = F.pad(output, padding, "reflect")
 
@@ -128,15 +128,15 @@ class ConvBlock(nn.Module):
             nn.Dropout2d(drop_prob),
         )
 
-    def forward(self, input):
+    def forward(self, image):
         """
         Args:
-            input (torch.Tensor): Input tensor of shape [batch_size, self.in_chans, height, width]
+            image (torch.Tensor): Input tensor of shape [batch_size, self.in_chans, height, width]
 
         Returns:
             (torch.Tensor): Output tensor of shape [batch_size, self.out_chans, height, width]
         """
-        return self.layers(input)
+        return self.layers(image)
 
     def __repr__(self):
         return (
@@ -170,15 +170,15 @@ class TransposeConvBlock(nn.Module):
             nn.LeakyReLU(negative_slope=0.2, inplace=True),
         )
 
-    def forward(self, input):
+    def forward(self, image):
         """
         Args:
-            input (torch.Tensor): Input tensor of shape [batch_size, self.in_chans, height, width]
+            image (torch.Tensor): Input tensor of shape [batch_size, self.in_chans, height, width]
 
         Returns:
             (torch.Tensor): Output tensor of shape [batch_size, self.out_chans, height, width]
         """
-        return self.layers(input)
+        return self.layers(image)
 
     def __repr__(self):
         return f"ConvBlock(in_chans={self.in_chans}, out_chans={self.out_chans})"

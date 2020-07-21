@@ -13,16 +13,17 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 import torchvision
+from pytorch_lightning import _logger as log
 from torch.utils.data import DataLoader, DistributedSampler
 
 import fastmri
 from fastmri import evaluate
 from fastmri.data import SliceDataset
 from fastmri.data.volume_sampler import VolumeSampler
-from fastmri.evaluate import DistributedMetricAverage
+from fastmri.evaluate import DistributedMetricSum
 
 
-class BaseModule(pl.LightningModule):
+class MriModule(pl.LightningModule):
     """
     Abstract super class for deep larning reconstruction models.
     
@@ -56,6 +57,7 @@ class BaseModule(pl.LightningModule):
         batch_size=1,
         num_workers=4,
         use_ddp=False,
+        **kwargs,
     ):
         """
         Args:
@@ -83,13 +85,19 @@ class BaseModule(pl.LightningModule):
         self.exp_dir = exp_dir
         self.exp_name = exp_name
         self.sample_rate = sample_rate
+        self.batch_size = batch_size
+        self.num_workers = num_workers
         self.use_ddp = use_ddp
 
         self.distr_metric_funs = {
-            "nmse": DistributedMetricAverage(),
-            "ssim": DistributedMetricAverage(),
-            "psnr": DistributedMetricAverage(),
+            "tot_num_examples": DistributedMetricSum("tot_num_examples"),
+            "val_loss": DistributedMetricSum("val_loss"),
+            "nmse": DistributedMetricSum("nmse"),
+            "ssim": DistributedMetricSum("ssim"),
+            "psnr": DistributedMetricSum("psnr"),
         }
+
+        self.othermetric = DistributedMetricSum("bleh")
 
     def _create_data_loader(self, data_transform, data_partition, sample_rate=None):
         sample_rate = sample_rate or self.sample_rate
@@ -143,33 +151,7 @@ class BaseModule(pl.LightningModule):
             self.test_data_transform(), data_partition="test", sample_rate=1.0,
         )
 
-    def _evaluate(self, val_logs):
-        losses = []
-        outputs = defaultdict(list)
-        targets = defaultdict(list)
-
-        for log in val_logs:
-            losses.append(log["val_loss"].cpu().numpy())
-            for i, (fname, slice_ind) in enumerate(zip(log["fname"], log["slice"])):
-                outputs[fname].append((slice_ind, log["output"][i]))
-                targets[fname].append((slice_ind, log["target"][i]))
-
-        metrics = dict(val_loss=losses, nmse=[], ssim=[], psnr=[])
-        for fname in outputs:
-            output = np.stack([out for _, out in sorted(outputs[fname])])
-            target = np.stack([tgt for _, tgt in sorted(targets[fname])])
-            metrics["nmse"].append(evaluate.nmse(target, output))
-            metrics["ssim"].append(evaluate.ssim(target, output))
-            metrics["psnr"].append(evaluate.psnr(target, output))
-
-        metrics = {
-            metric: self.distr_metric_funs[metric](np.mean(values))
-            for metric, values in metrics.items()
-        }
-
-        return dict(log=metrics, **metrics)
-
-    def _visualize(self, val_logs):
+    def _visualize(self, val_outputs, val_targets):
         def _normalize(image):
             image = image[np.newaxis]
             image = image - image.min()
@@ -180,16 +162,20 @@ class BaseModule(pl.LightningModule):
             self.logger.experiment.add_image(tag, grid)
 
         # only process first size to simplify visualization.
-        visualize_size = val_logs[0]["output"].shape
-        val_logs = [x for x in val_logs if x["output"].shape == visualize_size]
-        num_logs = len(val_logs)
+        visualize_size = val_outputs[0].shape
+        val_outputs = [x for x in val_outputs if x.shape == visualize_size]
+        val_targets = [x for x in val_targets if x.shape == visualize_size]
+
+        num_logs = len(val_outputs)
+        assert num_logs == len(val_targets)
+
         num_viz_images = 16
         step = (num_logs + num_viz_images - 1) // num_viz_images
         outputs, targets = [], []
 
         for i in range(0, num_logs, step):
-            outputs.append(_normalize(val_logs[i]["output"][0]))
-            targets.append(_normalize(val_logs[i]["target"][0]))
+            outputs.append(_normalize(val_outputs[i]))
+            targets.append(_normalize(val_targets[i]))
 
         outputs = np.stack(outputs)
         targets = np.stack(targets)
@@ -198,8 +184,60 @@ class BaseModule(pl.LightningModule):
         _save_image(np.abs(targets - outputs), "Error")
 
     def validation_epoch_end(self, val_logs):
-        self._visualize(val_logs)
-        return self._evaluate(val_logs)
+        # run the visualizations
+        assert val_logs[0]["output"].ndim == 3
+        self._visualize(
+            val_outputs=np.concatenate([x["output"].cpu().numpy() for x in val_logs]),
+            val_targets=np.concatenate([x["target"].cpu().numpy() for x in val_logs]),
+        )
+
+        # aggregate losses
+        losses = []
+        outputs = defaultdict(list)
+        targets = defaultdict(list)
+        base_tensor = val_logs[0]["output"][0]
+
+        for val_log in val_logs:
+            losses.append(val_log["val_loss"].cpu().numpy())
+            for i, (fname, slice_ind) in enumerate(
+                zip(val_log["fname"], val_log["slice"])
+            ):
+                outputs[int(fname)].append(
+                    (int(slice_ind), val_log["output"][i].cpu().numpy())
+                )
+                targets[int(fname)].append(
+                    (int(slice_ind), val_log["target"][i].cpu().numpy())
+                )
+
+        metrics = dict(val_loss=losses, nmse=[], ssim=[], psnr=[])
+        bleh = 0
+        for fname in outputs:
+            output = np.concatenate([out for _, out in sorted(outputs[fname])])
+            target = np.concatenate([tgt for _, tgt in sorted(targets[fname])])
+            metrics["nmse"].append(evaluate.nmse(target, output))
+            metrics["ssim"].append(evaluate.ssim(target, output))
+            metrics["psnr"].append(evaluate.psnr(target, output))
+            bleh = bleh + self.othermetric(
+                torch.tensor(evaluate.nmse(target, output)).to(base_tensor)
+            )
+            print(f"bleh: {bleh}")
+
+        # handle aggregation for distributed case with pytorch_lightning metrics
+        # aggregation has the mean-of-means problem, which
+        num_examples = torch.tensor(len(outputs)).to(base_tensor)
+        tot_examples = self.distr_metric_funs["tot_num_examples"](num_examples)
+        weight = num_examples.to(tot_examples) / tot_examples
+
+        metrics = {
+            metric: self.distr_metric_funs[metric](
+                (np.mean(values) * weight).to(base_tensor)
+            )
+            .cpu()
+            .numpy()
+            for metric, values in metrics.items()
+        }
+
+        return dict(log=metrics, **metrics)
 
     def test_epoch_end(self, test_logs):
         outputs = defaultdict(list)
@@ -250,7 +288,7 @@ class BaseModule(pl.LightningModule):
             "--exp_dir", default=pathlib.Path("logs/"), type=pathlib.Path
         )
         parser.add_argument(
-            "--exp_dir", default="my_experiment", type=str,
+            "--exp_name", default="my_experiment", type=str,
         )
 
         return parser

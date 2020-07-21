@@ -10,4 +10,5 @@ from .math import (
     ifftshift,
     roll,
 )
+from .mri_module import MriModule
 from .utils import save_reconstructions

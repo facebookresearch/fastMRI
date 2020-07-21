@@ -10,10 +10,10 @@ from fastmri.data import transforms
 from fastmri.data.subsample import create_mask_for_mask_type
 from fastmri.models import Unet
 
-from .base_module import BaseModule
+from fastmri import MriModule
 
 
-class UnetModule(pl.LightningModule):
+class UnetModule(MriModule):
     """
     Unet training module.
     """
@@ -72,7 +72,7 @@ class UnetModule(pl.LightningModule):
         self.lr_gamma = lr_gamma
         self.weight_decay = weight_decay
 
-        self.model = Unet(
+        self.unet = Unet(
             in_chans=self.in_chans,
             out_chans=self.out_chans,
             chans=self.chans,
@@ -85,23 +85,27 @@ class UnetModule(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         image, target, _, _, _, _ = batch
-        output = self.forward(image)
+        output = self(image)
         loss = F.l1_loss(output, target)
-        logs = {"loss": loss.item()}
+        logs = {"loss": loss.detach()}
 
         return dict(loss=loss, log=logs)
 
     def validation_step(self, batch, batch_idx):
         image, target, mean, std, fname, slice_num = batch
-        output = self.forward(image)
+        output = self(image)
         mean = mean.unsqueeze(1).unsqueeze(2)
         std = std.unsqueeze(1).unsqueeze(2)
 
+        fnumber = torch.zeros(len(fname)).to(output)
+        for i, fn in enumerate(fname):
+            fnumber[i] = int(fn.split("file")[1].split(".h5")[0])
+
         return {
-            "fname": fname,
+            "fname": fnumber,
             "slice": slice_num,
-            "output": (output * std + mean).cpu().numpy(),
-            "target": (target * std + mean).cpu().numpy(),
+            "output": output * std + mean,
+            "target": target * std + mean,
             "val_loss": F.l1_loss(output, target),
         }
 
@@ -148,8 +152,8 @@ class UnetModule(pl.LightningModule):
         """
         Define parameters that only apply to this model
         """
-        parser = ArgumentParser(parents=[parent_parser])
-        parser = super().add_model_specific_args(parser)
+        parser = ArgumentParser(parents=[parent_parser], add_help=False)
+        parser = MriModule.add_model_specific_args(parser)
 
         # param overwrites
 
@@ -167,7 +171,6 @@ class UnetModule(pl.LightningModule):
         parser.add_argument("--center_fractions", nargs="+", default=[0.08], type=float)
         parser.add_argument("--accelerations", nargs="+", default=[4], type=int)
         parser.add_argument("--resolution", default=384, type=int)
-        parser.add_argument("--num_workers", default=4, type=int)
 
         # training params (opt)
         parser.add_argument("--lr", default=0.001, type=float)

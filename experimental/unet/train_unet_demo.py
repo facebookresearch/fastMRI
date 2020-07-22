@@ -31,9 +31,9 @@ def run_cli():
     # ------------------------
     # TRAINING ARGUMENTS
     # ------------------------
-    # these are project-wide arguments
-    knee_path = pathlib.Path.cwd() / "../../datasets/knee_data"
-    logdir = pathlib.Path.cwd() / "../../logs/unet"
+    # this assumes data is stored in a folder parallel to the code repository
+    knee_path = pathlib.Path.cwd() / "../../../datasets/knee_data"
+    logdir = pathlib.Path.cwd() / "../../../logs/unet/unet_demo"
     parent_parser = ArgumentParser(add_help=False)
 
     parser = UnetModule.add_model_specific_args(parent_parser)
@@ -61,7 +61,6 @@ def run_cli():
         challenge="singlecoil",
         exp_dir=logdir,
         exp_name="unet_demo",
-        use_ddp=(backend == "ddp"),
         batch_size=batch_size,
     )
     parser.set_defaults(**config)

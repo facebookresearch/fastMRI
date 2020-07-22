@@ -13,9 +13,59 @@ from torch.distributed import ReduceOp
 import h5py
 import numpy as np
 from runstats import Statistics
-from pytorch_lightning.metrics.metric import TensorMetric
+from pytorch_lightning.metrics.metric import TensorMetric, NumpyMetric
 from skimage.metrics import structural_similarity, peak_signal_noise_ratio
 from data import transforms
+
+
+class MSE(NumpyMetric):
+    """Calculates MSE and aggregates by summing across distr processes."""
+
+    def __init__(self, name="MSE", *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
+
+    def forward(self, gt, pred):
+        return mse(gt, pred)
+
+
+class NMSE(NumpyMetric):
+    """Calculates NMSE and aggregates by summing across distr processes."""
+
+    def __init__(self, name="NMSE", *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
+
+    def forward(self, gt, pred):
+        return nmse(gt, pred)
+
+
+class PSNR(NumpyMetric):
+    """Calculates PSNR and aggregates by summing across distr processes."""
+
+    def __init__(self, name="PSNR", *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
+
+    def forward(self, gt, pred):
+        return psnr(gt, pred)
+
+
+class SSIM(NumpyMetric):
+    """Calculates SSIM and aggregates by summing across distr processes."""
+
+    def __init__(self, name="SSIM", *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
+
+    def forward(self, gt, pred, maxval=None):
+        return ssim(gt, pred, maxval=maxval)
+
+
+class DistributedMetricSum(TensorMetric):
+    """Used for summing parameters across distr processes."""
+
+    def __init__(self, name="DistributedMetricSum", *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
+
+    def forward(self, x):
+        return x.clone()
 
 
 def mse(gt, pred):
@@ -46,11 +96,6 @@ def ssim(gt, pred, maxval=None):
     ssim = ssim / gt.shape[0]
 
     return ssim
-
-
-class DistributedMetricSum(TensorMetric):
-    def forward(self, x):
-        return x.clone()
 
 
 METRIC_FUNCS = dict(MSE=mse, NMSE=nmse, PSNR=psnr, SSIM=ssim,)

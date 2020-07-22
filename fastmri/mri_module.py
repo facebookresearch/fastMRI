@@ -20,7 +20,7 @@ import fastmri
 from fastmri import evaluate
 from fastmri.data import SliceDataset
 from fastmri.data.volume_sampler import VolumeSampler
-from fastmri.evaluate import DistributedMetricSum
+from fastmri.evaluate import NMSE, PSNR, SSIM, DistributedMetricSum
 
 
 class MriModule(pl.LightningModule):
@@ -56,7 +56,6 @@ class MriModule(pl.LightningModule):
         sample_rate=1.0,
         batch_size=1,
         num_workers=4,
-        use_ddp=False,
         **kwargs,
     ):
         """
@@ -87,17 +86,12 @@ class MriModule(pl.LightningModule):
         self.sample_rate = sample_rate
         self.batch_size = batch_size
         self.num_workers = num_workers
-        self.use_ddp = use_ddp
 
-        self.distr_metric_funs = {
-            "tot_num_examples": DistributedMetricSum("tot_num_examples"),
-            "val_loss": DistributedMetricSum("val_loss"),
-            "nmse": DistributedMetricSum("nmse"),
-            "ssim": DistributedMetricSum("ssim"),
-            "psnr": DistributedMetricSum("psnr"),
-        }
-
-        self.othermetric = DistributedMetricSum("bleh")
+        self.NMSE = DistributedMetricSum(name="NMSE")
+        self.SSIM = DistributedMetricSum(name="SSIM")
+        self.PSNR = DistributedMetricSum(name="PSNR")
+        self.ValLoss = DistributedMetricSum(name="ValLoss")
+        self.TotExamples = DistributedMetricSum(name="TotExamples")
 
     def _create_data_loader(self, data_transform, data_partition, sample_rate=None):
         sample_rate = sample_rate or self.sample_rate
@@ -183,59 +177,56 @@ class MriModule(pl.LightningModule):
         _save_image(outputs, "Reconstruction")
         _save_image(np.abs(targets - outputs), "Error")
 
+    def validation_step_end(self, val_logs):
+        device = val_logs["output"].device
+        # move to CPU to save GPU memory
+        val_logs = {key: value.cpu() for key, value in val_logs.items()}
+        val_logs["device"] = device
+
+        return val_logs
+
     def validation_epoch_end(self, val_logs):
-        # run the visualizations
         assert val_logs[0]["output"].ndim == 3
+        device = val_logs[0]["device"]
+
+        # run the visualizations
         self._visualize(
-            val_outputs=np.concatenate([x["output"].cpu().numpy() for x in val_logs]),
-            val_targets=np.concatenate([x["target"].cpu().numpy() for x in val_logs]),
+            val_outputs=np.concatenate([x["output"].numpy() for x in val_logs]),
+            val_targets=np.concatenate([x["target"].numpy() for x in val_logs]),
         )
 
         # aggregate losses
         losses = []
         outputs = defaultdict(list)
         targets = defaultdict(list)
-        base_tensor = val_logs[0]["output"][0]
 
         for val_log in val_logs:
-            losses.append(val_log["val_loss"].cpu().numpy())
+            losses.append(val_log["val_loss"])
             for i, (fname, slice_ind) in enumerate(
                 zip(val_log["fname"], val_log["slice"])
             ):
-                outputs[int(fname)].append(
-                    (int(slice_ind), val_log["output"][i].cpu().numpy())
-                )
-                targets[int(fname)].append(
-                    (int(slice_ind), val_log["target"][i].cpu().numpy())
-                )
-
-        metrics = dict(val_loss=losses, nmse=[], ssim=[], psnr=[])
-        bleh = 0
-        for fname in outputs:
-            output = np.concatenate([out for _, out in sorted(outputs[fname])])
-            target = np.concatenate([tgt for _, tgt in sorted(targets[fname])])
-            metrics["nmse"].append(evaluate.nmse(target, output))
-            metrics["ssim"].append(evaluate.ssim(target, output))
-            metrics["psnr"].append(evaluate.psnr(target, output))
-            bleh = bleh + self.othermetric(
-                torch.tensor(evaluate.nmse(target, output)).to(base_tensor)
-            )
-            print(f"bleh: {bleh}")
+                outputs[int(fname)].append((int(slice_ind), val_log["output"][i]))
+                targets[int(fname)].append((int(slice_ind), val_log["target"][i]))
 
         # handle aggregation for distributed case with pytorch_lightning metrics
-        # aggregation has the mean-of-means problem, which
-        num_examples = torch.tensor(len(outputs)).to(base_tensor)
-        tot_examples = self.distr_metric_funs["tot_num_examples"](num_examples)
-        weight = num_examples.to(tot_examples) / tot_examples
+        metrics = dict(val_loss=0, nmse=0, ssim=0, psnr=0)
+        for fname in outputs:
+            output = torch.cat([out for _, out in sorted(outputs[fname])]).numpy()
+            target = torch.cat([tgt for _, tgt in sorted(targets[fname])]).numpy()
+            metrics["nmse"] = metrics["nmse"] + evaluate.nmse(target, output)
+            metrics["ssim"] = metrics["ssim"] + evaluate.ssim(target, output)
+            metrics["psnr"] = metrics["psnr"] + evaluate.psnr(target, output)
 
-        metrics = {
-            metric: self.distr_metric_funs[metric](
-                (np.mean(values) * weight).to(base_tensor)
-            )
-            .cpu()
-            .numpy()
-            for metric, values in metrics.items()
-        }
+        # currently ddp reduction requires everything on CUDA, so we'll do this manually
+        metrics["nmse"] = self.NMSE(torch.tensor(metrics["nmse"]).to(device))
+        metrics["ssim"] = self.SSIM(torch.tensor(metrics["ssim"]).to(device))
+        metrics["psnr"] = self.PSNR(torch.tensor(metrics["psnr"]).to(device))
+        metrics["val_loss"] = self.ValLoss(torch.sum(torch.stack(losses)).to(device))
+
+        num_examples = torch.tensor(len(outputs)).to(device)
+        tot_examples = self.TotExamples(num_examples)
+
+        metrics = {metric: values / tot_examples for metric, values in metrics.items()}
 
         return dict(log=metrics, **metrics)
 

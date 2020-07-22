@@ -9,3 +9,5 @@ logs
 recon-workspace.code-workspace
 datasets/
 logs/
+add_all_headers.py
+add_header.py

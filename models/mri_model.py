@@ -16,6 +16,7 @@ from torch.utils.data import DistributedSampler, DataLoader
 from common import evaluate
 from common.utils import save_reconstructions
 from data.mri_data import SliceData
+from data.volume_sampler import VolumeSampler
 
 
 class MRIModel(pl.LightningModule):
@@ -52,34 +53,36 @@ class MRIModel(pl.LightningModule):
             challenge=self.hparams.challenge
         )
 
-        sampler = DistributedSampler(dataset)
+        is_train = (data_partition == 'train')
+        if is_train:
+            sampler = DistributedSampler(dataset)
+        else:
+            sampler = VolumeSampler(dataset)
+
         return DataLoader(
             dataset=dataset,
             batch_size=self.hparams.batch_size,
             num_workers=4,
-            pin_memory=True,
-            drop_last=(data_partition == 'train'),
+            pin_memory=False,
+            drop_last=is_train,
             sampler=sampler,
         )
 
     def train_data_transform(self):
         raise NotImplementedError
 
-    @pl.data_loader
     def train_dataloader(self):
         return self._create_data_loader(self.train_data_transform(), data_partition='train')
 
     def val_data_transform(self):
         raise NotImplementedError
 
-    @pl.data_loader
     def val_dataloader(self):
         return self._create_data_loader(self.val_data_transform(), data_partition='val')
 
     def test_data_transform(self):
         raise NotImplementedError
 
-    @pl.data_loader
     def test_dataloader(self):
         return self._create_data_loader(self.test_data_transform(), data_partition=self.hparams.mode, sample_rate=1.)
 

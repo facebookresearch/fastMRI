@@ -7,6 +7,7 @@ LICENSE file in the root directory of this source tree.
 
 import math
 import pathlib
+import os
 import random
 
 import numpy as np
@@ -72,7 +73,8 @@ class DataTransform:
         acq_start = attrs['padding_left']
         acq_end = attrs['padding_right']
         if self.mask_func:
-            masked_kspace, mask = T.apply_mask(kspace, self.mask_func, seed, (acq_start, acq_end))
+            masked_kspace, mask = T.apply_mask(
+                kspace, self.mask_func, seed, (acq_start, acq_end))
         else:
             masked_kspace = kspace
             shape = np.array(kspace.shape)
@@ -80,9 +82,10 @@ class DataTransform:
             shape[:-3] = 1
             mask_shape = [1 for _ in shape]
             mask_shape[-2] = num_cols
-            mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
-            mask[:,:,:acq_start] = 0
-            mask[:,:,acq_end:] = 0
+            mask = torch.from_numpy(mask.reshape(
+                *mask_shape).astype(np.float32))
+            mask[:, :, :acq_start] = 0
+            mask[:, :, acq_end:] = 0
         return masked_kspace, mask.byte(), target, fname, slice, max_value
 
 
@@ -91,7 +94,8 @@ class SSIM(nn.Module):
         super().__init__()
         self.win_size = win_size
         self.k1, self.k2 = k1, k2
-        self.register_buffer('w', torch.ones(1, 1, win_size, win_size) / win_size ** 2)
+        self.register_buffer('w', torch.ones(
+            1, 1, win_size, win_size) / win_size ** 2)
         NP = win_size ** 2
         self.cov_norm = NP / (NP - 1)
 
@@ -107,7 +111,8 @@ class SSIM(nn.Module):
         vx = self.cov_norm * (uxx - ux * ux)
         vy = self.cov_norm * (uyy - uy * uy)
         vxy = self.cov_norm * (uxy - ux * uy)
-        A1, A2, B1, B2 = (2 * ux * uy + C1, 2 * vxy + C2, ux ** 2 + uy ** 2 + C1, vx + vy + C2)
+        A1, A2, B1, B2 = (2 * ux * uy + C1, 2 * vxy + C2,
+                          ux ** 2 + uy ** 2 + C1, vx + vy + C2)
         D = B1 * B2
         S = (A1 * A2) / D
         return 1 - S.mean()
@@ -117,12 +122,12 @@ class NormUnet(nn.Module):
     def __init__(self, chans, num_pools):
         super().__init__()
         self.unet = UnetModel(
-                in_chans=2,
-                out_chans=2,
-                chans=chans,
-                num_pool_layers=num_pools,
-                drop_prob=0
-            )
+            in_chans=2,
+            out_chans=2,
+            chans=chans,
+            num_pool_layers=num_pools,
+            drop_prob=0
+        )
 
     def complex_to_chan_dim(self, x):
         b, c, h, w, two = x.shape
@@ -139,8 +144,10 @@ class NormUnet(nn.Module):
         # Group norm
         b, c, h, w = x.shape
         x = x.contiguous().view(b, 2, c // 2 * h * w)
-        mean = x.mean(dim=2).view(b, 2, 1, 1, 1).expand(b, 2, c // 2, 1, 1).contiguous().view(b, c, 1, 1)
-        std = x.std(dim=2).view(b, 2, 1, 1, 1).expand(b, 2, c // 2, 1, 1).contiguous().view(b, c, 1, 1)
+        mean = x.mean(dim=2).view(b, 2, 1, 1, 1).expand(
+            b, 2, c // 2, 1, 1).contiguous().view(b, c, 1, 1)
+        std = x.std(dim=2).view(b, 2, 1, 1, 1).expand(
+            b, 2, c // 2, 1, 1).contiguous().view(b, c, 1, 1)
         x = x.view(b, c, h, w)
         return (x - mean) / std, mean, std
 
@@ -192,8 +199,8 @@ class VarNetBlock(nn.Module):
             return torch.where(mask, x - ref_kspace, self.zero) * self.dc_weight
 
         return current_kspace - \
-                soft_dc(current_kspace) - \
-                sens_expand(self.model(sens_reduce(current_kspace)))
+            soft_dc(current_kspace) - \
+            sens_expand(self.model(sens_reduce(current_kspace)))
 
 
 class SensitivityModel(nn.Module):
@@ -239,7 +246,8 @@ class SensitivityModel(nn.Module):
 class VariationalNetworkModel(MRIModel):
     def __init__(self, hparams):
         super().__init__(hparams)
-        self.sens_net = SensitivityModel(hparams.sens_chans, hparams.sens_pools)
+        self.sens_net = SensitivityModel(
+            hparams.sens_chans, hparams.sens_pools)
         self.cascades = nn.ModuleList([
             VarNetBlock(NormUnet(hparams.chans, hparams.pools))
             for _ in range(hparams.num_cascades)
@@ -257,7 +265,9 @@ class VariationalNetworkModel(MRIModel):
         masked_kspace, mask, target, fname, _, max_value = batch
         output = self.forward(masked_kspace, mask)
         target, output = T.center_crop_to_smallest(target, output)
-        return {'loss': self.ssim_loss(output.unsqueeze(1), target.unsqueeze(1), data_range=max_value)}
+        ssim_loss = self.ssim_loss(output.unsqueeze(
+            1), target.unsqueeze(1), data_range=max_value)
+        return {'loss': ssim_loss, 'log': {'train_loss': ssim_loss.item()}}
 
     def validation_step(self, batch, batch_idx):
         masked_kspace, mask, target, fname, slice, max_value = batch
@@ -274,7 +284,9 @@ class VariationalNetworkModel(MRIModel):
     def test_step(self, batch, batch_idx):
         masked_kspace, mask, _, fname, slice, _ = batch
         output = self.forward(masked_kspace, mask)
-        output = T.center_crop(output,(self.hparams.resolution,self.hparams.resolution))
+        b, h, w = output.shape
+        crop_size = min(w, self.hparams.resolution)
+        output = T.center_crop(output, (crop_size, crop_size))
         return {
             'fname': fname,
             'slice': slice,
@@ -282,8 +294,10 @@ class VariationalNetworkModel(MRIModel):
         }
 
     def configure_optimizers(self):
-        optim = torch.optim.Adam(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
-        scheduler = torch.optim.lr_scheduler.StepLR(optim, self.hparams.lr_step_size, self.hparams.lr_gamma)
+        optim = torch.optim.Adam(
+            self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optim, self.hparams.lr_step_size, self.hparams.lr_gamma)
         return [optim], [scheduler]
 
     def train_data_transform(self):
@@ -297,18 +311,27 @@ class VariationalNetworkModel(MRIModel):
         return DataTransform(self.hparams.resolution, mask)
 
     def test_data_transform(self):
-        return DataTransform(self.hparams.resolution)
+        mask = create_mask_for_mask_type(self.hparams.mask_type, self.hparams.center_fractions,
+                                         self.hparams.accelerations)
+        return DataTransform(self.hparams.resolution, mask)
 
     @staticmethod
     def add_model_specific_args(parser):
-        parser.add_argument('--num-cascades', type=int, default=12, help='Number of U-Net channels')
-        parser.add_argument('--pools', type=int, default=4, help='Number of U-Net pooling layers')
-        parser.add_argument('--chans', type=int, default=18, help='Number of U-Net channels')
-        parser.add_argument('--sens-pools', type=int, default=4, help='Number of U-Net pooling layers')
-        parser.add_argument('--sens-chans', type=int, default=8, help='Number of U-Net channels')
+        parser.add_argument('--num-cascades', type=int,
+                            default=12, help='Number of U-Net channels')
+        parser.add_argument('--pools', type=int, default=4,
+                            help='Number of U-Net pooling layers')
+        parser.add_argument('--chans', type=int, default=18,
+                            help='Number of U-Net channels')
+        parser.add_argument('--sens-pools', type=int, default=4,
+                            help='Number of U-Net pooling layers')
+        parser.add_argument('--sens-chans', type=int,
+                            default=8, help='Number of U-Net channels')
 
-        parser.add_argument('--batch-size', default=1, type=int, help='Mini batch size')
-        parser.add_argument('--lr', type=float, default=0.0003, help='Learning rate')
+        parser.add_argument('--batch-size', default=1,
+                            type=int, help='Mini batch size')
+        parser.add_argument('--lr', type=float,
+                            default=0.0003, help='Learning rate')
         parser.add_argument('--lr-step-size', type=int, default=40,
                             help='Period of learning rate decay')
         parser.add_argument('--lr-gamma', type=float, default=0.1,
@@ -319,19 +342,17 @@ class VariationalNetworkModel(MRIModel):
 
 
 def create_trainer(args):
+    backend = 'ddp' if args.gpus > 0 else 'ddp_cpu'
     return Trainer(
         default_save_path=args.exp_dir,
-        checkpoint_callback=True,
         max_epochs=args.num_epochs,
         gpus=args.gpus,
         num_nodes=args.nodes,
         weights_summary=None,
-        distributed_backend='ddp',
-        check_val_every_n_epoch=1,
-        val_check_interval=1.,
-        early_stop_callback=False,
-        num_sanity_val_steps=0,
+        distributed_backend=backend,
+        replace_sampler_ddp=False,
     )
+
 
 def run(args):
     cudnn.benchmark = True
@@ -342,22 +363,25 @@ def run(args):
         trainer.fit(model)
     else:  # args.mode == 'test' or args.mode == 'challenge'
         assert args.checkpoint is not None
-        model = VariationalNetworkModel.load_from_checkpoint(str(args.checkpoint))
+        model = VariationalNetworkModel.load_from_checkpoint(
+            str(args.checkpoint))
+        model.hparams = args
         model.hparams.sample_rate = 1.
         trainer = create_trainer(args)
-        model.hparams = args
         trainer.test(model)
 
 
 def main(args=None):
     parser = Args()
     parser.add_argument('--mode', choices=['train', 'test'], default='train')
-    parser.add_argument('--num-epochs', type=int, default=50, help='Number of training epochs')
+    parser.add_argument('--num-epochs', type=int, default=50,
+                        help='Number of training epochs')
     parser.add_argument('--gpus', type=int, default=1)
     parser.add_argument('--nodes', type=int, default=1)
     parser.add_argument('--exp-dir', type=pathlib.Path, default='experiments',
                         help='Path where model and results should be saved')
-    parser.add_argument('--exp', type=str, help='Name of the experiment')
+    parser.add_argument('--exp', type=str,
+                        help='Name of the experiment', default='default')
     parser.add_argument('--checkpoint', type=pathlib.Path,
                         help='Path to pre-trained model. Use with --mode test')
     parser = VariationalNetworkModel.add_model_specific_args(parser)
@@ -369,6 +393,7 @@ def main(args=None):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     run(args)
+
 
 if __name__ == '__main__':
     main()

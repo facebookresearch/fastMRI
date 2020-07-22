@@ -13,6 +13,7 @@ import h5py
 import numpy as np
 from runstats import Statistics
 from skimage.metrics import structural_similarity, peak_signal_noise_ratio
+from data import transforms
 
 
 def mse(gt, pred):
@@ -82,12 +83,18 @@ def evaluate(args, recons_key):
     metrics = Metrics(METRIC_FUNCS)
 
     for tgt_file in args.target_path.iterdir():
-        with h5py.File(tgt_file) as target, h5py.File(
-          args.predictions_path / tgt_file.name) as recons:
+        with h5py.File(tgt_file, 'r') as target, h5py.File(
+          args.predictions_path / tgt_file.name, 'r') as recons:
             if args.acquisition and args.acquisition != target.attrs['acquisition']:
                 continue
+
+            if args.acceleration and target.attrs['acceleration'] != args.acceleration:
+                continue
+
             target = target[recons_key][()]
             recons = recons['reconstruction'][()]
+            target = transforms.center_crop(target, (target.shape[-1], target.shape[-1]))
+            recons = transforms.center_crop(recons, (target.shape[-1], target.shape[-1]))
             metrics.push(target, recons)
     return metrics
 
@@ -100,6 +107,7 @@ if __name__ == '__main__':
                         help='Path to reconstructions')
     parser.add_argument('--challenge', choices=['singlecoil', 'multicoil'], required=True,
                         help='Which challenge')
+    parser.add_argument('--acceleration', type=int, default=None)
     parser.add_argument('--acquisition', choices=['CORPD_FBK', 'CORPDFS_FBK', 'AXT1', 'AXT1PRE',
                         'AXT1POST', 'AXT2', 'AXFLAIR'], default=None,
                         help='If set, only volumes of the specified acquisition type are used '

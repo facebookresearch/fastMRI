@@ -1,11 +1,11 @@
 __pycache__
+.vscode
 experiments
 logs
 .idea
 *.png
 *.cfl
 *.hdr
-*.vscode
 recon-workspace.code-workspace
 
 

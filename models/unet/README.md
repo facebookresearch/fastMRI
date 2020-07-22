@@ -14,6 +14,7 @@ To run the model on test data:
 ```bash
 python models/unet/train_unet.py --mode test --challenge CHALLENGE --data-path DATA --exp unet --out-dir reconstructions --checkpoint MODEL 
 ```
-where `MODEL` is the path to the model checkpoint from `experiments/unet/version_0/checkpoints/`.
+where `MODEL` is the path to the model checkpoint from `experiments/lightning_logs/version_0/checkpoints/`.
+Subsequent model runs will increment the version count.
 
 The outputs will be saved to `reconstructions` directory which can be uploaded for submission.

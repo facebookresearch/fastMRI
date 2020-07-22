@@ -20,7 +20,7 @@ def save_reconstructions(reconstructions, out_dir):
         out_dir (pathlib.Path): Path to the output directory where the reconstructions
             should be saved.
     """
-    out_dir.mkdir(exist_ok=True)
+    out_dir.mkdir(exist_ok=True, parents=True)
     for fname, recons in reconstructions.items():
         with h5py.File(out_dir / fname, 'w') as f:
             f.create_dataset('reconstruction', data=recons)

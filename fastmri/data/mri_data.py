@@ -57,6 +57,50 @@ def fetch_data_dir(split, knee_path=None, brain_path=None):
     return data_dir
 
 
+class CombinedSliceDataset(Dataset):
+    """
+    A container for combining slice datasets.
+
+    Args:
+        roots (list of pathlib.Path): Paths to the datasets.
+        transforms (list of callable): A callable object that pre-processes the
+            raw data into appropriate form. The transform function should take
+            'kspace', 'target', 'attributes', 'filename', and 'slice' as
+            inputs. 'target' may be null for test data.
+        challenges (list of str): "singlecoil" or "multicoil" depending on which
+            challenge to use.
+        sample_rates (list of float, optional): A float between 0 and 1. This
+            controls what fraction of the volumes should be loaded.
+    """
+
+    def __init__(self, roots, transforms, challenges, sample_rates=None):
+        assert len(roots) == len(transforms) == len(challenges)
+        if sample_rates is not None:
+            assert len(sample_rates) == len(roots)
+        else:
+            sample_rates = [1] * len(roots)
+
+        self.datasets = list()
+        for i in range(len(roots)):
+            self.datasets.append(
+                SliceDataset(roots[i], transforms[i], challenges[i], sample_rates[i])
+            )
+
+    def __len__(self):
+        length = 0
+        for dataset in self.datasets:
+            length = length + len(dataset)
+
+        return length
+
+    def __getitem__(self, i):
+        for dataset in self.datasets:
+            if i < len(dataset):
+                return dataset[i]
+            else:
+                i = i - len(dataset)
+
+
 class SliceDataset(Dataset):
     """
     A PyTorch Dataset that provides access to MR image slices.

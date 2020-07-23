@@ -27,7 +27,7 @@ def main(args):
     trainer.fit(model)
 
 
-def run_cli():
+def build_args():
     # ------------------------
     # TRAINING ARGUMENTS
     # ------------------------
@@ -40,7 +40,7 @@ def run_cli():
     parser = Trainer.add_argparse_args(parser)
 
     num_gpus = 2
-    backend = "dp"
+    backend = "ddp"
     batch_size = 1 if backend == "dp" else num_gpus
 
     config = dict(
@@ -73,6 +73,12 @@ def run_cli():
     )
 
     args = parser.parse_args()
+
+    return args
+
+
+def run_cli():
+    args = build_args()
 
     # ---------------------
     # RUN TRAINING

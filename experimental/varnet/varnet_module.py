@@ -5,6 +5,7 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+import hashlib
 import os
 from argparse import ArgumentParser
 
@@ -116,9 +117,12 @@ class VarNetModule(MriModule):
         output = self.forward(masked_kspace, mask)
         target, output = T.center_crop_to_smallest(target, output)
 
-        fnumber = torch.zeros(len(fname)).to(output)
+        # hash strings to int so pytorch can concat them
+        fnumber = torch.zeros(len(fname), dtype=torch.long, device=output.device)
         for i, fn in enumerate(fname):
-            fnumber[i] = int(fn.split("file")[1].split(".h5")[0])
+            fnumber[i] = (
+                int(hashlib.sha256(fn.encode("utf-8")).hexdigest(), 16) % 10 ** 12
+            )
 
         return {
             "fname": fnumber,

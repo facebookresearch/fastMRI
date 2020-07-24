@@ -5,6 +5,7 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+import hashlib
 import os
 from argparse import ArgumentParser
 
@@ -13,11 +14,10 @@ import torch
 from torch.nn import functional as F
 
 import fastmri
+from fastmri import MriModule
 from fastmri.data import transforms
 from fastmri.data.subsample import create_mask_for_mask_type
 from fastmri.models import Unet
-
-from fastmri import MriModule
 
 
 class UnetModule(MriModule):
@@ -104,9 +104,12 @@ class UnetModule(MriModule):
         mean = mean.unsqueeze(1).unsqueeze(2)
         std = std.unsqueeze(1).unsqueeze(2)
 
-        fnumber = torch.zeros(len(fname)).to(output)
+        # hash strings to int so pytorch can concat them
+        fnumber = torch.zeros(len(fname), dtype=torch.long, device=output.device)
         for i, fn in enumerate(fname):
-            fnumber[i] = int(fn.split("file")[1].split(".h5")[0])
+            fnumber[i] = (
+                int(hashlib.sha256(fn.encode("utf-8")).hexdigest(), 16) % 10 ** 12
+            )
 
         return {
             "fname": fnumber,

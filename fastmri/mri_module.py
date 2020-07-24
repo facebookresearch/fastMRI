@@ -229,9 +229,13 @@ class MriModule(pl.LightningModule):
         num_examples = torch.tensor(len(outputs)).to(device)
         tot_examples = self.TotExamples(num_examples)
 
+        log_metrics = {
+            f"metrics/{metric}": values / tot_examples
+            for metric, values in metrics.items()
+        }
         metrics = {metric: values / tot_examples for metric, values in metrics.items()}
 
-        return dict(log=metrics, **metrics)
+        return dict(log=log_metrics, **metrics)
 
     def test_epoch_end(self, test_logs):
         outputs = defaultdict(list)

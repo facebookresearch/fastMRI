@@ -65,10 +65,12 @@ class Unet(nn.Module):
     def forward(self, image):
         """
         Args:
-            image (torch.Tensor): Input tensor of shape [batch_size, self.in_chans, height, width]
+            image (torch.Tensor): Input tensor of shape [batch_size,
+                self.in_chans, height, width]
 
         Returns:
-            (torch.Tensor): Output tensor of shape [batch_size, self.out_chans, height, width]
+            (torch.Tensor): Output tensor of shape [batch_size, self.out_chans,
+                height, width]
         """
         stack = []
         output = image
@@ -134,10 +136,12 @@ class ConvBlock(nn.Module):
     def forward(self, image):
         """
         Args:
-            image (torch.Tensor): Input tensor of shape [batch_size, self.in_chans, height, width]
+            image (torch.Tensor): Input tensor of shape [batch_size,
+                self.in_chans, height, width]
 
         Returns:
-            (torch.Tensor): Output tensor of shape [batch_size, self.out_chans, height, width]
+            (torch.Tensor): Output tensor of shape [batch_size, self.out_chans,
+                height, width]
         """
         return self.layers(image)
 
@@ -150,8 +154,8 @@ class ConvBlock(nn.Module):
 
 class TransposeConvBlock(nn.Module):
     """
-    A Transpose Convolutional Block that consists of one convolution transpose layers followed by
-    instance normalization and LeakyReLU activation.
+    A Transpose Convolutional Block that consists of one convolution transpose
+    layers followed by instance normalization and LeakyReLU activation.
     """
 
     def __init__(self, in_chans, out_chans):
@@ -176,10 +180,12 @@ class TransposeConvBlock(nn.Module):
     def forward(self, image):
         """
         Args:
-            image (torch.Tensor): Input tensor of shape [batch_size, self.in_chans, height, width]
+            image (torch.Tensor): Input tensor of shape [batch_size,
+                self.in_chans, height, width]
 
         Returns:
-            (torch.Tensor): Output tensor of shape [batch_size, self.out_chans, height, width]
+            (torch.Tensor): Output tensor of shape [batch_size, self.out_chans,
+                height, width]
         """
         return self.layers(image)
 

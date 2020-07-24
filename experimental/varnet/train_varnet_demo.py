@@ -14,7 +14,7 @@ from pytorch_lightning import Trainer
 sys.path.append("../../")  # noqa: E402
 
 from fastmri.data.mri_data import fetch_dir
-from unet_module import UnetModule
+from varnet_module import VarNetModule
 
 
 def main(args):
@@ -22,7 +22,7 @@ def main(args):
     # ------------------------
     # 1 INIT LIGHTNING MODEL
     # ------------------------
-    model = UnetModule(**vars(args))
+    model = VarNetModule(**vars(args))
 
     # ------------------------
     # 2 INIT TRAINER
@@ -47,24 +47,24 @@ def build_args():
     # ------------------------
     path_config = pathlib.Path.cwd() / ".." / ".." / "fastmri_dirs.yaml"
     knee_path = fetch_dir("knee_path", path_config)
-    logdir = fetch_dir("log_path", path_config) / "unet" / "unet_demo"
+    logdir = fetch_dir("log_path", path_config) / "varnet" / "varnet_demo"
 
     parent_parser = ArgumentParser(add_help=False)
 
-    parser = UnetModule.add_model_specific_args(parent_parser)
+    parser = VarNetModule.add_model_specific_args(parent_parser)
     parser = Trainer.add_argparse_args(parser)
 
-    num_gpus = 2
     backend = "ddp"
-    batch_size = 1 if backend == "ddp" else num_gpus
+    num_gpus = 2 if backend == "ddp" else 1
+    batch_size = 1
 
     config = dict(
-        in_chans=1,
-        out_chans=1,
-        chans=32,
-        num_pool_layers=4,
-        drop_prob=0.0,
-        mask_type="random",
+        num_cascades=8,
+        pools=4,
+        chans=18,
+        sens_pools=4,
+        sens_chans=8,
+        mask_type="equispaced",
         center_fractions=[0.08],
         accelerations=[4],
         resolution=384,
@@ -73,9 +73,9 @@ def build_args():
         lr_gamma=0.1,
         weight_decay=0.0,
         data_path=knee_path,
-        challenge="singlecoil",
+        challenge="multicoil",
         exp_dir=logdir,
-        exp_name="unet_demo",
+        exp_name="varnet_demo",
         test_split="test",
         batch_size=batch_size,
     )

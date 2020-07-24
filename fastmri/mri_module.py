@@ -53,6 +53,7 @@ class MriModule(pl.LightningModule):
         challenge,
         exp_dir,
         exp_name,
+        test_split="test",
         sample_rate=1.0,
         batch_size=1,
         num_workers=4,
@@ -69,6 +70,7 @@ class MriModule(pl.LightningModule):
                 files.
             exp_name (str): Name of this experiment - this will store logs in
                 exp_dir / {exp_name}.
+            test_split (str): Name of test split from ("test", "challenge").
             sample_rate (float, default=1.0): Fraction of models from the
                 dataset to use.
             batch_size (int, default=1): Batch size.
@@ -83,6 +85,7 @@ class MriModule(pl.LightningModule):
         self.challenge = challenge
         self.exp_dir = exp_dir
         self.exp_name = exp_name
+        self.test_split = test_split
         self.sample_rate = sample_rate
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -142,7 +145,7 @@ class MriModule(pl.LightningModule):
 
     def test_dataloader(self):
         return self._create_data_loader(
-            self.test_data_transform(), data_partition="test", sample_rate=1.0,
+            self.test_data_transform(), data_partition=self.test_split, sample_rate=1.0,
         )
 
     def _visualize(self, val_outputs, val_targets):
@@ -280,6 +283,9 @@ class MriModule(pl.LightningModule):
         )
         parser.add_argument(
             "--exp_name", default="my_experiment", type=str,
+        )
+        parser.add_argument(
+            "--test_split", default="test", type=str,
         )
 
         return parser

@@ -5,6 +5,10 @@ import pytest
 import torch
 import yaml
 
+# these are really slow - skip by default
+skip_module_test_flag = True
+skip_data_test_flag = True
+
 
 def create_input(shape):
     x = np.arange(np.product(shape)).reshape(shape)
@@ -13,16 +17,14 @@ def create_input(shape):
     return x
 
 
-# knee data parameters
 @pytest.fixture
-def knee_path():
-    with open("tests/fastmri_dirs.yaml", "r") as f:
-        data_dir = yaml.safe_load(f)["knee_path"]
+def skip_module_test():
+    return skip_module_test_flag
 
-    if data_dir is not None:
-        data_dir = pathlib.Path(data_dir)
 
-    return data_dir
+@pytest.fixture
+def skip_data_test():
+    return skip_data_test_flag
 
 
 @pytest.fixture
@@ -37,18 +39,6 @@ def knee_split_lens():
     }
 
     return split_lens
-
-
-# brain data parameters
-@pytest.fixture
-def brain_path():
-    with open("tests/fastmri_dirs.yaml", "r") as f:
-        data_dir = yaml.safe_load(f)["brain_path"]
-
-    if data_dir is not None:
-        data_dir = pathlib.Path(data_dir)
-
-    return data_dir
 
 
 @pytest.fixture

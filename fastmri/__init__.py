@@ -6,6 +6,7 @@ LICENSE file in the root directory of this source tree.
 """
 
 from .coil_combine import rss, rss_complex
+from .losses import SSIMLoss
 from .math import (
     complex_abs,
     complex_abs_sq,

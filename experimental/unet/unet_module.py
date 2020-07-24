@@ -1,3 +1,10 @@
+"""
+Copyright (c) Facebook, Inc. and its affiliates.
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.
+"""
+
 import os
 from argparse import ArgumentParser
 
@@ -189,11 +196,11 @@ class DataTransform(object):
     def __init__(self, resolution, which_challenge, mask_func=None, use_seed=True):
         """
         Args:
-            mask_func (common.subsample.MaskFunc): A function that can create a
-                mask of appropriate shape.
             resolution (int): Resolution of the image.
             which_challenge (str): Either "singlecoil" or "multicoil" denoting
                 the dataset.
+            mask_func (fastmri.data.subsample.MaskFunc): A function that can
+                create a mask of appropriate shape.
             use_seed (bool): If true, this class computes a pseudo random
                 number generator seed from the filename. This ensures that the
                 same mask is used for all the slices of a given volume every
@@ -212,11 +219,11 @@ class DataTransform(object):
             kspace (numpy.array): Input k-space of shape (num_coils, rows,
                 cols, 2) for multi-coil data or (rows, cols, 2) for single coil
                 data.
-            mask (numpy.array): Mask from the test dataset
-            target (numpy.array): Target image
+            mask (numpy.array): Mask from the test dataset.
+            target (numpy.array): Target image.
             attrs (dict): Acquisition related information stored in the HDF5
                 object.
-            fname (str): File name
+            fname (str): File name.
             slice_num (int): Serial number of the slice.
 
         Returns:

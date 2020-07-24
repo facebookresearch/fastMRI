@@ -10,10 +10,11 @@ import random
 
 import h5py
 import numpy as np
+import yaml
 from torch.utils.data import Dataset
 
 
-def fetch_data_dir(split, knee_path=None, brain_path=None):
+def fetch_dir(key, data_config_file=pathlib.Path("fastmri_dirs.yaml")):
     """
     Data directory fetcher.
 
@@ -22,37 +23,32 @@ def fetch_data_dir(split, knee_path=None, brain_path=None):
     and this function will retrieve the requested subsplit of the data for use.
 
     Args:
-        split (str): A string specifying the split, one of ("multicoil_train",
-            "multicoil_val", "multicoil_test", "singlecoil_train",
-            "singlecoil_val", "singlecoil_test").
-        knee_path (pathlib.Path): The path to the fastmri knee data.
-        brain_path (pathlib.Path): The path to the fastmri brain data.
+        key (str): key to retrieve path from data_config_file.
+        data_config_file (pathlib.Path, 
+            default=pathlib.Path("fastmri_dirs.yaml")): Default path config
+            file.
 
     Returns:
-        pathlib.Path: The path to the specified dataset.
+        pathlib.Path: The path to the specified directory.
     """
-    data_dirs = dict()
-
-    if knee_path is not None:
-        knee_dirs = dict(
-            multicoil_knee_train=knee_path / "multicoil_train",
-            multicoil_knee_val=knee_path / "multicoil_val",
-            multicoil_knee_test=knee_path / "multicoil_test",
-            singlecoil_knee_train=knee_path / "singlecoil_train",
-            singlecoil_knee_val=knee_path / "singlecoil_val",
-            singlecoil_knee_test=knee_path / "singlecoil_test",
+    if not data_config_file.is_file():
+        default_config = dict(
+            knee_path="/path/to/knee",
+            brain_path="/path/to/brain",
+            log_path="/path/to/log",
         )
-        data_dirs.update(knee_dirs)
+        with open(data_config_file, "w") as f:
+            yaml.dump(default_config, f)
 
-    if brain_path is not None:
-        brain_dirs = dict(
-            multicoil_brain_train=brain_path / "multicoil_train",
-            multicoil_brain_val=brain_path / "multicoil_val",
-            multicoil_brain_test=brain_path / "multicoil_test",
-        )
-        data_dirs.update(brain_dirs)
+        raise ValueError(f"Please populate {data_config_file} with directory paths.")
 
-    data_dir = data_dirs[split]
+    with open(data_config_file, "r") as f:
+        data_dir = yaml.safe_load(f)[key]
+
+    data_dir = pathlib.Path(data_dir)
+
+    if not data_dir.exists():
+        raise ValueError(f"Path {data_dir} from {data_config_file} does not exist.")
 
     return data_dir
 

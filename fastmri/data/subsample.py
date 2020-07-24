@@ -55,7 +55,8 @@ class MaskFunc(object):
 
 
 class RandomMaskFunc(MaskFunc):
-    """RandomMaskFunc creates a sub-sampling mask of a given shape.
+    """
+    RandomMaskFunc creates a sub-sampling mask of a given shape.
 
     The mask selects a subset of columns from the input k-space data. If the
     k-space data has N columns, the mask picks out:

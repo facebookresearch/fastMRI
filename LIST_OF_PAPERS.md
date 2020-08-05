@@ -3,7 +3,7 @@
 The following is a list of fastMRI publication and preprints with abstracts andlinks to manucripts, code, etc.
 
 ## End-to-End Variational Networks for Accelerated MRI Reconstruction
-**MICCAI 2020**
+*MICCAI 2020*
 
 [arXiv](https://arxiv.org/abs/2004.06688)
 
@@ -20,7 +20,7 @@ The slow acquisition speed of magnetic resonance imaging (MRI) has led to the de
 ```
 
 ## Using Deep Learning to Accelerate Knee MRI at 3T: Results of an Interchangeability Study
-**American Journal of Roentgenology**
+*American Journal of Roentgenology*
 
 [publication](https://www.ajronline.org/doi/abs/10.2214/AJR.20.23313)
 
@@ -96,7 +96,7 @@ Deep learning approaches to accelerated MRI take a matrix of sampled Fourier-spa
 
 ## Advancing machine learning for MR image reconstruction with an open competition: Overview of the 2019 fastMRI challenge 
 
-**Magnetic Resonance in Medicine**
+*Magnetic Resonance in Medicine*
 
 [publication](https://onlinelibrary.wiley.com/doi/abs/10.1002/mrm.28338) [arXiv](https://arxiv.org/abs/2001.02518) [Code](https://github.com/facebookresearch/fastMRI) 
 
@@ -124,7 +124,7 @@ The challenge led to new developments in machine learning for image reconstructi
 ```
 
 ## fastMRI: A Publicly Available Raw k-Space and DICOM Dataset of Knee Images for Accelerated MR Image Reconstruction Using Machine Learning
-**Radiology: Artificial Intelligence**
+*Radiology: Artificial Intelligence*
 
 [publication](https://pubs.rsna.org/doi/10.1148/ryai.2020190007) [Code](https://github.com/facebookresearch/fastMRI)
 
@@ -138,7 +138,7 @@ Year = {2020}}
 
 
 ## Reducing Uncertainty in Undersampled MRI Reconstruction With Active Acquisition
-**CVPR 2019**
+*CVPR 2019*
 
 [arXiv](https://arxiv.org/abs/1902.03051)
 
@@ -155,7 +155,7 @@ The goal of MRI reconstruction is to restore a high fidelity image from partiall
 
 
 ## Active MR k-space Sampling with Reinforcement Learning
-**MICCAI 2020**
+*MICCAI 2020*
 
 [arXiv](https://arxiv.org/abs/2007.10469)
 

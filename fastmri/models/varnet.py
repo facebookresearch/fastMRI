@@ -57,7 +57,7 @@ class NormUnet(nn.Module):
         b, c2, h, w = x.shape
         assert c2 % 2 == 0
         c = c2 // 2
-        return x.view(b, 2, c, h, w).permute(0, 2, 3, 4, 1)
+        return x.view(b, 2, c, h, w).permute(0, 2, 3, 4, 1).contiguous()
 
     def norm(self, x):
         # Group norm
@@ -147,6 +147,7 @@ class SensitivityModel(nn.Module):
 
     def chans_to_batch_dim(self, x):
         b, c, *other = x.shape
+
         return x.contiguous().view(b * c, 1, *other), b
 
     def batch_chans_to_chan_dim(self, x, batch_size):

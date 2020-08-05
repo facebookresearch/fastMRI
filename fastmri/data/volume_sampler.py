@@ -5,6 +5,8 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+import math
+
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -21,42 +23,77 @@ class VolumeSampler(Sampler):
     fname is essentially the volume name (actually a filename).
     """
 
-    def __init__(self, dataset):
+    def __init__(self, dataset, num_replicas=None, rank=None, shuffle=True, seed=0):
         """
         Args:
             dataset (torch.utils.data.Dataset): An MRI dataset (e.g., SliceData).
+            num_replicas (int, optional): Number of processes participating in
+                distributed training. By default, :attr:`rank` is retrieved
+                from the current distributed group.
+            rank (int, optional): Rank of the current process within
+                :attr:`num_replicas`. By default, :attr:`rank` is retrieved
+                from the current distributed group.
+            shuffle (bool, optional): If ``True`` (default), sampler will
+                shuffle the indices.
+            seed (int, optional): random seed used to shuffle the sampler if
+                :attr:`shuffle=True`. This number should be identical across
+                all processes in the distributed group. Default: ``0``.
         """
+        if num_replicas is None:
+            if not dist.is_available():
+                raise RuntimeError("Requires distributed package to be available")
+            num_replicas = dist.get_world_size()
+        if rank is None:
+            if not dist.is_available():
+                raise RuntimeError("Requires distributed package to be available")
+            rank = dist.get_rank()
         self.dataset = dataset
-        self.world_size = dist.get_world_size()
-        self.rank = dist.get_rank()
+        self.num_replicas = num_replicas
+        self.rank = rank
         self.epoch = 0
+        self.shuffle = shuffle
+        self.seed = seed
 
-        # all nodes
+        self.num_samples = int(math.ceil(len(self.dataset) * 1.0 / self.num_replicas))
+        self.total_size = self.num_samples * self.num_replicas
+
+        # get all file names and split them based on number of processes
         self.all_volume_names = np.array(
             sorted(list({example[0] for example in self.dataset.examples}))
         )
-        self.all_volumes_split = np.array_split(self.all_volume_names, self.world_size)
+        self.all_volumes_split = np.array_split(
+            self.all_volume_names, self.num_replicas
+        )
 
-        # this node
-        self.volumes = self.all_volumes_split[self.rank]
-        self.indices = []
+        # get slice indices for each file name
+        indices = [list() for _ in range(self.num_replicas)]
 
         for i, example in enumerate(self.dataset.examples):
             vname = example[0]
-            if vname in self.volumes:
-                self.indices.append(i)
+            for rank in range(self.num_replicas):
+                if vname in self.all_volumes_split[rank]:
+                    indices[rank].append(i)
 
-        self.total_size = len(self.dataset.examples)
-        self.indices = np.array(self.indices)
-        self.num_samples = len(self.indices)
+        # need to send equal number of samples to each process - take the max
+        self.num_samples = max([len(l) for l in indices])
+        self.total_size = self.num_samples * self.num_replicas
+        self.indices = indices[self.rank]
 
     def __iter__(self):
-        # deterministically shuffle based on epoch
-        g = torch.Generator()
-        g.manual_seed(self.epoch)
-        ordering = torch.randperm(self.num_samples, generator=g).tolist()
-        indices_shuffled = self.indices[ordering]
-        return iter(indices_shuffled.tolist())
+        if self.shuffle:
+            # deterministically shuffle based on epoch and seed
+            g = torch.Generator()
+            g.manual_seed(self.seed + self.epoch)
+            ordering = torch.randperm(len(self.indices), generator=g).tolist()
+            indices = list(np.array(self.indices)[ordering])
+        else:
+            indices = self.indices
+
+        # add extra samples to match num_samples
+        indices = indices + indices[: self.num_samples - len(indices)]
+        assert len(indices) == self.num_samples
+
+        return iter(indices)
 
     def __len__(self):
         return self.num_samples

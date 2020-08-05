@@ -208,8 +208,10 @@ class MriModule(pl.LightningModule):
             for i, (fname, slice_ind) in enumerate(
                 zip(val_log["fname"], val_log["slice"])
             ):
-                outputs[int(fname)].append((int(slice_ind), val_log["output"][i]))
-                targets[int(fname)].append((int(slice_ind), val_log["target"][i]))
+                # need to check for duplicate slices
+                if slice_ind not in [s for (s, _) in outputs[int(fname)]]:
+                    outputs[int(fname)].append((int(slice_ind), val_log["output"][i]))
+                    targets[int(fname)].append((int(slice_ind), val_log["target"][i]))
 
         # handle aggregation for distributed case with pytorch_lightning metrics
         metrics = dict(val_loss=0, nmse=0, ssim=0, psnr=0)

@@ -51,7 +51,7 @@ Then you should have all the packages.
 
 ## Directory Structure & Usage
 
-Since August 2020, the repository has been refactored to operate as a package centered around the `fastmri` module, while configurations and scripts for reproducibility are now hosted in `experimental`.
+Since August 2020, the repository has been refactored to operate as a package centered around the `fastmri` module, while configurations and scripts for reproducibility are now hosted in `experimental`. Other folders are in the process of being adapted to the new structure and then deprecated.
 
 `fastmri`: Contains a number of basic tools for complex number math, coil combinations, etc.
 

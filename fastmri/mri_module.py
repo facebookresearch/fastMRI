@@ -75,9 +75,6 @@ class MriModule(pl.LightningModule):
                 dataset to use.
             batch_size (int, default=1): Batch size.
             num_workers (int, default=4): Number of workers for PyTorch dataloader.
-            use_ddp (boolean, default=False): Set this to true if you use a 'ddp'
-                backend for the PyTorch Lightning trainer - this will make
-                aggregation for ssim and other metrics perform as expected. 
         """
         super().__init__()
 
@@ -281,7 +278,6 @@ class MriModule(pl.LightningModule):
         parser.add_argument(
             "--num_workers", default=4, type=float,
         )
-        parser.add_argument("--use_ddp", default=False, type=bool)
 
         # logging params
         parser.add_argument(

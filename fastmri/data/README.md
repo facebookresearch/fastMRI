@@ -46,7 +46,7 @@ For the 2020 fastMRI challenge, all data will be on the brain data with a multi-
 
 ## Data Loader
 
-`fastmri.data.mri_data` provides a `SliceData` class to read one MR slice at a time. It takes as input
+`fastmri.data.mri_data` provides a `SliceDataset` class to read one MR slice at a time. It takes as input
 a `transform` function or callable object that can be used transform the data into the format that
 you need. This makes the data loader versatile and can be used to run different kinds of
 reconstruction methods.

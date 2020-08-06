@@ -6,6 +6,17 @@ Accelerating Magnetic Resonance Imaging (MRI) by acquiring fewer measurements ha
 
 This repository contains convenient PyTorch data loaders, subsampling functions, evaluation metrics, and reference implementations of simple baseline methods.
 
+## Outline
+
+1. [Citing](#citing)
+2. [Dependencies and Installation](#Dependencies-and-Installation)
+3. [Directory Structure & Usage](#directory-structure--usage)
+4. [Testing](#testing)
+5. [Training a model](#training-a-model)
+6. [Submitting to the Leaderboard](#submitting-to-the-leaderboard)
+7. [License](#license)
+8. [List of Papers](#list-of-papers)
+
 ## Citing
 
 If you use the fastMRI data or this code in your research, please consider citing
@@ -24,7 +35,7 @@ the fastMRI dataset paper:
 
 For other publications from the fastMRI project please see our [list of papers](https://github.com/facebookresearch/fastMRI/blob/master/LIST_OF_PAPERS.md).
 
-## Dependencies
+## Dependencies and Installation
 
 We have tested this code using:
 
@@ -79,3 +90,18 @@ Upload the zip file to any publicly accessible cloud storage (e.g. Amazon S3, Dr
 ## License
 
 fastMRI is MIT licensed, as found in the LICENSE file.
+
+## List of Papers
+
+The following lists titles of papers from the fastMRI project. A more complete list of papers with abstracts and links to code can be found [here](LIST_OF_PAPERS.md).
+
+1. Zbontar, J., Knoll, F., Sriram, A., Muckley, M. J., Bruno, M., Defazio, A., ... & Zhang, Z. (2018). [fastMRI: An open dataset and benchmarks for accelerated MRI](https://arxiv.org/abs/1811.08839). *arXiv preprint arXiv:1811.08839*.
+2. Zhang, Z., Romero, A., Muckley, M. J., Vincent, P., Yang, L., & Drozdzal, M. (2019). [Reducing uncertainty in undersampled mri reconstruction with active acquisition](https://openaccess.thecvf.com/content_CVPR_2019/html/Zhang_Reducing_Uncertainty_in_Undersampled_MRI_Reconstruction_With_Active_Acquisition_CVPR_2019_paper.html). In *Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition* (pp. 2049-2058).
+3. Defazio, A. (2019). [Offset Sampling Improves Deep Learning based Accelerated MRI Reconstructions by Exploiting Symmetry](https://arxiv.org/abs/1912.01101). *arXiv preprint, arXiv:1912.01101*.
+4. Defazio, A., Murrell, T., & Recht, M. P. (2020). [MRI Banding Removal via Adversarial Training](https://arxiv.org/abs/2001.08699). *arXiv preprint arXiv:2001.08699*.
+5. Knoll, F., Zbontar, J., Sriram, A., Muckley, M. J., Bruno, M., Defazio, A., ... & Zhang, Z. (2020). [fastMRI: A Publicly Available Raw k-Space and DICOM Dataset of Knee Images for Accelerated MR Image Reconstruction Using Machine Learning](https://doi.org/10.1148/ryai.2020190007). *Radiology: Artificial Intelligence*, 2(1), e190007.
+6. Knoll, F., Murrell, T., Sriram, A., Yakubova, N., Zbontar, J., Rabbat, M., ... & Recht, M. P. (2020). [Advancing machine learning for MR image reconstruction with an open competition: Overview of the 2019 fastMRI challenge](https://doi.org/10.1002/mrm.28338). *Magnetic Resonance in Medicine*.
+7. Sriram, A., Zbontar, J., Murrell, T., Zitnick, C. L., Defazio, A., & Sodickson, D. K. (2020). [GrappaNet: Combining parallel imaging with deep learning for multi-coil MRI reconstruction](https://openaccess.thecvf.com/content_CVPR_2020/html/Sriram_GrappaNet_Combining_Parallel_Imaging_With_Deep_Learning_for_Multi-Coil_MRI_CVPR_2020_paper.html). In *Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition* (pp. 14315-14322).
+8. Recht, M. P., Zbontar, J., Sodickson, D. K., Knoll, F., Yakubova, N., Sriram, A., ... & Kline, M. (2020). [Using Deep Learning to Accelerate Knee MRI at 3T: Results of an Interchangeability Study](https://www.ajronline.org/doi/abs/10.2214/AJR.20.23313). *American Journal of Roentgenology*.
+9. Pineda, L., Basu, S., Romero, A., Calandra, R., & Drozdzal, M. (2020). [Active MR k-space Sampling with Reinforcement Learning](https://arxiv.org/abs/2007.10469). In *International Conference on Medical image computing and computer-assisted intervention*.
+10. Sriram, A., Zbontar, J., Murrell, T., Defazio, A., Zitnick, C. L., Yakubova, N., ... & Johnson, P. (2020). [End-to-End Variational Networks for Accelerated MRI Reconstruction](https://arxiv.org/abs/2004.06688). In *International Conference on Medical image computing and computer-assisted intervention*.

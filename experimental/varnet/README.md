@@ -1,11 +1,11 @@
-# U-Net Model for MRI Reconstruction
+# End-to-End Variational Networks for Accelerated MRI Reconstruction Model
 
-This directory contains a reference U-Net implementation for MRI reconstruction in PyTorch.
+This directory contains a PyTorch implementation for the method described in [End-to-End Variational Networks for Accelerated MRI Reconstruction Model](https://arxiv.org/abs/2004.06688).
 
 To start training the model, run:
 
 ```bash
-python train_unet_demo.py
+python train_varnet_demo.py
 ```
 
 You can also pass options at the command line:
@@ -25,3 +25,18 @@ python models/unet/train_unet.py --mode test --test_split TESTSPLIT --challenge 
 where `MODEL` is the path to the model checkpoint from `{logdir}/lightning_logs/version_0/checkpoints/`. Subsequent model runs will increment the version count. `TESTSPLIT` should specify the test split you want to run on - either `test` or `challenge`.
 
 The outputs will be saved to `reconstructions` directory which can be uploaded for submission.
+
+## Citing
+
+If you use this this code in your research, please cite the corresponding paper:
+
+```BibTeX
+@inproceedings{sriram2020endtoend,
+    title={End-to-End Variational Networks for Accelerated MRI Reconstruction},
+    author={Anuroop Sriram and Jure Zbontar and Tullie Murrell and Aaron Defazio and C. Lawrence Zitnick and Nafissa Yakubova and Florian Knoll and Patricia Johnson},
+    year={2020},
+    eprint={2004.06688},
+    archivePrefix={arXiv},
+    primaryClass={eess.IV}
+}
+```

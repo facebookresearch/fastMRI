@@ -156,7 +156,7 @@ class MriModule(pl.LightningModule):
 
         def _save_image(image, tag):
             grid = torchvision.utils.make_grid(torch.Tensor(image), nrow=4, pad_value=1)
-            self.logger.experiment.add_image(tag, grid)
+            self.logger.experiment.add_image(tag, grid, self.global_step)
 
         # only process first size to simplify visualization.
         visualize_size = val_outputs[0].shape

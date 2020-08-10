@@ -10,6 +10,7 @@ import sys
 from argparse import ArgumentParser
 
 import h5py
+import ismrmrd
 
 sys.path.append("../../")  # noqa: E402
 
@@ -17,22 +18,28 @@ import fastmri
 from fastmri.data import transforms
 
 
-def save_zero_filled(data_dir, out_dir, which_challenge, resolution):
+def save_zero_filled(data_dir, out_dir, which_challenge):
     reconstructions = {}
 
     for f in data_dir.iterdir():
         with h5py.File(f, "r") as hf:
+            enc = ismrmrd.xsd.CreateFromDocument(hf["ismrmrd_header"][()]).encoding[0]
             masked_kspace = transforms.to_tensor(hf["kspace"][()])
+
+            # extract target image width, height from ismrmrd header
+            height = enc.reconSpace.matrixSize.x
+            width = enc.reconSpace.matrixSize.y
 
             # inverse Fourier Transform to get zero filled solution
             image = fastmri.ifft2c(masked_kspace)
 
+            # check for partial Fourier, just do a simple crop if present
+            if image.shape[-2] < width:
+                width = image.shape[-2]
+                height = width
+
             # crop input image
-            smallest_width = min(resolution, image.shape[-2])
-            smallest_height = min(resolution, image.shape[-3])
-            image = transforms.complex_center_crop(
-                image, (smallest_height, smallest_width)
-            )
+            image = transforms.complex_center_crop(image, (height, width))
 
             # absolute value
             image = fastmri.complex_abs(image)
@@ -61,13 +68,10 @@ def create_arg_parser():
     parser.add_argument(
         "--challenge", type=str, required=True, help="Which challenge",
     )
-    parser.add_argument(
-        "--resolution", type=int, default=320, help="Reconstruction matrix size",
-    )
 
     return parser
 
 
 if __name__ == "__main__":
     args = create_arg_parser().parse_args()
-    save_zero_filled(args.data_path, args.out_path, args.challenge, args.resolution)
+    save_zero_filled(args.data_path, args.out_path, args.challenge)

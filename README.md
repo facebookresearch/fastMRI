@@ -33,7 +33,7 @@ the fastMRI dataset paper:
 }
 ```
 
-For other publications from the fastMRI project please see our [list of papers](https://github.com/facebookresearch/fastMRI/blob/master/LIST_OF_PAPERS.md).
+For other publications from the fastMRI project please see our [list of papers](#list-of-papers).
 
 ## Dependencies and Installation
 
@@ -89,7 +89,7 @@ Upload the zip file to any publicly accessible cloud storage (e.g. Amazon S3, Dr
 
 ## License
 
-fastMRI is MIT licensed, as found in the LICENSE file.
+fastMRI is MIT licensed, as found in the [LICENSE file](LICENSE.md).
 
 ## List of Papers
 

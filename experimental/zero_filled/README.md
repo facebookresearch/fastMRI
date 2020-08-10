@@ -9,3 +9,5 @@ python run_zero_filled.py --challenge CHALLENGE --data_path DATA --out_path RECO
 ```
 
 where `CHALLENGE` is either `singlecoil` or `multicoil`.
+
+For cropping the script infers the target image dimensions from the ISMRMRD header. Note that there are some issues with files that have "FLAIR_203" in their file name - there are three of these files in the test set, and they are ignored for the brain leaderboard.

@@ -9,6 +9,7 @@ import pathlib
 import random
 
 import h5py
+import ismrmrd
 import numpy as np
 import yaml
 from torch.utils.data import Dataset
@@ -135,8 +136,6 @@ class SliceDataset(Dataset):
             # Compute the size of zero padding in k-space
             # We really should have stored this as an attribute in the hdf5 file
             try:
-                import ismrmrd
-
                 hdr = ismrmrd.xsd.CreateFromDocument(data["ismrmrd_header"][()])
                 enc = hdr.encoding[0]
                 enc_size = (

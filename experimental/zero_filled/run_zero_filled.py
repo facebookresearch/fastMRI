@@ -33,7 +33,7 @@ def save_zero_filled(data_dir, out_dir, which_challenge):
             # inverse Fourier Transform to get zero filled solution
             image = fastmri.ifft2c(masked_kspace)
 
-            # check for partial Fourier, just do a simple crop if present
+            # check for FLAIR 203
             if image.shape[-2] < width:
                 width = image.shape[-2]
                 height = width

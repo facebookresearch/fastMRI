@@ -23,7 +23,7 @@ from fastmri.models import VarNet
 
 class VarNetModule(MriModule):
     """
-    Unet training module.
+    VarNet training module.
     """
 
     def __init__(
@@ -102,7 +102,7 @@ class VarNetModule(MriModule):
         return self.varnet(masked_kspace, mask)
 
     def training_step(self, batch, batch_idx):
-        masked_kspace, mask, target, _, _, max_value = batch
+        masked_kspace, mask, target, _, _, max_value, _ = batch
 
         output = self(masked_kspace, mask)
 
@@ -112,7 +112,7 @@ class VarNetModule(MriModule):
         return {"loss": loss, "log": {"train_loss": loss.item()}}
 
     def validation_step(self, batch, batch_idx):
-        masked_kspace, mask, target, fname, slice_num, max_value = batch
+        masked_kspace, mask, target, fname, slice_num, max_value, _ = batch
 
         output = self.forward(masked_kspace, mask)
         target, output = T.center_crop_to_smallest(target, output)
@@ -135,14 +135,16 @@ class VarNetModule(MriModule):
         }
 
     def test_step(self, batch, batch_idx):
-        masked_kspace, mask, _, fname, slice_num, _ = batch
+        masked_kspace, mask, _, fname, slice_num, _, crop_size = batch
+        crop_size = crop_size[0]  # always have a batch size of 1 for varnet
 
         output = self(masked_kspace, mask)
 
-        _, _, w = output.shape
+        # check for FLAIR 203
+        if output.shape[-2] < crop_size[1]:
+            crop_size = (output.shape[-2], output.shape[-2])
 
-        crop_size = min(w, self.resolution)
-        output = T.center_crop(output, (crop_size, crop_size))
+        output = T.center_crop(output, tuple(crop_size.cpu()))
 
         return {
             "fname": fname,
@@ -268,6 +270,8 @@ class DataTransform(object):
         acq_start = attrs["padding_left"]
         acq_end = attrs["padding_right"]
 
+        crop_size = torch.tensor([attrs["recon_size"][0], attrs["recon_size"][1]])
+
         if self.mask_func:
             masked_kspace, mask = T.apply_mask(
                 kspace, self.mask_func, seed, (acq_start, acq_end)
@@ -283,4 +287,13 @@ class DataTransform(object):
             mask[:, :, :acq_start] = 0
             mask[:, :, acq_end:] = 0
 
-        return masked_kspace, mask.byte(), target, fname, slice_num, max_value
+        return (
+            masked_kspace,
+            mask.byte(),
+            target,
+            fname,
+            slice_num,
+            max_value,
+            crop_size,
+        )
+

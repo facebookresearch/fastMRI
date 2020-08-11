@@ -239,38 +239,40 @@ class DataTransform(object):
         """
         kspace = transforms.to_tensor(kspace)
 
-        # Apply mask
+        # apply mask
         if self.mask_func:
             seed = None if not self.use_seed else tuple(map(ord, fname))
             masked_kspace, mask = transforms.apply_mask(kspace, self.mask_func, seed)
         else:
             masked_kspace = kspace
 
-        # Inverse Fourier Transform to get zero filled solution
+        # inverse Fourier transform to get zero filled solution
         image = fastmri.ifft2c(masked_kspace)
 
-        # Crop input image to given resolution if larger
-        smallest_width = min(self.resolution, image.shape[-2])
-        smallest_height = min(self.resolution, image.shape[-3])
+        # crop input to correct size
         if target is not None:
-            smallest_width = min(smallest_width, target.shape[-1])
-            smallest_height = min(smallest_height, target.shape[-2])
+            crop_size = (target.shape[-2], target.shape[-1])
+        else:
+            crop_size = (attrs["recon_size"][0], attrs["recon_size"][1])
 
-        crop_size = (smallest_height, smallest_width)
+        # check for FLAIR 203
+        if image.shape[-2] < crop_size[1]:
+            crop_size = (image.shape[-2], image.shape[-2])
+
         image = transforms.complex_center_crop(image, crop_size)
 
-        # Absolute value
+        # absolute value
         image = fastmri.complex_abs(image)
 
-        # Apply Root-Sum-of-Squares if multicoil data
+        # apply Root-Sum-of-Squares if multicoil data
         if self.which_challenge == "multicoil":
             image = fastmri.rss(image)
 
-        # Normalize input
+        # normalize input
         image, mean, std = transforms.normalize_instance(image, eps=1e-11)
         image = image.clamp(-6, 6)
 
-        # Normalize target
+        # normalize target
         if target is not None:
             target = transforms.to_tensor(target)
             target = transforms.center_crop(target, crop_size)

@@ -1,6 +1,7 @@
+import pdb
 from . import transforms
 from .common.subsample import mask_factory
-import pdb
+from .transforms.orientation import Orientation
 
 class TransformMixin(object):
     def transform_setup(self, args):
@@ -11,5 +12,8 @@ class TransformMixin(object):
 
         self.dev_transform = Transform(args, dev_mask, partition='val', use_seed=True)
         self.train_transform = Transform(args, train_mask, partition='train')
+
+        if args.orientation_augmentation:
+            self.train_transform = Orientation(after=self.train_transform, args=args)
 
         super().transform_setup(args)

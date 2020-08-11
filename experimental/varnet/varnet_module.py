@@ -36,7 +36,6 @@ class VarNetModule(MriModule):
         mask_type="equispaced",
         center_fractions=[0.08],
         accelerations=[4],
-        resolution=384,
         lr=0.0003,
         lr_step_size=40,
         lr_gamma=0.1,
@@ -60,7 +59,6 @@ class VarNetModule(MriModule):
                 take from center (i.e., list of floats).
             accelerations (list, default=[4]): List of accelerations to apply
                 (i.e., list of ints).
-            resolution (int, default=384): Reconstruction resolution.
             lr (float, default=0.0003): Learning rate.
             lr_step_size (int, default=40): Learning rate step size.
             lr_gamma (float, default=0.1): Learning rate gamma decay.
@@ -82,7 +80,6 @@ class VarNetModule(MriModule):
         self.mask_type = mask_type
         self.center_fractions = center_fractions
         self.accelerations = accelerations
-        self.resolution = resolution
         self.lr = lr
         self.lr_step_size = lr_step_size
         self.lr_gamma = lr_gamma
@@ -167,21 +164,21 @@ class VarNetModule(MriModule):
             self.mask_type, self.center_fractions, self.accelerations
         )
 
-        return DataTransform(self.resolution, mask, use_seed=False)
+        return DataTransform(mask, use_seed=False)
 
     def val_data_transform(self):
         mask = create_mask_for_mask_type(
             self.mask_type, self.center_fractions, self.accelerations
         )
 
-        return DataTransform(self.resolution, mask)
+        return DataTransform(mask)
 
     def test_data_transform(self):
         mask = create_mask_for_mask_type(
             self.mask_type, self.center_fractions, self.accelerations
         )
 
-        return DataTransform(self.resolution, mask)
+        return DataTransform(mask)
 
     @staticmethod
     def add_model_specific_args(parent_parser):  # pragma: no-cover
@@ -206,7 +203,6 @@ class VarNetModule(MriModule):
         )
         parser.add_argument("--center_fractions", nargs="+", default=[0.08], type=float)
         parser.add_argument("--accelerations", nargs="+", default=[4], type=int)
-        parser.add_argument("--resolution", default=384, type=int)
 
         # training params (opt)
         parser.add_argument("--lr", default=0.001, type=float)
@@ -222,10 +218,9 @@ class DataTransform(object):
     Data Transformer for training VarNet models.
     """
 
-    def __init__(self, resolution, mask_func=None, use_seed=True):
+    def __init__(self, mask_func=None, use_seed=True):
         """
         Args:
-            resolution (int): Resolution of the image.
             mask_func (fastmri.data.subsample.MaskFunc): A function that can
                 create a mask of appropriate shape.
             use_seed (bool): If true, this class computes a pseudo random
@@ -234,7 +229,6 @@ class DataTransform(object):
                 time.
         """
         self.mask_func = mask_func
-        self.resolution = resolution
         self.use_seed = use_seed
 
     def __call__(self, kspace, mask, target, attrs, fname, slice_num):
@@ -252,11 +246,14 @@ class DataTransform(object):
 
         Returns:
             (tuple): tuple containing:
-                image (torch.Tensor): Zero-filled input image.
-                target (torch.Tensor): Target image converted to a torch
-                    Tensor.
-                mean (float): Mean value used for normalization.
-                std (float): Standard deviation value used for normalization.
+                masked_kspace (torch.Tensor): k-space after applying sampling
+                    mask.
+                mask (torch.Tensor): The applied sampling mask
+                target (torch.Tensor): The target image (if applicable).
+                fname (str): File name.
+                slice_num (int): The slice index.
+                max_value (float): Maximum image value.
+                crop_size (torch.Tensor): the size to crop the final image.
         """
         if target is not None:
             target = T.to_tensor(target)

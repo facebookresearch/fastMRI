@@ -35,7 +35,6 @@ class UnetModule(MriModule):
         mask_type="random",
         center_fractions=[0.08],
         accelerations=[4],
-        resolution=384,
         lr=0.001,
         lr_step_size=40,
         lr_gamma=0.1,
@@ -57,7 +56,6 @@ class UnetModule(MriModule):
                 center (i.e., list of floats).
             accelerations (list): List of accelerations to apply (i.e., list
                 of ints).
-            resolution (int): Reconstruction resolution.
             lr (float): Learning rate.
             lr_step_size (int): Learning rate step size.
             lr_gamma (float): Learning rate gamma decay.
@@ -73,7 +71,6 @@ class UnetModule(MriModule):
         self.mask_type = mask_type
         self.center_fractions = center_fractions
         self.accelerations = accelerations
-        self.resolution = resolution
         self.lr = lr
         self.lr_step_size = lr_step_size
         self.lr_gamma = lr_gamma
@@ -146,16 +143,16 @@ class UnetModule(MriModule):
             self.mask_type, self.center_fractions, self.accelerations,
         )
 
-        return DataTransform(self.resolution, self.challenge, mask, use_seed=False)
+        return DataTransform(self.challenge, mask, use_seed=False)
 
     def val_data_transform(self):
         mask = create_mask_for_mask_type(
             self.mask_type, self.center_fractions, self.accelerations,
         )
-        return DataTransform(self.resolution, self.challenge, mask)
+        return DataTransform(self.challenge, mask)
 
     def test_data_transform(self):
-        return DataTransform(self.resolution, self.challenge)
+        return DataTransform(self.challenge)
 
     @staticmethod
     def add_model_specific_args(parent_parser):  # pragma: no-cover
@@ -180,7 +177,6 @@ class UnetModule(MriModule):
         )
         parser.add_argument("--center_fractions", nargs="+", default=[0.08], type=float)
         parser.add_argument("--accelerations", nargs="+", default=[4], type=int)
-        parser.add_argument("--resolution", default=384, type=int)
 
         # training params (opt)
         parser.add_argument("--lr", default=0.001, type=float)
@@ -196,10 +192,9 @@ class DataTransform(object):
     Data Transformer for training U-Net models.
     """
 
-    def __init__(self, resolution, which_challenge, mask_func=None, use_seed=True):
+    def __init__(self, which_challenge, mask_func=None, use_seed=True):
         """
         Args:
-            resolution (int): Resolution of the image.
             which_challenge (str): Either "singlecoil" or "multicoil" denoting
                 the dataset.
             mask_func (fastmri.data.subsample.MaskFunc): A function that can
@@ -212,7 +207,6 @@ class DataTransform(object):
         if which_challenge not in ("singlecoil", "multicoil"):
             raise ValueError(f'Challenge should either be "singlecoil" or "multicoil"')
         self.mask_func = mask_func
-        self.resolution = resolution
         self.which_challenge = which_challenge
         self.use_seed = use_seed
 
@@ -236,6 +230,8 @@ class DataTransform(object):
                     Tensor.
                 mean (float): Mean value used for normalization.
                 std (float): Standard deviation value used for normalization.
+                fname (str): File name.
+                slice_num (int): Serial number of the slice.
         """
         kspace = transforms.to_tensor(kspace)
 

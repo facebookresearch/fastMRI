@@ -59,4 +59,5 @@ config = {
 }
 
 if __name__ == "__main__":
-    spawn_dist.run(config)
+    #spawn_dist.run(config) # Multiple GPU training (8 recommended)
+    run.run(config) # Single GPU training

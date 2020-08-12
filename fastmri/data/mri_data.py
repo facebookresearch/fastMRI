@@ -131,48 +131,53 @@ class SliceDataset(Dataset):
             files = files[:num_files]
 
         for fname in sorted(files):
-            data = h5py.File(fname, "r")
-
-            # Compute the size of zero padding in k-space
-            # We really should have stored this as an attribute in the hdf5 file
-            try:
-                hdr = ismrmrd.xsd.CreateFromDocument(data["ismrmrd_header"][()])
+            with h5py.File(fname, "r") as hf:
+                hdr = ismrmrd.xsd.CreateFromDocument(hf["ismrmrd_header"][()])
                 enc = hdr.encoding[0]
+
                 enc_size = (
                     enc.encodedSpace.matrixSize.x,
                     enc.encodedSpace.matrixSize.y,
                     enc.encodedSpace.matrixSize.z,
                 )
+                recon_size = (
+                    enc.reconSpace.matrixSize.x,
+                    enc.reconSpace.matrixSize.y,
+                    enc.reconSpace.matrixSize.z,
+                )
+
                 enc_limits_center = enc.encodingLimits.kspace_encoding_step_1.center
                 enc_limits_max = enc.encodingLimits.kspace_encoding_step_1.maximum + 1
                 padding_left = enc_size[1] // 2 - enc_limits_center
                 padding_right = padding_left + enc_limits_max
-            except Exception as e:
-                padding_left = None
-                padding_right = None
-                raise e
 
-            kspace = data["kspace"]
-            num_slices = kspace.shape[0]
+                num_slices = hf["kspace"].shape[0]
+
+            metadata = {
+                "padding_left": padding_left,
+                "padding_right": padding_right,
+                "encoding_size": enc_size,
+                "recon_size": recon_size,
+            }
+
             self.examples += [
-                (fname, slice_ind, padding_left, padding_right)
-                for slice_ind in range(num_slices)
+                (fname, slice_ind, metadata) for slice_ind in range(num_slices)
             ]
 
     def __len__(self):
         return len(self.examples)
 
     def __getitem__(self, i):
-        fname, dataslice, padding_left, padding_right = self.examples[i]
+        fname, dataslice, metadata = self.examples[i]
 
-        with h5py.File(fname, "r") as data:
-            kspace = data["kspace"][dataslice]
-            mask = np.asarray(data["mask"]) if "mask" in data else None
-            target = (
-                data[self.recons_key][dataslice] if self.recons_key in data else None
-            )
-            attrs = dict(data.attrs)
-            attrs["padding_left"] = padding_left
-            attrs["padding_right"] = padding_right
+        with h5py.File(fname, "r") as hf:
+            kspace = hf["kspace"][dataslice]
+
+            mask = np.asarray(hf["mask"]) if "mask" in hf else None
+
+            target = hf[self.recons_key][dataslice] if self.recons_key in hf else None
+
+            attrs = dict(hf.attrs)
+            attrs.update(metadata)
 
         return self.transform(kspace, mask, target, attrs, fname.name, dataslice)

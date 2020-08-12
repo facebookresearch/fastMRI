@@ -23,7 +23,7 @@ from fastmri.models import VarNet
 
 class VarNetModule(MriModule):
     """
-    Unet training module.
+    VarNet training module.
     """
 
     def __init__(
@@ -36,7 +36,6 @@ class VarNetModule(MriModule):
         mask_type="equispaced",
         center_fractions=[0.08],
         accelerations=[4],
-        resolution=384,
         lr=0.0003,
         lr_step_size=40,
         lr_gamma=0.1,
@@ -60,7 +59,6 @@ class VarNetModule(MriModule):
                 take from center (i.e., list of floats).
             accelerations (list, default=[4]): List of accelerations to apply
                 (i.e., list of ints).
-            resolution (int, default=384): Reconstruction resolution.
             lr (float, default=0.0003): Learning rate.
             lr_step_size (int, default=40): Learning rate step size.
             lr_gamma (float, default=0.1): Learning rate gamma decay.
@@ -82,7 +80,6 @@ class VarNetModule(MriModule):
         self.mask_type = mask_type
         self.center_fractions = center_fractions
         self.accelerations = accelerations
-        self.resolution = resolution
         self.lr = lr
         self.lr_step_size = lr_step_size
         self.lr_gamma = lr_gamma
@@ -102,7 +99,7 @@ class VarNetModule(MriModule):
         return self.varnet(masked_kspace, mask)
 
     def training_step(self, batch, batch_idx):
-        masked_kspace, mask, target, _, _, max_value = batch
+        masked_kspace, mask, target, _, _, max_value, _ = batch
 
         output = self(masked_kspace, mask)
 
@@ -112,7 +109,7 @@ class VarNetModule(MriModule):
         return {"loss": loss, "log": {"train_loss": loss.item()}}
 
     def validation_step(self, batch, batch_idx):
-        masked_kspace, mask, target, fname, slice_num, max_value = batch
+        masked_kspace, mask, target, fname, slice_num, max_value, _ = batch
 
         output = self.forward(masked_kspace, mask)
         target, output = T.center_crop_to_smallest(target, output)
@@ -135,14 +132,16 @@ class VarNetModule(MriModule):
         }
 
     def test_step(self, batch, batch_idx):
-        masked_kspace, mask, _, fname, slice_num, _ = batch
+        masked_kspace, mask, _, fname, slice_num, _, crop_size = batch
+        crop_size = crop_size[0]  # always have a batch size of 1 for varnet
 
         output = self(masked_kspace, mask)
 
-        _, _, w = output.shape
+        # check for FLAIR 203
+        if output.shape[-2] < crop_size[1]:
+            crop_size = (output.shape[-2], output.shape[-2])
 
-        crop_size = min(w, self.resolution)
-        output = T.center_crop(output, (crop_size, crop_size))
+        output = T.center_crop(output, tuple(crop_size.cpu()))
 
         return {
             "fname": fname,
@@ -165,21 +164,21 @@ class VarNetModule(MriModule):
             self.mask_type, self.center_fractions, self.accelerations
         )
 
-        return DataTransform(self.resolution, mask, use_seed=False)
+        return DataTransform(mask, use_seed=False)
 
     def val_data_transform(self):
         mask = create_mask_for_mask_type(
             self.mask_type, self.center_fractions, self.accelerations
         )
 
-        return DataTransform(self.resolution, mask)
+        return DataTransform(mask)
 
     def test_data_transform(self):
         mask = create_mask_for_mask_type(
             self.mask_type, self.center_fractions, self.accelerations
         )
 
-        return DataTransform(self.resolution, mask)
+        return DataTransform(mask)
 
     @staticmethod
     def add_model_specific_args(parent_parser):  # pragma: no-cover
@@ -204,7 +203,6 @@ class VarNetModule(MriModule):
         )
         parser.add_argument("--center_fractions", nargs="+", default=[0.08], type=float)
         parser.add_argument("--accelerations", nargs="+", default=[4], type=int)
-        parser.add_argument("--resolution", default=384, type=int)
 
         # training params (opt)
         parser.add_argument("--lr", default=0.001, type=float)
@@ -220,10 +218,9 @@ class DataTransform(object):
     Data Transformer for training VarNet models.
     """
 
-    def __init__(self, resolution, mask_func=None, use_seed=True):
+    def __init__(self, mask_func=None, use_seed=True):
         """
         Args:
-            resolution (int): Resolution of the image.
             mask_func (fastmri.data.subsample.MaskFunc): A function that can
                 create a mask of appropriate shape.
             use_seed (bool): If true, this class computes a pseudo random
@@ -232,7 +229,6 @@ class DataTransform(object):
                 time.
         """
         self.mask_func = mask_func
-        self.resolution = resolution
         self.use_seed = use_seed
 
     def __call__(self, kspace, mask, target, attrs, fname, slice_num):
@@ -250,11 +246,14 @@ class DataTransform(object):
 
         Returns:
             (tuple): tuple containing:
-                image (torch.Tensor): Zero-filled input image.
-                target (torch.Tensor): Target image converted to a torch
-                    Tensor.
-                mean (float): Mean value used for normalization.
-                std (float): Standard deviation value used for normalization.
+                masked_kspace (torch.Tensor): k-space after applying sampling
+                    mask.
+                mask (torch.Tensor): The applied sampling mask
+                target (torch.Tensor): The target image (if applicable).
+                fname (str): File name.
+                slice_num (int): The slice index.
+                max_value (float): Maximum image value.
+                crop_size (torch.Tensor): the size to crop the final image.
         """
         if target is not None:
             target = T.to_tensor(target)
@@ -267,6 +266,8 @@ class DataTransform(object):
         seed = None if not self.use_seed else tuple(map(ord, fname))
         acq_start = attrs["padding_left"]
         acq_end = attrs["padding_right"]
+
+        crop_size = torch.tensor([attrs["recon_size"][0], attrs["recon_size"][1]])
 
         if self.mask_func:
             masked_kspace, mask = T.apply_mask(
@@ -283,4 +284,13 @@ class DataTransform(object):
             mask[:, :, :acq_start] = 0
             mask[:, :, acq_end:] = 0
 
-        return masked_kspace, mask.byte(), target, fname, slice_num, max_value
+        return (
+            masked_kspace,
+            mask.byte(),
+            target,
+            fname,
+            slice_num,
+            max_value,
+            crop_size,
+        )
+

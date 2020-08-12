@@ -27,19 +27,17 @@ def save_zero_filled(data_dir, out_dir, which_challenge):
             masked_kspace = transforms.to_tensor(hf["kspace"][()])
 
             # extract target image width, height from ismrmrd header
-            height = enc.reconSpace.matrixSize.x
-            width = enc.reconSpace.matrixSize.y
+            crop_size = (enc.reconSpace.matrixSize.x, enc.reconSpace.matrixSize.y)
 
             # inverse Fourier Transform to get zero filled solution
             image = fastmri.ifft2c(masked_kspace)
 
             # check for FLAIR 203
-            if image.shape[-2] < width:
-                width = image.shape[-2]
-                height = width
+            if image.shape[-2] < crop_size[1]:
+                crop_size = (image.shape[-2], image.shape[-2])
 
             # crop input image
-            image = transforms.complex_center_crop(image, (height, width))
+            image = transforms.complex_center_crop(image, crop_size)
 
             # absolute value
             image = fastmri.complex_abs(image)

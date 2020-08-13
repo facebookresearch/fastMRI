@@ -9,7 +9,7 @@ import pathlib
 import sys
 from argparse import ArgumentParser
 
-from pytorch_lightning import Trainer
+from pytorch_lightning import Trainer, seed_everything
 
 sys.path.append("../../")  # noqa: E402
 
@@ -22,8 +22,8 @@ def main(args):
     # ------------------------
     # 1 INIT LIGHTNING MODEL
     # ------------------------
+    seed_everything(args.seed)
     model = UnetModule(**vars(args))
-
     # ------------------------
     # 2 INIT TRAINER
     # ------------------------
@@ -86,10 +86,11 @@ def build_args():
         default_root_dir=logdir,
         replace_sampler_ddp=(backend != "ddp"),
         distributed_backend=backend,
+        deterministic=True,
     )
 
     parser.add_argument("--mode", default="train", type=str)
-
+    parser.add_argument("--seed", default=42, type=int)
     args = parser.parse_args()
 
     return args

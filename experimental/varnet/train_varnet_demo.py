@@ -9,7 +9,7 @@ import pathlib
 import sys
 from argparse import ArgumentParser
 
-from pytorch_lightning import Trainer
+from pytorch_lightning import Trainer, seed_everything
 
 sys.path.append("../../")  # noqa: E402
 
@@ -22,6 +22,7 @@ def main(args):
     # ------------------------
     # 1 INIT LIGHTNING MODEL
     # ------------------------
+    seed_everything(args.seed)
     model = VarNetModule(**vars(args))
 
     # ------------------------
@@ -78,6 +79,7 @@ def build_args():
         exp_name="varnet_demo",
         test_split="test",
         batch_size=batch_size,
+        deterministic=True,
     )
     parser.set_defaults(**config)
 

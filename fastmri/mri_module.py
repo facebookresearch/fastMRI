@@ -213,8 +213,8 @@ class MriModule(pl.LightningModule):
         # handle aggregation for distributed case with pytorch_lightning metrics
         metrics = dict(val_loss=0, nmse=0, ssim=0, psnr=0)
         for fname in outputs:
-            output = torch.cat([out for _, out in sorted(outputs[fname])]).numpy()
-            target = torch.cat([tgt for _, tgt in sorted(targets[fname])]).numpy()
+            output = torch.stack([out for _, out in sorted(outputs[fname])]).numpy()
+            target = torch.stack([tgt for _, tgt in sorted(targets[fname])]).numpy()
             metrics["nmse"] = metrics["nmse"] + evaluate.nmse(target, output)
             metrics["ssim"] = metrics["ssim"] + evaluate.ssim(target, output)
             metrics["psnr"] = metrics["psnr"] + evaluate.psnr(target, output)

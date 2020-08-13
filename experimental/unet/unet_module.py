@@ -206,6 +206,7 @@ class DataTransform(object):
         """
         if which_challenge not in ("singlecoil", "multicoil"):
             raise ValueError(f'Challenge should either be "singlecoil" or "multicoil"')
+
         self.mask_func = mask_func
         self.which_challenge = which_challenge
         self.use_seed = use_seed

@@ -162,25 +162,25 @@ class EquispacedMaskFunc(MaskFunc):
         if len(shape) < 3:
             raise ValueError("Shape should have 3 or more dimensions")
 
-        self.rng.seed(seed)
-        center_fraction, acceleration = self.choose_acceleration()
-        num_cols = shape[-2]
-        num_low_freqs = int(round(num_cols * center_fraction))
+        with temp_seed(self.rng, seed):
+            center_fraction, acceleration = self.choose_acceleration()
+            num_cols = shape[-2]
+            num_low_freqs = int(round(num_cols * center_fraction))
 
-        # Create the mask
-        mask = np.zeros(num_cols, dtype=np.float32)
-        pad = (num_cols - num_low_freqs + 1) // 2
-        mask[pad : pad + num_low_freqs] = True
+            # Create the mask
+            mask = np.zeros(num_cols, dtype=np.float32)
+            pad = (num_cols - num_low_freqs + 1) // 2
+            mask[pad : pad + num_low_freqs] = True
 
-        # Determine acceleration rate by adjusting for the number of low frequencies
-        adjusted_accel = (acceleration * (num_low_freqs - num_cols)) / (
-            num_low_freqs * acceleration - num_cols
-        )
-        offset = self.rng.randint(0, round(adjusted_accel))
+            # Determine acceleration rate by adjusting for the number of low frequencies
+            adjusted_accel = (acceleration * (num_low_freqs - num_cols)) / (
+                num_low_freqs * acceleration - num_cols
+            )
+            offset = self.rng.randint(0, round(adjusted_accel))
 
-        accel_samples = np.arange(offset, num_cols - 1, adjusted_accel)
-        accel_samples = np.around(accel_samples).astype(np.uint)
-        mask[accel_samples] = True
+            accel_samples = np.arange(offset, num_cols - 1, adjusted_accel)
+            accel_samples = np.around(accel_samples).astype(np.uint)
+            mask[accel_samples] = True
 
         # Reshape the mask
         mask_shape = [1 for _ in shape]

@@ -79,7 +79,6 @@ def build_args():
         exp_name="varnet_demo",
         test_split="test",
         batch_size=batch_size,
-        deterministic=True,
     )
     parser.set_defaults(**config)
 
@@ -88,10 +87,10 @@ def build_args():
         default_root_dir=logdir,
         replace_sampler_ddp=(backend != "ddp"),
         distributed_backend=backend,
+        deterministic=True,
     )
 
     parser.add_argument("--mode", default="train", type=str)
-
     args = parser.parse_args()
 
     return args

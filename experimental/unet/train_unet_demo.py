@@ -24,6 +24,7 @@ def main(args):
     # ------------------------
     seed_everything(args.seed)
     model = UnetModule(**vars(args))
+    
     # ------------------------
     # 2 INIT TRAINER
     # ------------------------
@@ -90,7 +91,6 @@ def build_args():
     )
 
     parser.add_argument("--mode", default="train", type=str)
-    parser.add_argument("--seed", default=42, type=int)
     args = parser.parse_args()
 
     return args

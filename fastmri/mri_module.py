@@ -278,6 +278,10 @@ class MriModule(pl.LightningModule):
         parser.add_argument(
             "--num_workers", default=4, type=float,
         )
+        parser.add_argument(
+            "--seed", default=42, type=int,
+        )
+
 
         # logging params
         parser.add_argument(

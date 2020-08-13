@@ -19,11 +19,14 @@ from .conftest import create_input
     [([4, 32, 32, 2], [0.08], [4]), ([2, 64, 64, 2], [0.04, 0.08], [8, 4]),],
 )
 def test_apply_mask(shape, center_fractions, accelerations):
+    state = np.random.get_state()
+
     mask_func = RandomMaskFunc(center_fractions, accelerations)
     expected_mask = mask_func(shape, seed=123)
     x = create_input(shape)
     output, mask = transforms.apply_mask(x, mask_func, seed=123)
 
+    assert (state[1] == np.random.get_state()[1]).all()
     assert output.shape == x.shape
     assert mask.shape == expected_mask.shape
     assert np.all(expected_mask.numpy() == mask.numpy())

@@ -5,8 +5,20 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+import contextlib
+
 import numpy as np
 import torch
+
+
+@contextlib.contextmanager
+def temp_seed(rng, seed):
+    state = rng.get_state()
+    rng.seed(seed)
+    try:
+        yield
+    finally:
+        rng.set_state(state)
 
 
 def create_mask_for_mask_type(mask_type_str, center_fractions, accelerations):
@@ -95,16 +107,18 @@ class RandomMaskFunc(MaskFunc):
         if len(shape) < 3:
             raise ValueError("Shape should have 3 or more dimensions")
 
-        self.rng.seed(seed)
-        num_cols = shape[-2]
-        center_fraction, acceleration = self.choose_acceleration()
+        with temp_seed(self.rng, seed):
+            num_cols = shape[-2]
+            center_fraction, acceleration = self.choose_acceleration()
 
-        # Create the mask
-        num_low_freqs = int(round(num_cols * center_fraction))
-        prob = (num_cols / acceleration - num_low_freqs) / (num_cols - num_low_freqs)
-        mask = self.rng.uniform(size=num_cols) < prob
-        pad = (num_cols - num_low_freqs + 1) // 2
-        mask[pad : pad + num_low_freqs] = True
+            # Create the mask
+            num_low_freqs = int(round(num_cols * center_fraction))
+            prob = (num_cols / acceleration - num_low_freqs) / (
+                num_cols - num_low_freqs
+            )
+            mask = self.rng.uniform(size=num_cols) < prob
+            pad = (num_cols - num_low_freqs + 1) // 2
+            mask[pad : pad + num_low_freqs] = True
 
         # Reshape the mask
         mask_shape = [1 for _ in shape]

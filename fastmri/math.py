@@ -191,3 +191,16 @@ def ifftshift(x, dim=None):
         shift = [(x.shape[i] + 1) // 2 for i in dim]
 
     return roll(x, shift, dim)
+
+
+def tensor_to_complex_np(data):
+    """
+    Converts a complex torch tensor to numpy array.
+    Args:
+        data (torch.Tensor): Input data to be converted to numpy.
+
+    Returns:
+        np.array: Complex numpy version of data
+    """
+    data = data.numpy()
+    return data[..., 0] + 1j * data[..., 1]

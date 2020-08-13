@@ -99,7 +99,7 @@ class RandomMaskFunc(MaskFunc):
                 along the second last dimension.
             seed (int, optional): Seed for the random number generator. Setting
                 the seed ensures the same mask is generated each time for the
-                same shape.
+                same shape. The random state is reset afterwards.
                 
         Returns:
             torch.Tensor: A mask of the specified shape.
@@ -111,7 +111,7 @@ class RandomMaskFunc(MaskFunc):
             num_cols = shape[-2]
             center_fraction, acceleration = self.choose_acceleration()
 
-            # Create the mask
+            # create the mask
             num_low_freqs = int(round(num_cols * center_fraction))
             prob = (num_cols / acceleration - num_low_freqs) / (
                 num_cols - num_low_freqs
@@ -120,10 +120,10 @@ class RandomMaskFunc(MaskFunc):
             pad = (num_cols - num_low_freqs + 1) // 2
             mask[pad : pad + num_low_freqs] = True
 
-        # Reshape the mask
-        mask_shape = [1 for _ in shape]
-        mask_shape[-2] = num_cols
-        mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
+            # reshape the mask
+            mask_shape = [1 for _ in shape]
+            mask_shape[-2] = num_cols
+            mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
 
         return mask
 
@@ -154,7 +154,7 @@ class EquispacedMaskFunc(MaskFunc):
                 along the second last dimension.
             seed (int, optional): Seed for the random number generator. Setting
                 the seed ensures the same mask is generated each time for the
-                same shape.
+                same shape. The random state is reset afterwards.
 
         Returns:
             torch.Tensor: A mask of the specified shape.
@@ -167,12 +167,12 @@ class EquispacedMaskFunc(MaskFunc):
             num_cols = shape[-2]
             num_low_freqs = int(round(num_cols * center_fraction))
 
-            # Create the mask
+            # create the mask
             mask = np.zeros(num_cols, dtype=np.float32)
             pad = (num_cols - num_low_freqs + 1) // 2
             mask[pad : pad + num_low_freqs] = True
 
-            # Determine acceleration rate by adjusting for the number of low frequencies
+            # determine acceleration rate by adjusting for the number of low frequencies
             adjusted_accel = (acceleration * (num_low_freqs - num_cols)) / (
                 num_low_freqs * acceleration - num_cols
             )
@@ -182,9 +182,9 @@ class EquispacedMaskFunc(MaskFunc):
             accel_samples = np.around(accel_samples).astype(np.uint)
             mask[accel_samples] = True
 
-        # Reshape the mask
-        mask_shape = [1 for _ in shape]
-        mask_shape[-2] = num_cols
-        mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
+            # reshape the mask
+            mask_shape = [1 for _ in shape]
+            mask_shape[-2] = num_cols
+            mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
 
         return mask

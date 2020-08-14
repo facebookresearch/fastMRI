@@ -138,8 +138,8 @@ def cs_total_variation(args, kspace, reg_wt, crop_size, num_low_freqs):
     pred = torch.from_numpy(np.abs(pred[0]))
 
     # check for FLAIR 203
-    if pred.shape[-2] < crop_size[1]:
-        crop_size = (pred.shape[-2], pred.shape[-2])
+    if pred.shape[1] < crop_size[1]:
+        crop_size = (pred.shape[1], pred.shape[1])
 
     return T.center_crop(pred, crop_size)
 

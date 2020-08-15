@@ -144,6 +144,11 @@ class EquispacedMaskFunc(MaskFunc):
     It is possible to use multiple center_fractions and accelerations, in which
     case one possible (center_fraction, acceleration) is chosen uniformly at
     random each time the EquispacedMaskFunc object is called.
+
+    Note that this function may not give equispaced samples (documented in
+    https://github.com/facebookresearch/fastMRI/issues/54), which will require
+    modifications to standard GRAPPA approaches. Nonetheless, this aspect of
+    the function has been preserved to match the public multicoil data. 
     """
 
     def __call__(self, shape, seed):

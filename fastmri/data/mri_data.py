@@ -5,7 +5,9 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+import logging
 import pathlib
+import pickle
 import random
 
 import h5py
@@ -112,11 +114,22 @@ class SliceDataset(Dataset):
             challenge to use.
         sample_rate (float, optional): A float between 0 and 1. This controls
             what fraction of the volumes should be loaded.
+        dataset_cache_file (pathlib.Path). A file in which to cache dataset
+            information for faster load times. Default: dataset_cache.pkl.
     """
 
-    def __init__(self, root, transform, challenge, sample_rate=1):
+    def __init__(
+        self,
+        root,
+        transform,
+        challenge,
+        sample_rate=1,
+        dataset_cache_file=pathlib.Path("dataset_cache.pkl"),
+    ):
         if challenge not in ("singlecoil", "multicoil"):
             raise ValueError('challenge should be either "singlecoil" or "multicoil"')
+
+        self.dataset_cache_file = dataset_cache_file
 
         self.transform = transform
         self.recons_key = (
@@ -124,45 +137,62 @@ class SliceDataset(Dataset):
         )
         self.examples = []
 
-        files = list(pathlib.Path(root).iterdir())
+        if self.dataset_cache_file.exists():
+            with open(self.dataset_cache_file, "rb") as f:
+                dataset_cache = pickle.load(f)
+        else:
+            dataset_cache = {}
+
+        if dataset_cache.get(root) is None:
+            files = list(pathlib.Path(root).iterdir())
+            for fname in sorted(files):
+                with h5py.File(fname, "r") as hf:
+                    hdr = ismrmrd.xsd.CreateFromDocument(hf["ismrmrd_header"][()])
+                    enc = hdr.encoding[0]
+
+                    enc_size = (
+                        enc.encodedSpace.matrixSize.x,
+                        enc.encodedSpace.matrixSize.y,
+                        enc.encodedSpace.matrixSize.z,
+                    )
+                    recon_size = (
+                        enc.reconSpace.matrixSize.x,
+                        enc.reconSpace.matrixSize.y,
+                        enc.reconSpace.matrixSize.z,
+                    )
+
+                    enc_limits_center = enc.encodingLimits.kspace_encoding_step_1.center
+                    enc_limits_max = (
+                        enc.encodingLimits.kspace_encoding_step_1.maximum + 1
+                    )
+                    padding_left = enc_size[1] // 2 - enc_limits_center
+                    padding_right = padding_left + enc_limits_max
+
+                    num_slices = hf["kspace"].shape[0]
+
+                metadata = {
+                    "padding_left": padding_left,
+                    "padding_right": padding_right,
+                    "encoding_size": enc_size,
+                    "recon_size": recon_size,
+                }
+
+                self.examples += [
+                    (fname, slice_ind, metadata) for slice_ind in range(num_slices)
+                ]
+
+            dataset_cache[root] = self.examples
+            logging.info(f"Saving dataset cache to {self.dataset_cache_file}.")
+            with open(self.dataset_cache_file, "wb") as f:
+                pickle.dump(dataset_cache, f)
+        else:
+            logging.info(f"Using dataset cache from {self.dataset_cache_file}.")
+            self.examples = dataset_cache[root]
+
         if sample_rate < 1:
-            random.shuffle(files)
-            num_files = round(len(files) * sample_rate)
-            files = files[:num_files]
-
-        for fname in sorted(files):
-            with h5py.File(fname, "r") as hf:
-                hdr = ismrmrd.xsd.CreateFromDocument(hf["ismrmrd_header"][()])
-                enc = hdr.encoding[0]
-
-                enc_size = (
-                    enc.encodedSpace.matrixSize.x,
-                    enc.encodedSpace.matrixSize.y,
-                    enc.encodedSpace.matrixSize.z,
-                )
-                recon_size = (
-                    enc.reconSpace.matrixSize.x,
-                    enc.reconSpace.matrixSize.y,
-                    enc.reconSpace.matrixSize.z,
-                )
-
-                enc_limits_center = enc.encodingLimits.kspace_encoding_step_1.center
-                enc_limits_max = enc.encodingLimits.kspace_encoding_step_1.maximum + 1
-                padding_left = enc_size[1] // 2 - enc_limits_center
-                padding_right = padding_left + enc_limits_max
-
-                num_slices = hf["kspace"].shape[0]
-
-            metadata = {
-                "padding_left": padding_left,
-                "padding_right": padding_right,
-                "encoding_size": enc_size,
-                "recon_size": recon_size,
-            }
-
-            self.examples += [
-                (fname, slice_ind, metadata) for slice_ind in range(num_slices)
-            ]
+            random.shuffle(self.examples)
+            num_examples = round(len(self.examples) * sample_rate)
+            self.examples = self.examples[:num_examples]
 
     def __len__(self):
         return len(self.examples)

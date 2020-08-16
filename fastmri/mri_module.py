@@ -157,8 +157,8 @@ class MriModule(pl.LightningModule):
 
         # only process first size to simplify visualization.
         visualize_size = val_outputs[0].shape
-        val_outputs = [x for x in val_outputs if x.shape == visualize_size]
-        val_targets = [x for x in val_targets if x.shape == visualize_size]
+        val_outputs = [x[0] for x in val_outputs if x.shape == visualize_size]
+        val_targets = [x[0] for x in val_targets if x.shape == visualize_size]
 
         num_logs = len(val_outputs)
         assert num_logs == len(val_targets)
@@ -191,8 +191,8 @@ class MriModule(pl.LightningModule):
 
         # run the visualizations
         self._visualize(
-            val_outputs=np.concatenate([x["output"].numpy() for x in val_logs]),
-            val_targets=np.concatenate([x["target"].numpy() for x in val_logs]),
+            val_outputs=[x["output"].numpy() for x in val_logs],
+            val_targets=[x["target"].numpy() for x in val_logs],
         )
 
         # aggregate losses
@@ -281,7 +281,6 @@ class MriModule(pl.LightningModule):
         parser.add_argument(
             "--seed", default=42, type=int,
         )
-
 
         # logging params
         parser.add_argument(

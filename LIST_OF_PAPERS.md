@@ -1,6 +1,6 @@
 # fastMRI publications and preprints
 
-The following is a short-form list of fastMRI publications. Clicking on the title will take you further down in this page where other links to the paper manuscript, preprints, code, etc. will be present.
+The following is a short list of fastMRI publications. Clicking on the title will take you further down in this page where other links to the paper manuscript, preprints, code, etc. will be present.
 
 1. Zbontar, J., Knoll, F., Sriram, A., Muckley, M. J., Bruno, M., Defazio, A., ... & Zhang, Z. (2018). [fastMRI: An open dataset and benchmarks for accelerated MRI](#fastmri-an-open-dataset-and-benchmarks-for-accelerated-MRI). *arXiv preprint arXiv:1811.08839*.
 2. Zhang, Z., Romero, A., Muckley, M. J., Vincent, P., Yang, L., & Drozdzal, M. (2019). [Reducing uncertainty in undersampled MRI reconstruction with active acquisition](#reducing-uncertainty-in-undersampled-mri-reconstruction-with-active-acquisition). In *Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition* (pp. 2049-2058).

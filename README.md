@@ -17,7 +17,6 @@ This repository contains convenient PyTorch data loaders, subsampling functions,
 5. [Training a model](#training-a-model)
 6. [Submitting to the Leaderboard](#submitting-to-the-leaderboard)
 7. [License](#license)
-8. [Citing](#citing)
 
 ## Documentation
 

@@ -10,7 +10,7 @@ This repository contains convenient PyTorch data loaders, subsampling functions,
 
 ## Outline
 
-1. [Citing](#citing)
+1. [Documentation](#documentation)
 2. [Dependencies and Installation](#Dependencies-and-Installation)
 3. [Directory Structure & Usage](#directory-structure--usage)
 4. [Testing](#testing)
@@ -19,7 +19,7 @@ This repository contains convenient PyTorch data loaders, subsampling functions,
 7. [License](#license)
 8. [List of Papers](#list-of-papers)
 
-## Citing
+## Documentation
 
 Documentation for the fastMRI dataset and baseline reconstruction performance can be found in [our paper on arXiv](https://arxiv.org/abs/1811.08839). The paper is updated on an ongoing basis for dataset additions and new baselines. If you use the fastMRI data or code in your project, please consider citing the dataset paper:
 
@@ -76,7 +76,9 @@ Since August 2020, the repository has been refactored to operate as a package ce
 * `fastmri/data`: Contains data utility functions from original `data` folder that can be used to create sampling masks and submission files.
 * `fastmri/models`: Contains baseline models, including the U-Net and the End-to-end Variational Network.
 
-`experimental`: Folders intended to aid reproducibility of baselines. We currently have code for reproducing the following papers:
+`experimental`: Folders intended to aid reproducibility of baselines and papers.
+
+We currently have code for reproducing the following papers:
 
 * fastMRI: An open dataset and benchmarks for accelerated MRI (Zbontar, J. et al., 2018)
   * [U-Net Baseline](https://github.com/facebookresearch/fastMRI/tree/master/experimental/unet)
@@ -107,7 +109,7 @@ fastMRI is MIT licensed, as found in the [LICENSE file](https://github.com/faceb
 
 ## List of Papers
 
-The following lists titles of papers from the fastMRI project. A more complete list of papers with abstracts and links to code can be found [here](LIST_OF_PAPERS.md).
+The following lists titles of papers from the fastMRI project. A more complete list of papers with abstracts and links to code can be found [here](https://github.com/facebookresearch/fastMRI/blob/master/LIST_OF_PAPERS.md).
 
 1. [fastMRI: An open dataset and benchmarks for accelerated MRI (Zbontar, J. et al., 2018)](https://arxiv.org/abs/1811.08839).
 2. [Reducing uncertainty in undersampled MRI reconstruction with active acquisition (Zhang, Z. et al., 2019)](https://openaccess.thecvf.com/content_CVPR_2019/html/Zhang_Reducing_Uncertainty_in_Undersampled_MRI_Reconstruction_With_Active_Acquisition_CVPR_2019_paper.html).

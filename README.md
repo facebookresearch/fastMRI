@@ -102,7 +102,7 @@ fastMRI is MIT licensed, as found in the [LICENSE file](https://github.com/faceb
 
 ## List of Papers
 
-The following lists titles of papers from the fastMRI project. A more complete list of papers with abstracts and links to code can be found [here](LIST_OF_PAPERS.md)
+The following lists titles of papers from the fastMRI project. A more complete list of papers with abstracts and links to code can be found [here](LIST_OF_PAPERS.md).
 
 1. Zbontar, J., Knoll, F., Sriram, A., Muckley, M. J., Bruno, M., Defazio, A., ... & Zhang, Z. (2018). [fastMRI: An open dataset and benchmarks for accelerated MRI](https://arxiv.org/abs/1811.08839). *arXiv preprint arXiv:1811.08839*.
 2. Zhang, Z., Romero, A., Muckley, M. J., Vincent, P., Yang, L., & Drozdzal, M. (2019). [Reducing uncertainty in undersampled MRI reconstruction with active acquisition](https://openaccess.thecvf.com/content_CVPR_2019/html/Zhang_Reducing_Uncertainty_in_Undersampled_MRI_Reconstruction_With_Active_Acquisition_CVPR_2019_paper.html). In *Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition* (pp. 2049-2058).

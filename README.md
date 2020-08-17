@@ -78,8 +78,6 @@ Since August 2020, the repository has been refactored to operate as a package ce
 
 `experimental`: Folders intended to aid reproducibility of baselines.
 
-* `experimental.
-
 ## Testing
 
 Run `python -m pytest tests`.

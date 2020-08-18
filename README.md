@@ -21,7 +21,7 @@ This repository contains convenient PyTorch data loaders, subsampling functions,
 
 ## Documentation
 
-Documentation for the fastMRI dataset and baseline reconstruction performance can be found in [our paper on arXiv](https://arxiv.org/abs/1811.08839). The paper is updated on an ongoing basis for dataset additions and new baselines. If you use the fastMRI data or code in your project, please consider citing the dataset paper:
+Documentation for the fastMRI dataset and baseline reconstruction performance can be found in [our paper on arXiv](https://arxiv.org/abs/1811.08839). The paper is updated on an ongoing basis for dataset additions and new baselines. If you use the fastMRI data or code in your project, please consider citing the arXiv paper:
 
 ```BibTeX
 @inproceedings{zbontar2018fastMRI,

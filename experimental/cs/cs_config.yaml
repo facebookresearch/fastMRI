@@ -1,0 +1,29 @@
+singlecoil:
+  CORPD_FBK: # knee
+    4: 0.01
+    8: 0.1
+  CORPDFS_FBK: # knee
+    4: 0.01
+    8: 0.01
+multicoil:
+  CORPD_FBK: # knee
+    4: 0.01
+    8: 0.01
+  CORPDFS_FBK: # knee
+    4: 0.001
+    8: 0.01
+  AXT1: # brain
+    4: 0.001
+    8: 0.01
+  AXT1PRE: # brain
+    4: 0.001
+    8: 0.01
+  AXT1POST: # brain
+    4: 0.01
+    8: 0.01
+  AXT2: # brain
+    4: 0.01
+    8: 0.01
+  AXFLAIR: # brain
+    4: 0.01
+    8: 0.001

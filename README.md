@@ -78,14 +78,15 @@ Since August 2020, the repository has been refactored to operate as a package ce
 
 `experimental`: Folders intended to aid reproducibility of baselines and papers.
 
-We currently have code for reproducing the following papers:
+* `experimental/zero_filled`: Examples for saving images for leaderboard submission, zero-filled baselines from [fastMRI: An open dataset and benchmarks for accelerated MRI (Zbontar, J. et al., 2018)](https://arxiv.org/abs/1811.08839).
+* `experimental/cs`: Compressed sensing baselines from [fastMRI: An open dataset and benchmarks for accelerated MRI (Zbontar, J. et al., 2018)](https://arxiv.org/abs/1811.08839).
+* `experimental/unet`: U-Net baselines from [fastMRI: An open dataset and benchmarks for accelerated MRI (Zbontar, J. et al., 2018)](https://arxiv.org/abs/1811.08839).
+* `experimental/varnet`: Code for reproducing [End-to-End Variational Networks for Accelerated MRI Reconstruction (Sriram, A. et al. 2020)](https://arxiv.org/abs/2004.06688).
 
-* fastMRI: An open dataset and benchmarks for accelerated MRI (Zbontar, J. et al., 2018)
-  * [U-Net Baseline](https://github.com/facebookresearch/fastMRI/tree/master/experimental/unet)
-  * [Zero-filled Baseline](https://github.com/facebookresearch/fastMRI/tree/master/experimental/zero_filled)
-* [End-to-End Variational Networks for Accelerated MRI Reconstruction (Sriram, A. et al. 2020)](https://github.com/facebookresearch/fastMRI/tree/master/experimental/varnet)
-* [Offset Sampling Improves Deep Learning based Accelerated MRI Reconstructions by Exploiting Symmetry (Defazio, A., 2019)](https://github.com/facebookresearch/fastMRI/blob/master/banding_removal/fastmri/common/subsample.py)
-* [MRI Banding Removal via Adversarial Training (Defazio, A. et al., 2020)](https://github.com/facebookresearch/fastMRI/tree/master/banding_removal)
+Code for other papers can be found in:
+
+* `banding_removal`: Code for reproducing [MRI Banding Removal via Adversarial Training (Defazio, A. et al., 2020)](https://arxiv.org/abs/2001.08699).
+* `banding_removal/fastmri/common/subsample.py`: Code for implementing masks from [Offset Sampling Improves Deep Learning based Accelerated MRI Reconstructions by Exploiting Symmetry (Defazio, A., 2019)](https://arxiv.org/abs/1912.01101).
 
 ## Testing
 

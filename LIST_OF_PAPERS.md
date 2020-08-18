@@ -101,7 +101,7 @@ A publicly available dataset containing k-space data as well as Digital Imaging 
 
 *Magnetic Resonance in Medicine*
 
-[arXiv](https://arxiv.org/abs/2001.02518) [publication](https://doi.org/10.1002/mrm.28338) [Code](https://github.com/facebookresearch/fastMRI)
+[arXiv](https://arxiv.org/abs/2001.02518) [publication](https://doi.org/10.1002/mrm.28338)
 
 **Purpose**
 

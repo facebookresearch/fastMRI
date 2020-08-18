@@ -30,3 +30,5 @@ python models/cs/run_bart.py --challenge CHALLENGE --data_path DATA --output_pat
 ```
 
 The outputs will be saved to `reconstructions_test` directory which can be uploaded for submission.
+
+Note: for the 2020 Brain Challenge we have opted to not include compressed sensing as a FAIR/NYU baseline for the leaderboard. The 2020 Challenge uses equispaced masks, which are not supported by compressed sensing theory.

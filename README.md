@@ -119,6 +119,6 @@ The following lists titles of papers from the fastMRI project. A more complete l
 5. [fastMRI: A Publicly Available Raw k-Space and DICOM Dataset of Knee Images for Accelerated MR Image Reconstruction Using Machine Learning (Knoll, F. et al., 2020)](https://doi.org/10.1148/ryai.2020190007).
 6. [Advancing machine learning for MR image reconstruction with an open competition: Overview of the 2019 fastMRI challenge (Knoll, F. et al., 2020)](https://doi.org/10.1002/mrm.28338).
 7. [GrappaNet: Combining parallel imaging with deep learning for multi-coil MRI reconstruction (Sriram, A. et al., 2020)](https://openaccess.thecvf.com/content_CVPR_2020/html/Sriram_GrappaNet_Combining_Parallel_Imaging_With_Deep_Learning_for_Multi-Coil_MRI_CVPR_2020_paper.html).
-8. [Using Deep Learning to Accelerate Knee MRI at 3T: Results of an Interchangeability Study (Recht, M. P. et al., 2020)](https://www.ajronline.org/doi/abs/10.2214/AJR.20.23313).
+8. [Using Deep Learning to Accelerate Knee MRI at 3T: Results of an Interchangeability Study (Recht, M. P. et al., 2020)](https://doi.org/10.2214/AJR.20.23313).
 9. [Active MR k-space Sampling with Reinforcement Learning (Pineda, L. et al., 2020)](https://arxiv.org/abs/2007.10469).
 10. [End-to-End Variational Networks for Accelerated MRI Reconstruction (Sriram, A. et al. 2020)](https://arxiv.org/abs/2004.06688).

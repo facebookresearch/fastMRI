@@ -47,8 +47,8 @@ def build_args():
     # TRAINING ARGUMENTS
     # ------------------------
     path_config = pathlib.Path.cwd() / ".." / ".." / "fastmri_dirs.yaml"
-    knee_path = fetch_dir("knee_path", path_config)
-    logdir = fetch_dir("log_path", path_config) / "varnet" / "varnet_demo"
+    brain_path = fetch_dir("brain_path", path_config)
+    logdir = fetch_dir("log_path", path_config) / "varnet" / "varnet_leaderboard"
 
     parent_parser = ArgumentParser(add_help=False)
 
@@ -56,27 +56,27 @@ def build_args():
     parser = Trainer.add_argparse_args(parser)
 
     backend = "ddp"
-    num_gpus = 2 if backend == "ddp" else 1
+    num_gpus = 32  # this was the number of GPUs for training
     batch_size = 1
 
     # module config
     config = dict(
-        num_cascades=8,
+        num_cascades=12,
         pools=4,
         chans=18,
         sens_pools=4,
         sens_chans=8,
         mask_type="equispaced",
-        center_fractions=[0.08],
-        accelerations=[4],
-        lr=0.001,
+        center_fractions=[0.08, 0.04],  # note: paper used fixed number of lines
+        accelerations=[4, 8],  # note: paper trained 4x and 8x separately
+        lr=0.0003,
         lr_step_size=40,
         lr_gamma=0.1,
         weight_decay=0.0,
-        data_path=knee_path,
+        data_path=brain_path,
         challenge="multicoil",
         exp_dir=logdir,
-        exp_name="varnet_demo",
+        exp_name="varnet_leaderboard",
         test_split="test",
         batch_size=batch_size,
     )
@@ -88,6 +88,7 @@ def build_args():
         default_root_dir=logdir,
         replace_sampler_ddp=(backend != "ddp"),
         distributed_backend=backend,
+        max_epochs=50,
         seed=42,
         deterministic=True,
     )

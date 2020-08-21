@@ -138,10 +138,10 @@ class VarNetModule(MriModule):
         output = self(masked_kspace, mask)
 
         # check for FLAIR 203
-        if output.shape[-2] < crop_size[1]:
-            crop_size = (output.shape[-2], output.shape[-2])
+        if output.shape[-1] < crop_size[1]:
+            crop_size = (output.shape[-1], output.shape[-1])
 
-        output = T.center_crop(output, tuple(crop_size.cpu()))
+        output = T.center_crop(output, crop_size)
 
         return {
             "fname": fname,
@@ -174,11 +174,7 @@ class VarNetModule(MriModule):
         return DataTransform(mask)
 
     def test_data_transform(self):
-        mask = create_mask_for_mask_type(
-            self.mask_type, self.center_fractions, self.accelerations
-        )
-
-        return DataTransform(mask)
+        return DataTransform()
 
     @staticmethod
     def add_model_specific_args(parent_parser):  # pragma: no-cover

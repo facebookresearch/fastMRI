@@ -2,6 +2,8 @@
 
 This directory contains a reference U-Net implementation for MRI reconstruction in PyTorch.
 
+The file `unet_brain_leaderboard_submission_2020-08-18.py` contains code and hyperparameters that were used to train the "fastMRI Repo U-Net" model on the [fastMRI Multi-Coil Brain Leaderboard](https://fastmri.org/leaderboards/). `train_unet_demo.py` contains a basic demo designed for lower memory consumption.
+
 To start training the model, run:
 
 ```bash

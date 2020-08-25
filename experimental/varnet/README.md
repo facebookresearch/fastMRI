@@ -2,7 +2,9 @@
 
 This directory contains a PyTorch implementation for the method described in [End-to-End Variational Networks for Accelerated MRI Reconstruction Model](https://arxiv.org/abs/2004.06688).
 
-To start training the model, run:
+The file `varnet_brain_leaderboard_submission_2020-08-21.py` contains code and hyperparameters that were used to train the "fastMRI Repo End-to-End VarNet" model on the [fastMRI Multi-Coil Brain Leaderboard](https://fastmri.org/leaderboards/). `train_varnet_demo.py` contains a basic demo designed for lower memory consumption.
+
+To start training demo the model, run:
 
 ```bash
 python train_varnet_demo.py

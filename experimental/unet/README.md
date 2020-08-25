@@ -27,3 +27,7 @@ python models/unet/train_unet.py --mode test --test_split TESTSPLIT --challenge 
 where `MODEL` is the path to the model checkpoint from `{logdir}/lightning_logs/version_0/checkpoints/`. Subsequent model runs will increment the version count. `TESTSPLIT` should specify the test split you want to run on - either `test` or `challenge`.
 
 The outputs will be saved to `reconstructions` directory which can be uploaded for submission.
+
+## Implementation Notes
+
+The leaderboard model was trained where the `train` split included both the `train` and `val` splits from the public data.

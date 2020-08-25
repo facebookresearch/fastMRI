@@ -45,10 +45,11 @@ If you use this this code in your research, please cite the corresponding paper:
 
 ## Implementation Notes
 
+The leaderboard model was trained where the `train` split included both the `train` and `val` splits from the public data.
+
 There are a few differences between this implementation and the [paper](https://arxiv.org/abs/2004.06688).
 
 - The paper model used a fixed number of center lines, whereas this model uses the `center_fractions` variable that might change depending on image size.
 - The paper model was trained separately on 4x and 8x, whereas this model trains on both of them together.
-- The paper model was trained on the `train` and `val` splits together before leaderboard submission, whereas this model only trains on `val`.
 
 These differences have been left partly for backwards compatibility and partly due to the number of areas in the code base that would have go be tweaked and tested to get them working. A full matching implementation may be added to the repository in the future.

@@ -8,14 +8,15 @@ LICENSE file in the root directory of this source tree.
 import argparse
 import pathlib
 from argparse import ArgumentParser
-from torch.distributed import ReduceOp
 
 import h5py
 import numpy as np
+from pytorch_lightning.metrics.metric import NumpyMetric, TensorMetric
 from runstats import Statistics
-from pytorch_lightning.metrics.metric import TensorMetric, NumpyMetric
-from skimage.metrics import structural_similarity, peak_signal_noise_ratio
-from data import transforms
+from skimage.metrics import peak_signal_noise_ratio, structural_similarity
+from torch.distributed import ReduceOp
+
+from fastmri.data import transforms
 
 
 class MSE(NumpyMetric):

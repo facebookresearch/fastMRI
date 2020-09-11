@@ -116,6 +116,8 @@ class SliceDataset(Dataset):
             what fraction of the volumes should be loaded.
         dataset_cache_file (pathlib.Path). A file in which to cache dataset
             information for faster load times. Default: dataset_cache.pkl.
+        num_cols (tuple(int), optional): if provided, only slices with the desired
+            number of columns will be considered.
     """
 
     def __init__(
@@ -125,6 +127,7 @@ class SliceDataset(Dataset):
         challenge,
         sample_rate=1,
         dataset_cache_file=pathlib.Path("dataset_cache.pkl"),
+        num_cols=None
     ):
         if challenge not in ("singlecoil", "multicoil"):
             raise ValueError('challenge should be either "singlecoil" or "multicoil"')
@@ -193,6 +196,10 @@ class SliceDataset(Dataset):
             random.shuffle(self.examples)
             num_examples = round(len(self.examples) * sample_rate)
             self.examples = self.examples[:num_examples]
+
+        if num_cols:
+            self.examples = [
+                ex for ex in self.examples if ex[2]["encoding_size"][1] in num_cols]
 
     def __len__(self):
         return len(self.examples)

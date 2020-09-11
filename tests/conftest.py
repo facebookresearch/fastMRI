@@ -51,7 +51,7 @@ def knee_split_lens():
 @pytest.fixture
 def brain_split_lens():
     split_lens = {
-        "multicoil_train": 92590,
+        "multicoil_train": 70748,
         "multicoil_val": 21842,
         "multicoil_test": 8852,
     }

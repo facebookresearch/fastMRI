@@ -70,9 +70,11 @@ class CombinedSliceDataset(Dataset):
             challenge to use.
         sample_rates (list of float, optional): A float between 0 and 1. This
             controls what fraction of the volumes should be loaded.
+        num_cols (tuple(int), optional): if provided, only slices with the desired
+            number of columns will be considered.
     """
 
-    def __init__(self, roots, transforms, challenges, sample_rates=None):
+    def __init__(self, roots, transforms, challenges, sample_rates=None, num_cols=None):
         assert len(roots) == len(transforms) == len(challenges)
         if sample_rates is not None:
             assert len(sample_rates) == len(roots)
@@ -82,7 +84,13 @@ class CombinedSliceDataset(Dataset):
         self.datasets = list()
         for i in range(len(roots)):
             self.datasets.append(
-                SliceDataset(roots[i], transforms[i], challenges[i], sample_rates[i])
+                SliceDataset(
+                    roots[i],
+                    transforms[i],
+                    challenges[i],
+                    sample_rates[i],
+                    num_cols=num_cols,
+                )
             )
 
     def __len__(self):
@@ -116,6 +124,8 @@ class SliceDataset(Dataset):
             what fraction of the volumes should be loaded.
         dataset_cache_file (pathlib.Path). A file in which to cache dataset
             information for faster load times. Default: dataset_cache.pkl.
+        num_cols (tuple(int), optional): if provided, only slices with the desired
+            number of columns will be considered.
     """
 
     def __init__(
@@ -125,6 +135,7 @@ class SliceDataset(Dataset):
         challenge,
         sample_rate=1,
         dataset_cache_file=pathlib.Path("dataset_cache.pkl"),
+        num_cols=None,
     ):
         if challenge not in ("singlecoil", "multicoil"):
             raise ValueError('challenge should be either "singlecoil" or "multicoil"')
@@ -193,6 +204,11 @@ class SliceDataset(Dataset):
             random.shuffle(self.examples)
             num_examples = round(len(self.examples) * sample_rate)
             self.examples = self.examples[:num_examples]
+
+        if num_cols:
+            self.examples = [
+                ex for ex in self.examples if ex[2]["encoding_size"][1] in num_cols
+            ]
 
     def __len__(self):
         return len(self.examples)

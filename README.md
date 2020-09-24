@@ -53,16 +53,10 @@ We have tested this code using:
 
 You can find the full list of Python packages needed to run the code in the `requirements.txt` file. Most people already have their own PyTorch environment configured with Anaconda, and based on `requirements.txt` you can install the final packages as needed.
 
-If you want to install with `pip`, first delete the `git+https://github.com/ismrmrd/ismrmrd-python.git` line from `requirements.txt`. Then, run
+If you want to install with `pip`, run
 
 ```bash
 pip install -r requirements.txt
-```
-
-Finally, run
-
-```bash
-pip install git+https://github.com/ismrmrd/ismrmrd-python.git
 ```
 
 Then you should have all the packages.

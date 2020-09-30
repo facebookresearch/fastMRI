@@ -8,6 +8,10 @@ Accelerating Magnetic Resonance Imaging (MRI) by acquiring fewer measurements ha
 
 This repository contains convenient PyTorch data loaders, subsampling functions, evaluation metrics, and reference implementations of simple baseline methods. It also contains implementations for methods in some of the publications of the fastMRI project.
 
+## Note to 2020 fastMRI Brain Challenge Participants
+
+We have added a new folder, `experimental/brain_challenge_inference`, where we include new scripts for running inference on the brain challenge set. In particular, these scripts illustrate an aspect of the GE data where there is no frequency oversampling. For further details, please consult the [README](https://github.com/facebookresearch/fastMRI/blob/master/experimental/brain_challenge_inference/README.md).
+
 ## Outline
 
 1. [Documentation](#documentation)

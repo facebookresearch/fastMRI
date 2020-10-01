@@ -10,7 +10,7 @@ This repository contains convenient PyTorch data loaders, subsampling functions,
 
 ## Note to 2020 fastMRI Brain Challenge Participants
 
-We have added a new folder, `experimental/brain_challenge_inference`, where we include new scripts for running inference on the brain challenge set. In particular, these scripts illustrate an aspect of the GE data where there is no frequency oversampling. For further details, please consult the [README](https://github.com/facebookresearch/fastMRI/blob/master/experimental/brain_challenge_inference/README.md).
+We have added a new folder, `experimental/brain_challenge_inference`, where we include new scripts for running inference on the brain challenge set. In particular, these scripts illustrate an aspect of the GE data where there is no frequency oversampling. For further details on the inference scripts, please consult the [README](https://github.com/facebookresearch/fastMRI/blob/master/experimental/brain_challenge_inference/README.md). For further details on submitting to the challenge, please consult [this forum post](https://discuss.fastmri.org/t/2020-fastmri-reconstruction-challenge-launch/208).
 
 ## Outline
 

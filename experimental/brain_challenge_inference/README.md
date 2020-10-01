@@ -4,7 +4,7 @@ This directory contains example scripts for running models on the 2020 fastMRI C
 Data split. The scripts are designed to be minimal - all that is needed is a model
 checkpoint, a path to the data directory, and a path where you want to save your
 reconstructions. In order to submit after saving, you'll want to compress your images
-to a `.zip` or a `.tar.gz` file and put a link to the file the submission form at
+to a `.zip` or a `.tar.gz` file and put a link to the file in the submission form at
 [fastmri.org](fastmri.org).
 
 ## Note on the brain challenge transfer track
@@ -22,7 +22,7 @@ frequency-oversampled inputs into CNNs. Extra work must be done to get these mod
 successfully process the Transfer data. In `run_brain_challenge_transfer_inference.py`,
 we simulate the oversampling with image-domain zero-padding prior to model input. We
 believe there are better ways to augment the Transfer data with regards to frequency
-oversampling. Our only goal with providing this code is only to illustrate the issue to
+oversampling. Our only goal with providing this code is to illustrate the issue to
 challenge participants. We leave decisions on best ways to handle this to the
 participants, as they are best-informed on the properties of their models.
 
@@ -38,9 +38,9 @@ python run_brain_challenge_inference.py \
 ```
 
 where `CHECKPOINT` is your model `CHECKPOINT`, `DATA_PATH` is a path to the
-`multicoil_challenge` split of the brain data, and `OUTPUT_PATH` is where you would like
-to save your reconstructions. Note that the script expects `CHECKPOINT` to be saved in
-PyTorch Lightning format - you may need to modify how it processes the model
+`brain_multicoil_challenge` split of the brain data, and `OUTPUT_PATH` is where you
+would like to save your reconstructions. Note that the script expects `CHECKPOINT` to be
+saved in PyTorch Lightning format - you may need to modify how it processes the model
 `state_dict` is if you used a differrent training framework.
 
 To run inference on the Transfer data split, run the following command:
@@ -52,4 +52,5 @@ python run_brain_challenge_transfer_inference.py \
     --output-path OUTPUT_PATH
 ```
 
-where `CHECKPOINT`, `DATA_PATH`, and `OUTPUT_PATH` are as above.
+where `CHECKPOINT` and `OUTPUT_PATH` are as above. `DATA_PATH` should point to the 
+`brain_multicoil_challenge_transfer` split of the brain data.

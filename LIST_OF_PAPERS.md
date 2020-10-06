@@ -180,7 +180,7 @@ An optimized DL model allowed for acceleration of knee images which performed in
 
 *MICCAI 2020*
 
-[arXiv](https://arxiv.org/abs/2007.10469)
+[arXiv](https://arxiv.org/abs/2007.10469) [Code](https://github.com/facebookresearch/active-mri-acquisition)
 
 Deep learning approaches have recently shown great promise in accelerating magnetic resonance image (MRI) acquisition. The majority of existing work have focused on designing better reconstruction models given a pre-determined acquisition trajectory, ignoring the question of trajectory optimization. In this paper, we focus on learning acquisition trajectories given a fixed image reconstruction model. We formulate the problem as a sequential decision process and propose the use of reinforcement learning to solve it. Experiments on a large scale public MRI dataset of knees show that our proposed models significantly outperform the state-of-the-art in active MRI acquisition, over a large range of acceleration factors.
 

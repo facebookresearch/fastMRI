@@ -1,0 +1,21 @@
+numpy
+scipy
+matplotlib
+ipython
+jupyter
+pandas
+sympy
+nose
+tensorboardX
+runstats
+h5py
+scikit-image
+ismrmrd
+git+https://github.com/NVIDIA/apex  --install-option="--cpp_ext"
+dask>=1.2.2
+dask-jobqueue @ git+https://github.com/dask/dask-jobqueue.git@9c3371d17d943dd44103225c814b8ee042513a93
+distributed @ git+https://github.com/dask/distributed.git@a16b8ff071938c08f64e78bb04636c3b4d619325
+pydantic>=0.21
+typing_extensions
+async_generator
+pyyaml

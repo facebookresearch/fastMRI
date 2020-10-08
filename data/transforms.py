@@ -25,7 +25,7 @@ def to_tensor(data):
     return torch.from_numpy(data)
 
 
-def apply_mask(data, mask_func, seed=None):
+def apply_mask(data, mask_func, seed=None, padding=None):
     """
     Subsample given k-space by multiplying with a mask.
 
@@ -45,7 +45,31 @@ def apply_mask(data, mask_func, seed=None):
     shape = np.array(data.shape)
     shape[:-3] = 1
     mask = mask_func(shape, seed)
-    return torch.where(mask == 0, torch.Tensor([0]), data), mask
+    if padding is not None:
+        mask[:, :, :padding[0]] = 0
+        mask[:, :, padding[1]:] = 0 # padding value inclusive on right of zeros
+
+    masked_data = data * mask + 0.0 # The + 0.0 removes the sign of the zeros
+    return masked_data, mask
+
+
+def mask_center(x, mask_from, mask_to):
+    b, c, h, w, two = x.shape
+    mask = torch.zeros_like(x)
+    mask[:, :, :, mask_from:mask_to] = x[:, :, :, mask_from:mask_to]
+    return mask
+
+
+def complex_mul(x, y):
+    assert x.shape[-1] == y.shape[-1] == 2
+    re = x[..., 0] * y[..., 0] - x[..., 1] * y[..., 1]
+    im = x[..., 0] * y[..., 1] + x[..., 1] * y[..., 0]
+    return torch.stack((re, im), dim=-1)
+
+
+def complex_conj(x):
+    assert x.shape[-1] == 2
+    return torch.stack((x[..., 0], -x[..., 1]), dim=-1)
 
 
 def fft2(data):
@@ -101,6 +125,14 @@ def complex_abs(data):
     return (data ** 2).sum(dim=-1).sqrt()
 
 
+def complex_abs_sq(data):
+    """
+    Compute the squared absolute value of a complex tensor
+    """
+    assert data.size(-1) == 2
+    return (data ** 2).sum(dim=-1)
+
+
 def root_sum_of_squares(data, dim=0):
     """
     Compute the Root Sum of Squares (RSS) transform along a given dimension of a tensor.
@@ -113,6 +145,20 @@ def root_sum_of_squares(data, dim=0):
         torch.Tensor: The RSS value
     """
     return torch.sqrt((data ** 2).sum(dim))
+
+
+def root_sum_of_squares_complex(data, dim=0):
+    """
+    Compute the Root Sum of Squares (RSS) transform along a given dimension of a tensor.
+
+    Args:
+        data (torch.Tensor): The input tensor
+        dim (int): The dimensions along which to apply the RSS transform
+
+    Returns:
+        torch.Tensor: The RSS value
+    """
+    return torch.sqrt(complex_abs_sq(data).sum(dim))
 
 
 def center_crop(data, shape):
@@ -158,6 +204,17 @@ def complex_center_crop(data, shape):
     w_to = w_from + shape[0]
     h_to = h_from + shape[1]
     return data[..., w_from:w_to, h_from:h_to, :]
+
+
+def center_crop_to_smallest(x, y):
+    """
+    Apply a center crop on the larger image to the size of the smaller image.
+    """
+    smallest_width = min(x.shape[-1], y.shape[-1])
+    smallest_height = min(x.shape[-2], y.shape[-2])
+    x = center_crop(x, (smallest_height, smallest_width))
+    y = center_crop(y, (smallest_height, smallest_width))
+    return x, y
 
 
 def normalize(data, mean, stddev, eps=0.):

@@ -12,7 +12,8 @@ from argparse import ArgumentParser
 import h5py
 import numpy as np
 from runstats import Statistics
-from skimage.measure import compare_psnr, compare_ssim
+from skimage.metrics import structural_similarity, peak_signal_noise_ratio
+from data import transforms
 
 
 def mse(gt, pred):
@@ -27,12 +28,12 @@ def nmse(gt, pred):
 
 def psnr(gt, pred):
     """ Compute Peak Signal to Noise Ratio metric (PSNR) """
-    return compare_psnr(gt, pred, data_range=gt.max())
+    return peak_signal_noise_ratio(gt, pred, data_range=gt.max())
 
 
 def ssim(gt, pred):
     """ Compute Structural Similarity Index Metric (SSIM). """
-    return compare_ssim(
+    return structural_similarity(
         gt.transpose(1, 2, 0), pred.transpose(1, 2, 0), multichannel=True, data_range=gt.max()
     )
 
@@ -82,12 +83,18 @@ def evaluate(args, recons_key):
     metrics = Metrics(METRIC_FUNCS)
 
     for tgt_file in args.target_path.iterdir():
-        with h5py.File(tgt_file) as target, h5py.File(
-          args.predictions_path / tgt_file.name) as recons:
+        with h5py.File(tgt_file, 'r') as target, h5py.File(
+          args.predictions_path / tgt_file.name, 'r') as recons:
             if args.acquisition and args.acquisition != target.attrs['acquisition']:
                 continue
-            target = target[recons_key].value
-            recons = recons['reconstruction'].value
+
+            if args.acceleration and target.attrs['acceleration'] != args.acceleration:
+                continue
+
+            target = target[recons_key][()]
+            recons = recons['reconstruction'][()]
+            target = transforms.center_crop(target, (target.shape[-1], target.shape[-1]))
+            recons = transforms.center_crop(recons, (target.shape[-1], target.shape[-1]))
             metrics.push(target, recons)
     return metrics
 
@@ -100,7 +107,9 @@ if __name__ == '__main__':
                         help='Path to reconstructions')
     parser.add_argument('--challenge', choices=['singlecoil', 'multicoil'], required=True,
                         help='Which challenge')
-    parser.add_argument('--acquisition', choices=['CORPD_FBK', 'CORPDFS_FBK'], default=None,
+    parser.add_argument('--acceleration', type=int, default=None)
+    parser.add_argument('--acquisition', choices=['CORPD_FBK', 'CORPDFS_FBK', 'AXT1', 'AXT1PRE',
+                        'AXT1POST', 'AXT2', 'AXFLAIR'], default=None,
                         help='If set, only volumes of the specified acquisition type are used '
                              'for evaluation. By default, all volumes are included.')
     args = parser.parse_args()

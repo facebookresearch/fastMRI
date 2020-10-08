@@ -1,6 +1,16 @@
 __pycache__
+.vscode
+experiments
 logs
 .idea
 *.png
 *.cfl
 *.hdr
+recon-workspace.code-workspace
+datasets/
+logs/
+add_all_headers.py
+add_header.py
+*fair_cluster*
+fastmri_dirs.yaml
+dataset_cache.pkl

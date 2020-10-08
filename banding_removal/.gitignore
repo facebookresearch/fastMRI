@@ -1,0 +1,9 @@
+__pycache__
+logs
+.idea
+*.cfl
+*.hdr
+*.pyc
+.pytest_cache                                
+*.png
+*.pkl

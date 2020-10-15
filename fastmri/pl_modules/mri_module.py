@@ -79,6 +79,7 @@ class MriModule(pl.LightningModule):
             num_workers (int, default=4): Number of workers for PyTorch dataloader.
         """
         super().__init__()
+        self.save_hyperparameters()
 
         self.data_path = data_path
         self.challenge = challenge

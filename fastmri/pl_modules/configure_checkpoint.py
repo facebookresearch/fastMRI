@@ -45,7 +45,7 @@ def configure_checkpoint(
         save_top_k=True,
         verbose=True,
         monitor=monitor,
-        mode=min,
+        mode=mode,
         prefix="",
     )
 

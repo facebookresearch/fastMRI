@@ -7,5 +7,4 @@ pytorch_lightning==0.8.5
 h5py>=2.10.0
 PyYAML>=5.3.1
 pytest>=5.4.3
-pyxb==1.2.6
 git+https://github.com/ismrmrd/ismrmrd-python.git

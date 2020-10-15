@@ -5,9 +5,6 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import subprocess
-import sys
-
 from setuptools import find_packages, setup
 
 install_requires = [
@@ -20,13 +17,8 @@ install_requires = [
     "h5py",
     "PyYAML",
     "pytest",
-    "pyxb",
     "ismrmrd @ git+https://github.com/ismrmrd/ismrmrd-python.git",
 ]
-
-# pyxb not properly handled in ismrmrd - this prevents installation breakage
-# should install into user environment that launched install script
-subprocess.check_call([sys.executable, "-m", "pip", "install", "pyxb"])
 
 setup(
     name="fastmri",

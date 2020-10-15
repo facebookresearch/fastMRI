@@ -87,7 +87,6 @@ class MriModule(pl.LightningModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.num_log_images = num_log_images
-
         self.val_log_indices = None
 
         self.NMSE = DistributedMetricSum()
@@ -95,6 +94,7 @@ class MriModule(pl.LightningModule):
         self.PSNR = DistributedMetricSum()
         self.ValLoss = DistributedMetricSum()
         self.TotExamples = DistributedMetricSum()
+        self.TotSliceExamples = DistributedMetricSum()
 
     def _create_data_loader(self, data_transform, data_partition, sample_rate=None):
         sample_rate = sample_rate or self.sample_rate
@@ -258,10 +258,13 @@ class MriModule(pl.LightningModule):
         metrics["nmse"] = self.NMSE(metrics["nmse"])
         metrics["ssim"] = self.SSIM(metrics["ssim"])
         metrics["psnr"] = self.PSNR(metrics["psnr"])
-        val_loss = self.ValLoss(torch.mean(torch.cat(losses)))
         tot_examples = self.TotExamples(torch.tensor(local_examples))
+        val_loss = self.ValLoss(torch.sum(torch.cat(losses)))
+        tot_slice_examples = self.TotSliceExamples(
+            torch.tensor(len(losses), dtype=torch.float)
+        )
 
-        self.log("val_loss", val_loss, prog_bar=True)
+        self.log("val_loss", val_loss / tot_slice_examples, prog_bar=True)
         for metric, value in metrics.items():
             self.log(f"val_metrics/{metric}", value / tot_examples)
 

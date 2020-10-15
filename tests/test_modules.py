@@ -5,15 +5,12 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import pathlib
 from argparse import ArgumentParser
 
 import pytest
-from pytorch_lightning import Trainer
-
-from experimental.unet.unet_module import UnetModule
-from experimental.varnet.varnet_module import VarNetModule
 from fastmri.data.mri_data import fetch_dir
+from fastmri.pl_modules import UnetModule, VarNetModule
+from pytorch_lightning import Trainer
 
 
 def build_unet_args():

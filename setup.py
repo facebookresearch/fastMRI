@@ -13,7 +13,7 @@ install_requires = [
     "torchvision>=0.6.0",
     "torch>=1.5.1",
     "runstats>=1.8.0",
-    "pytorch_lightning==0.8.5",
+    "pytorch_lightning",
     "h5py",
     "PyYAML",
     "pytest",

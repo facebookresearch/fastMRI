@@ -5,19 +5,16 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import hashlib
-import os
 from argparse import ArgumentParser
 
-import pytorch_lightning as pl
-import torch
-from torch.nn import functional as F
-
 import fastmri
-from fastmri import MriModule
+import torch
 from fastmri.data import transforms
 from fastmri.data.subsample import create_mask_for_mask_type
 from fastmri.models import Unet
+from torch.nn import functional as F
+
+from .mri_module import MriModule
 
 
 class UnetModule(MriModule):
@@ -88,36 +85,32 @@ class UnetModule(MriModule):
         return self.unet(image.unsqueeze(1)).squeeze(1)
 
     def training_step(self, batch, batch_idx):
-        image, target, _, _, _, _ = batch
+        image, target, _, _, _, _, _ = batch
         output = self(image)
         loss = F.l1_loss(output, target)
-        logs = {"loss": loss.detach()}
 
-        return dict(loss=loss, log=logs)
+        self.log("loss", loss.detach())
+
+        return loss
 
     def validation_step(self, batch, batch_idx):
-        image, target, mean, std, fname, slice_num = batch
+        image, target, mean, std, fname, slice_num, max_value = batch
         output = self(image)
         mean = mean.unsqueeze(1).unsqueeze(2)
         std = std.unsqueeze(1).unsqueeze(2)
 
-        # hash strings to int so pytorch can concat them
-        fnumber = torch.zeros(len(fname), dtype=torch.long, device=output.device)
-        for i, fn in enumerate(fname):
-            fnumber[i] = (
-                int(hashlib.sha256(fn.encode("utf-8")).hexdigest(), 16) % 10 ** 12
-            )
-
         return {
-            "fname": fnumber,
-            "slice": slice_num,
+            "batch_idx": batch_idx,
+            "fname": fname,
+            "slice_num": slice_num,
+            "max_value": max_value,
             "output": output * std + mean,
             "target": target * std + mean,
             "val_loss": F.l1_loss(output, target),
         }
 
     def test_step(self, batch, batch_idx):
-        image, _, mean, std, fname, slice_num = batch
+        image, _, mean, std, fname, slice_num, _ = batch
         output = self.forward(image)
         mean = mean.unsqueeze(1).unsqueeze(2)
         std = std.unsqueeze(1).unsqueeze(2)
@@ -162,8 +155,6 @@ class UnetModule(MriModule):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
         parser = MriModule.add_model_specific_args(parser)
 
-        # param overwrites
-
         # network params
         parser.add_argument("--in_chans", default=1, type=int)
         parser.add_argument("--out_chans", default=1, type=int)
@@ -205,7 +196,7 @@ class DataTransform(object):
                 time.
         """
         if which_challenge not in ("singlecoil", "multicoil"):
-            raise ValueError(f'Challenge should either be "singlecoil" or "multicoil"')
+            raise ValueError("Challenge should either be 'singlecoil' or 'multicoil'")
 
         self.mask_func = mask_func
         self.which_challenge = which_challenge
@@ -235,6 +226,9 @@ class DataTransform(object):
                 slice_num (int): Serial number of the slice.
         """
         kspace = transforms.to_tensor(kspace)
+
+        # check for max value
+        max_value = attrs["max"] if "max" in attrs.keys() else None
 
         # apply mask
         if self.mask_func:
@@ -278,4 +272,4 @@ class DataTransform(object):
         else:
             target = torch.Tensor([0])
 
-        return image, target, mean, std, fname, slice_num
+        return image, target, mean, std, fname, slice_num, max_value

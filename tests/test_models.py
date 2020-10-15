@@ -6,8 +6,6 @@ LICENSE file in the root directory of this source tree.
 """
 
 import pytest
-import torch
-
 from fastmri.data import transforms
 from fastmri.data.subsample import RandomMaskFunc
 from fastmri.models import Unet, VarNet

@@ -272,8 +272,8 @@ class MriModule(pl.LightningModule):
         outputs = defaultdict(list)
 
         for log in test_logs:
-            for i, (fname, slice) in enumerate(zip(log["fname"], log["slice"])):
-                outputs[fname].append((slice, log["output"][i]))
+            for i, (fname, slice_num) in enumerate(zip(log["fname"], log["slice"])):
+                outputs[fname].append((slice_num, log["output"][i]))
 
         for fname in outputs:
             outputs[fname] = np.stack([out for _, out in sorted(outputs[fname])])

@@ -6,6 +6,7 @@ logs
 *.png
 *.cfl
 *.hdr
+*egg-info*
 recon-workspace.code-workspace
 datasets/
 logs/

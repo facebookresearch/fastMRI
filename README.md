@@ -55,21 +55,15 @@ We have tested this code using:
 * CUDA 10.1
 * CUDNN 7.6.5
 
-You can find the full list of Python packages needed to run the code in the `requirements.txt` file. Most people already have their own PyTorch environment configured with Anaconda, and based on `requirements.txt` you can install the final packages as needed.
+First install PyTorch according to the directions at the [PyTorch Website](https://pytorch.org/get-started/) for your operating system and CUDA setup.
 
-If you want to install with `pip`, first delete the `git+https://github.com/ismrmrd/ismrmrd-python.git` line from `requirements.txt`. Then, run
-
-```bash
-pip install -r requirements.txt
-```
-
-Finally, run
+Then, navigate to the `fastmri` root directory and run
 
 ```bash
-pip install git+https://github.com/ismrmrd/ismrmrd-python.git
+pip install -e .
 ```
 
-Then you should have all the packages.
+`pip` will handle all package dependencies. After this you should be able to run most the code in the repository.
 
 ## Directory Structure & Usage
 

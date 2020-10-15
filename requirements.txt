@@ -3,9 +3,8 @@ scikit_image>=0.16.2
 torchvision>=0.6.0
 torch>=1.5.1
 runstats>=1.8.0
-pytorch_lightning>=0.8.5
+pytorch_lightning==0.8.5
 h5py>=2.10.0
 PyYAML>=5.3.1
 pytest>=5.4.3
-pyxb==1.2.6
 git+https://github.com/ismrmrd/ismrmrd-python.git

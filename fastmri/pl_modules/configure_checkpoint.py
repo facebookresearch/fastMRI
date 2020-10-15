@@ -26,9 +26,9 @@ def configure_checkpoint(
         (tuple): Tuple containing:
             pl.callbacks.ModelCheckpoint: A ModelCheckpooint for a PyTorch
                 Lightning Trainer.
-            pathlib.Path: A checkpoint you can pass to resume_from_checkpoint
-                in the trainer to resume existing training. If no checkpoint is
-                found, this returns None.
+            str: A checkpoint you can pass to resume_from_checkpoint in the
+                trainer to resume existing training. If no checkpoint is found,
+                this returns None.
     """
     checkpoint_dir = default_root_dir / checkpoint_name
 
@@ -36,7 +36,7 @@ def configure_checkpoint(
     if checkpoint_dir.exists():
         ckpt_list = sorted(checkpoint_dir.glob("*.ckpt"), key=os.path.getmtime)
         if ckpt_list:
-            resume_from_checkpoint = ckpt_list[-1]
+            resume_from_checkpoint = str(ckpt_list[-1])
     else:
         checkpoint_dir.mkdir()  # note: better to create this outside main
 

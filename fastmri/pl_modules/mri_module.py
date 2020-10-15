@@ -160,16 +160,16 @@ class MriModule(pl.LightningModule):
         ):
             if k not in val_logs.keys():
                 raise RuntimeError(
-                    f"Expected key {k} in dict returned by validation_step."
+                    f"Expected key {k} in dict returned by validation_step"
                 )
         if val_logs["output"].ndim == 2:
             val_logs["output"] = val_logs["output"].unsqueeze(0)
         elif val_logs["output"].ndim != 3:
-            raise RuntimeError("Unexpected output size from validation_step.")
+            raise RuntimeError("Unexpected output size from validation_step")
         if val_logs["target"].ndim == 2:
             val_logs["target"] = val_logs["target"].unsqueeze(0)
         elif val_logs["target"].ndim != 3:
-            raise RuntimeError("Unexpected output size from validation_step.")
+            raise RuntimeError("Unexpected output size from validation_step")
 
         # pick a set of images to log if we don't have one already
         if self.val_log_indices is None:
@@ -180,10 +180,8 @@ class MriModule(pl.LightningModule):
             )
 
         # log images to tensorboard
-        if len(val_logs["output"]) == 1:
+        if isinstance(val_logs["batch_idx"], int):
             batch_indices = [val_logs["batch_idx"]]
-        else:
-            batch_indices = val_logs["bach_idx"]
         for i, batch_idx in enumerate(batch_indices):
             if batch_idx in self.val_log_indices:
                 key = f"val_images_idx_{batch_idx}"

@@ -11,7 +11,7 @@ install_requires = [
     "numpy>=1.18.5",
     "scikit_image>=0.16.2",
     "torchvision>=0.6.0",
-    "torch>=1.5.1",
+    "torch>=1.6",
     "runstats>=1.8.0",
     "pytorch_lightning",
     "h5py",

@@ -182,6 +182,8 @@ class MriModule(pl.LightningModule):
         # log images to tensorboard
         if isinstance(val_logs["batch_idx"], int):
             batch_indices = [val_logs["batch_idx"]]
+        else:
+            batch_indices = val_logs["batch_idx"]
         for i, batch_idx in enumerate(batch_indices):
             if batch_idx in self.val_log_indices:
                 key = f"val_images_idx_{batch_idx}"

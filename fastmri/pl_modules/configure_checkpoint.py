@@ -38,7 +38,7 @@ def configure_checkpoint(
         if ckpt_list:
             resume_from_checkpoint = str(ckpt_list[-1])
     else:
-        checkpoint_dir.mkdir()  # note: better to create this outside main
+        checkpoint_dir.mkdir(parents=True)
 
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         filepath=default_root_dir / checkpoint_name,

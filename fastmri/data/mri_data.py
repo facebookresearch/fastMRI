@@ -13,8 +13,8 @@ import random
 import h5py
 import ismrmrd
 import numpy as np
+import torch
 import yaml
-from torch.utils.data import Dataset
 
 
 def fetch_dir(key, data_config_file=pathlib.Path("fastmri_dirs.yaml")):
@@ -43,7 +43,13 @@ def fetch_dir(key, data_config_file=pathlib.Path("fastmri_dirs.yaml")):
         with open(data_config_file, "w") as f:
             yaml.dump(default_config, f)
 
-        raise ValueError(f"Please populate {data_config_file} with directory paths.")
+        raise FileNotFoundError(
+            (
+                f"Path config at {data_config_file.resolve()} does not exist. "
+                "A template has been created for you. "
+                "Please populate it with directory paths for your system."
+            )
+        )
 
     with open(data_config_file, "r") as f:
         data_dir = yaml.safe_load(f)[key]
@@ -51,12 +57,17 @@ def fetch_dir(key, data_config_file=pathlib.Path("fastmri_dirs.yaml")):
     data_dir = pathlib.Path(data_dir)
 
     if not data_dir.exists():
-        raise ValueError(f"Path {data_dir} from {data_config_file} does not exist.")
+        raise FileNotFoundError(
+            (
+                f"Path {data_dir.resolve()} from "
+                f"{data_config_file.resolve()} does not exist."
+            )
+        )
 
     return data_dir
 
 
-class CombinedSliceDataset(Dataset):
+class CombinedSliceDataset(torch.utils.data.Dataset):
     """
     A container for combining slice datasets.
 
@@ -108,7 +119,7 @@ class CombinedSliceDataset(Dataset):
                 i = i - len(dataset)
 
 
-class SliceDataset(Dataset):
+class SliceDataset(torch.utils.data.Dataset):
     """
     A PyTorch Dataset that provides access to MR image slices.
 

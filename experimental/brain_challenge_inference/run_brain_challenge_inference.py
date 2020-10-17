@@ -1,3 +1,10 @@
+"""
+Copyright (c) Facebook, Inc. and its affiliates.
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.
+"""
+
 import argparse
 import pathlib
 import sys
@@ -40,9 +47,7 @@ def run_inference(checkpoint, data_path, output_path):
     data_transform = DataTransform()
 
     dataset = SliceDataset(
-        root=data_path,
-        transform=data_transform,
-        challenge="multicoil",
+        root=data_path, transform=data_transform, challenge="multicoil",
     )
     dataloader = torch.utils.data.DataLoader(dataset, num_workers=4)
 
@@ -90,10 +95,7 @@ if __name__ == "__main__":
         help="Path to saved model checkpoint",
     )
     parser.add_argument(
-        "--data-path",
-        type=pathlib.Path,
-        required=True,
-        help="Path to subsampled data",
+        "--data-path", type=pathlib.Path, required=True, help="Path to subsampled data",
     )
     parser.add_argument(
         "--output-path",

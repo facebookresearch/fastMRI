@@ -34,18 +34,22 @@ class UnetModule(MriModule):
     ):
         """
         Args:
-            in_chans (int): Number of channels in the input to the U-Net model.
-            out_chans (int): Number of channels in the output to the U-Net
-                model.
-            chans (int): Number of output channels of the first convolution
-                layer.
-            num_pool_layers (int): Number of down-sampling and up-sampling
-                layers.
-            drop_prob (float): Dropout probability.
-            lr (float): Learning rate.
-            lr_step_size (int): Learning rate step size.
-            lr_gamma (float): Learning rate gamma decay.
-            weight_decay (float): Parameter for penalizing weights norm.
+            in_chans (int, optional): Number of channels in the input to the
+                U-Net model. Defaults to 1.
+            out_chans (int, optional): Number of channels in the output to the
+                U-Net model. Defaults to 1.
+            chans (int, optional): Number of output channels of the first
+                convolution layer. Defaults to 32.
+            num_pool_layers (int, optional): Number of down-sampling and
+                up-sampling layers. Defaults to 4.
+            drop_prob (float, optional): Dropout probability. Defaults to 0.0.
+            lr (float, optional): Learning rate. Defaults to 0.001.
+            lr_step_size (int, optional): Learning rate step size. Defaults to
+                40.
+            lr_gamma (float, optional): Learning rate gamma decay. Defaults to
+                0.1.
+            weight_decay (float, optional): Parameter for penalizing weights
+                norm. Defaults to 0.0.
         """
         super().__init__(**kwargs)
         self.save_hyperparameters()

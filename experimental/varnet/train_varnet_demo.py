@@ -81,7 +81,7 @@ def build_args():
     parser = ArgumentParser()
 
     # basic args
-    backend = "dp"
+    backend = "ddp"
     num_gpus = 2 if backend == "ddp" else 1
     batch_size = 1
 
@@ -126,10 +126,7 @@ def build_args():
     # data config
     parser = FastMriDataModule.add_data_specific_args(parser)
     parser.set_defaults(
-        mask_type="equispaced",
-        challenge="multicoil",
-        batch_size=batch_size,
-        distributed_sampler=(backend == "ddp"),
+        mask_type="equispaced", challenge="multicoil", batch_size=batch_size,
     )
 
     # module config

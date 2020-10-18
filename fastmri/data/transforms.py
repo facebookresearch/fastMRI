@@ -53,10 +53,12 @@ def apply_mask(data, mask_func, seed=None, padding=None):
             least 3 dimensions, where dimensions -3 and -2 are the spatial
             dimensions, and the final dimension has size 2 (for complex
             values).
-        mask_func (callable): A function that takes a shape (tuple of ints)
+        mask_func (Callable): A function that takes a shape (tuple of ints)
             and a random number seed and returns a mask.
         seed (int or 1-d array_like, optional): Seed for the random number
-            generator.
+            generator. Defaults to None.
+        padding (tuple, optional): Padding value to apply for mask. Defaults to
+            None.
 
     Returns:
         (tuple): tuple containing:
@@ -166,7 +168,8 @@ def normalize(data, mean, stddev, eps=0.0):
         data (torch.Tensor): Input data to be normalized.
         mean (float): Mean value.
         stddev (float): Standard deviation.
-        eps (float, default=0.0): Added to stddev to prevent dividing by zero.
+        eps (float, optional): Added to stddev to prevent dividing by zero.
+            Defaults to 0.0.
 
     Returns:
         torch.Tensor: Normalized tensor
@@ -183,7 +186,8 @@ def normalize_instance(data, eps=0.0):
 
     Args:
         data (torch.Tensor): Input data to be normalized
-        eps (float): Added to stddev to prevent dividing by zero
+        eps (float, optional): Added to stddev to prevent dividing by zero.
+            Defaults to 0.0.
 
     Returns:
         torch.Tensor: Normalized tensor
@@ -204,12 +208,12 @@ class UnetDataTransform:
         Args:
             which_challenge (str): Either "singlecoil" or "multicoil" denoting
                 the dataset.
-            mask_func (fastmri.data.subsample.MaskFunc): A function that can
-                create a mask of appropriate shape.
-            use_seed (bool): If true, this class computes a pseudo random
-                number generator seed from the filename. This ensures that the
-                same mask is used for all the slices of a given volume every
-                time.
+            mask_func (fastmri.data.subsample.MaskFunc, optional): A function
+                that can create a mask of appropriate shape. Defaults to None.
+            use_seed (bool, optional): If true, this class computes a pseudo
+                random number generator seed from the filename. This ensures
+                that the same mask is used for all the slices of a given volume
+                every time. Defaults to True.
         """
         if which_challenge not in ("singlecoil", "multicoil"):
             raise ValueError("Challenge should either be 'singlecoil' or 'multicoil'")
@@ -299,12 +303,12 @@ class VarNetDataTransform:
     def __init__(self, mask_func=None, use_seed=True):
         """
         Args:
-            mask_func (fastmri.data.subsample.MaskFunc): A function that can
-                create a mask of appropriate shape.
-            use_seed (bool): If true, this class computes a pseudo random
-                number generator seed from the filename. This ensures that the
-                same mask is used for all the slices of a given volume every
-                time.
+            mask_func (fastmri.data.subsample.MaskFunc, optional): A function
+                that can create a mask of appropriate shape. Defaults to None.
+            use_seed (bool, optional): If true, this class computes a pseudo
+                random number generator seed from the filename. This ensures
+                that the same mask is used for all the slices of a given volume
+                every time. Defaults to True.
         """
         self.mask_func = mask_func
         self.use_seed = use_seed

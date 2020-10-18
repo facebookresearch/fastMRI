@@ -82,7 +82,7 @@ def build_args():
 
     # basic args
     num_gpus = 2
-    backend = "dp"
+    backend = "ddp"
     batch_size = 1 if backend == "ddp" else num_gpus
 
     # client arguments
@@ -125,9 +125,7 @@ def build_args():
 
     # data config
     parser = FastMriDataModule.add_data_specific_args(parser)
-    parser.set_defaults(
-        batch_size=batch_size, distributed_sampler=(backend == "ddp"),
-    )
+    parser.set_defaults(batch_size=batch_size)
 
     # module config
     parser = UnetModule.add_model_specific_args(parser)

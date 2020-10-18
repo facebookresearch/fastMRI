@@ -35,20 +35,23 @@ class VarNetModule(MriModule):
     ):
         """
         Args:
-            num_cascades (int, default=12): Number of cascades (i.e., layers)
-                for variational network.
-            sens_chans (int, default=8): Number of channels for sensitivity map
-                U-Net.
-            sens_pools (int, default=8): Number of downsampling and upsampling
-                layers for sensitivity map U-Net.
-            chans (int, default=18): Number of channels for cascade U-Net.
-            pools (int, default=4): Number of downsampling and upsampling
-                layers for cascade U-Net.
-            lr (float, default=0.0003): Learning rate.
-            lr_step_size (int, default=40): Learning rate step size.
-            lr_gamma (float, default=0.1): Learning rate gamma decay.
-            weight_decay (float, default=0): Parameter for penalizing weights
-                norm.
+            num_cascades (int, optional): Number of cascades (i.e., layers)
+                for variational network. Defaults to 12.
+            pools (int, optional): Number of downsampling and upsampling
+                layers for cascade U-Net. Defaults to 4.
+            chans (int, optional): Number of channels for cascade U-Net.
+                Defaults to 18.
+            sens_pools (int, optional): Number of downsampling and upsampling
+                layers for sensitivity map U-Net. Defaults to 4.
+            sens_chans (int, optional): Number of channels for sensitivity map
+                U-Net. Defaults to 8.
+            lr (float, optional): Learning rate. Defaults to 0.0003.
+            lr_step_size (int, optional): Learning rate step size. Defaults to
+                40.
+            lr_gamma (float, optional): Learning rate gamma decay. Defaults to
+                0.0.
+            weight_decay (float, optional): Parameter for penalizing weights
+                norm. Defaults to 0.0.
         """
         super().__init__(**kwargs)
         self.save_hyperparameters()
@@ -164,18 +167,18 @@ class VarNetModule(MriModule):
             "--sens_pools",
             default=4,
             type=int,
-            help="Number of pooling layers for sensitivity map estimation U-Net in VarNet",
+            help="Number of pooling layers for sense map estimation U-Net in VarNet",
         )
         parser.add_argument(
             "--sens_chans",
             default=8,
             type=float,
-            help="Number of channels for sensitivity map estimation U-Net in VarNet",
+            help="Number of channels for sense map estimation U-Net in VarNet",
         )
 
         # training params (opt)
         parser.add_argument(
-            "--lr", default=0.001, type=float, help="Adam learning rate"
+            "--lr", default=0.0003, type=float, help="Adam learning rate"
         )
         parser.add_argument(
             "--lr_step_size",

@@ -5,7 +5,6 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import logging
 import pathlib
 from argparse import ArgumentParser
 
@@ -15,6 +14,20 @@ import torch
 
 
 class FastMriDataModule(pl.LightningDataModule):
+    """
+    Data module class for fastMRI data sets.
+
+    This class handles configurations for training on fastMRI data. It is set
+    up to process configurations independently of training modules.
+
+    Note that subsampling mask and transform configurations are expected to be
+    done by the main client training scripts and passed into this data module.
+
+    For training with ddp this module will create data loaders after ddp
+    processes have launched. This correctly donfigures distributed sampling
+    ranks.
+    """
+
     def __init__(
         self,
         data_path,
@@ -36,12 +49,22 @@ class FastMriDataModule(pl.LightningDataModule):
                 for data_path.
             challenge (str): Name of challenge from ('multicoil',
                 'singlecoil').
-            test_split (str): Name of test split from ("test", "challenge").
-            sample_rate (float, default=1.0): Fraction of models from the
-                dataset to use.
-            batch_size (int, default=1): Batch size.
-            num_workers (int, default=4): Number of workers for PyTorch
-                dataloader.
+            train_transform (Callable): A transform object for the training
+                split.
+            val_transform (Callable): A transform object for the validation
+                split.
+            test_transform (Callable): A transform object for the test split.
+            test_split (str, optional): Name of test split from ("test",
+                "challenge"). Defaults to "test".
+            sample_rate (float, optional): Fraction of of the training data
+                split to use. Can be set to less than 1.0 for rapid
+                prototyping. Defaults to 1.0.
+            batch_size (int, optional): Batch size. Defaults to 1.
+            num_workers (int, optional): Number of workers for PyTorch
+                dataloader. Defaults to 4.
+            distributed_sampler (bool, optional): Whether to use a distributed
+                sampler. This should be set to True if training with ddp.
+                Defaults to False.
         """
         super().__init__()
 

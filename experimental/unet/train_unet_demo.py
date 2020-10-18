@@ -79,9 +79,6 @@ def cli_main(args):
 
 
 def build_args():
-    # ------------------------
-    # TRAINING ARGUMENTS
-    # ------------------------
     parser = ArgumentParser()
 
     # basic args

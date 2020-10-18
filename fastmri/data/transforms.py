@@ -13,7 +13,7 @@ import torch
 def to_tensor(data):
     """
     Convert numpy array to PyTorch tensor.
-    
+
     For complex arrays, the real and imaginary parts are stacked along the last
     dimension.
 
@@ -140,7 +140,7 @@ def center_crop_to_smallest(x, y):
     The minimum is taken over dim=-1 and dim=-2. If x is smaller than y at
     dim=-1 and y is smaller than x at dim=-2, then the returned dimension will
     be a mixture of the two.
-    
+
     Args:
         x (torch.Tensor): The first image.
         y (torch.Tensor): The second image
@@ -289,3 +289,85 @@ class UnetDataTransform:
             target = torch.Tensor([0])
 
         return image, target, mean, std, fname, slice_num, max_value
+
+
+class VarNetDataTransform:
+    """
+    Data Transformer for training VarNet models.
+    """
+
+    def __init__(self, mask_func=None, use_seed=True):
+        """
+        Args:
+            mask_func (fastmri.data.subsample.MaskFunc): A function that can
+                create a mask of appropriate shape.
+            use_seed (bool): If true, this class computes a pseudo random
+                number generator seed from the filename. This ensures that the
+                same mask is used for all the slices of a given volume every
+                time.
+        """
+        self.mask_func = mask_func
+        self.use_seed = use_seed
+
+    def __call__(self, kspace, mask, target, attrs, fname, slice_num):
+        """
+        Args:
+            kspace (numpy.array): Input k-space of shape (num_coils, rows,
+                cols, 2) for multi-coil data or (rows, cols, 2) for single coil
+                data.
+            mask (numpy.array): Mask from the test dataset.
+            target (numpy.array): Target image.
+            attrs (dict): Acquisition related information stored in the HDF5
+                object.
+            fname (str): File name.
+            slice_num (int): Serial number of the slice.
+
+        Returns:
+            (tuple): tuple containing:
+                masked_kspace (torch.Tensor): k-space after applying sampling
+                    mask.
+                mask (torch.Tensor): The applied sampling mask
+                target (torch.Tensor): The target image (if applicable).
+                fname (str): File name.
+                slice_num (int): The slice index.
+                max_value (float): Maximum image value.
+                crop_size (torch.Tensor): the size to crop the final image.
+        """
+        if target is not None:
+            target = to_tensor(target)
+            max_value = attrs["max"]
+        else:
+            target = torch.tensor(0)
+            max_value = 0.0
+
+        kspace = to_tensor(kspace)
+        seed = None if not self.use_seed else tuple(map(ord, fname))
+        acq_start = attrs["padding_left"]
+        acq_end = attrs["padding_right"]
+
+        crop_size = torch.tensor([attrs["recon_size"][0], attrs["recon_size"][1]])
+
+        if self.mask_func:
+            masked_kspace, mask = apply_mask(
+                kspace, self.mask_func, seed, (acq_start, acq_end)
+            )
+        else:
+            masked_kspace = kspace
+            shape = np.array(kspace.shape)
+            num_cols = shape[-2]
+            shape[:-3] = 1
+            mask_shape = [1 for _ in shape]
+            mask_shape[-2] = num_cols
+            mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
+            mask[:, :, :acq_start] = 0
+            mask[:, :, acq_end:] = 0
+
+        return (
+            masked_kspace,
+            mask.byte(),
+            target,
+            fname,
+            slice_num,
+            max_value,
+            crop_size,
+        )

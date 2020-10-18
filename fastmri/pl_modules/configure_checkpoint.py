@@ -6,6 +6,7 @@ LICENSE file in the root directory of this source tree.
 """
 
 import os
+
 import pytorch_lightning as pl
 
 
@@ -28,7 +29,7 @@ def configure_checkpoint(
         monitor (str, optional): Quantity to monitor for saving checkpoints.
             Defaults to "val_loss".
         mode (str, optional): Mode for monitoring. Defaults to "min".
-    
+
     Returns:
         (tuple): Tuple containing:
             pl.callbacks.ModelCheckpoint: A ModelCheckpooint for a PyTorch

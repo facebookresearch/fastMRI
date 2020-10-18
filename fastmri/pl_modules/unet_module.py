@@ -48,6 +48,7 @@ class UnetModule(MriModule):
             weight_decay (float): Parameter for penalizing weights norm.
         """
         super().__init__(**kwargs)
+        self.save_hyperparameters()
 
         self.in_chans = in_chans
         self.out_chans = out_chans

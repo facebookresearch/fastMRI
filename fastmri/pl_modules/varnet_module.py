@@ -7,14 +7,12 @@ LICENSE file in the root directory of this source tree.
 
 from argparse import ArgumentParser
 
-import numpy as np
-import torch
-
 import fastmri
-from .mri_module import MriModule
-from fastmri.data import transforms as T
-from fastmri.data.subsample import create_mask_for_mask_type
+import torch
+from fastmri.data import transforms
 from fastmri.models import VarNet
+
+from .mri_module import MriModule
 
 
 class VarNetModule(MriModule):
@@ -29,9 +27,6 @@ class VarNetModule(MriModule):
         chans=18,
         sens_pools=4,
         sens_chans=8,
-        mask_type="equispaced",
-        center_fractions=[0.08],
-        accelerations=[4],
         lr=0.0003,
         lr_step_size=40,
         lr_gamma=0.1,
@@ -49,12 +44,6 @@ class VarNetModule(MriModule):
             chans (int, default=18): Number of channels for cascade U-Net.
             pools (int, default=4): Number of downsampling and upsampling
                 layers for cascade U-Net.
-            mask_type (str, default="equispaced"): Type of mask from ("random",
-                "equispaced").
-            center_fractions (list, default=[0.08]): Fraction of all samples to
-                take from center (i.e., list of floats).
-            accelerations (list, default=[4]): List of accelerations to apply
-                (i.e., list of ints).
             lr (float, default=0.0003): Learning rate.
             lr_step_size (int, default=40): Learning rate step size.
             lr_gamma (float, default=0.1): Learning rate gamma decay.
@@ -62,20 +51,13 @@ class VarNetModule(MriModule):
                 norm.
         """
         super().__init__(**kwargs)
-
-        if self.batch_size != 1:
-            raise NotImplementedError(
-                f"Only batch_size=1 allowed for {self.__class__.__name__}"
-            )
+        self.save_hyperparameters()
 
         self.num_cascades = num_cascades
         self.pools = pools
         self.chans = chans
         self.sens_pools = sens_pools
         self.sens_chans = sens_chans
-        self.mask_type = mask_type
-        self.center_fractions = center_fractions
-        self.accelerations = accelerations
         self.lr = lr
         self.lr_step_size = lr_step_size
         self.lr_gamma = lr_gamma
@@ -99,7 +81,7 @@ class VarNetModule(MriModule):
 
         output = self(masked_kspace, mask)
 
-        target, output = T.center_crop_to_smallest(target, output)
+        target, output = transforms.center_crop_to_smallest(target, output)
         loss = self.loss(output.unsqueeze(1), target.unsqueeze(1), data_range=max_value)
 
         self.log("train_loss", loss.item())
@@ -110,7 +92,7 @@ class VarNetModule(MriModule):
         masked_kspace, mask, target, fname, slice_num, max_value, _ = batch
 
         output = self.forward(masked_kspace, mask)
-        target, output = T.center_crop_to_smallest(target, output)
+        target, output = transforms.center_crop_to_smallest(target, output)
 
         return {
             "batch_idx": batch_idx,
@@ -134,7 +116,7 @@ class VarNetModule(MriModule):
         if output.shape[-1] < crop_size[1]:
             crop_size = (output.shape[-1], output.shape[-1])
 
-        output = T.center_crop(output, crop_size)
+        output = transforms.center_crop(output, crop_size)
 
         return {
             "fname": fname,
@@ -151,23 +133,6 @@ class VarNetModule(MriModule):
         )
 
         return [optim], [scheduler]
-
-    def train_data_transform(self):
-        mask = create_mask_for_mask_type(
-            self.mask_type, self.center_fractions, self.accelerations
-        )
-
-        return DataTransform(mask, use_seed=False)
-
-    def val_data_transform(self):
-        mask = create_mask_for_mask_type(
-            self.mask_type, self.center_fractions, self.accelerations
-        )
-
-        return DataTransform(mask)
-
-    def test_data_transform(self):
-        return DataTransform()
 
     @staticmethod
     def add_model_specific_args(parent_parser):  # pragma: no-cover
@@ -186,13 +151,6 @@ class VarNetModule(MriModule):
         parser.add_argument("--sens_pools", default=4, type=int)
         parser.add_argument("--sens_chans", default=8, type=float)
 
-        # data params
-        parser.add_argument(
-            "--mask_type", choices=["random", "equispaced"], default="random", type=str
-        )
-        parser.add_argument("--center_fractions", nargs="+", default=[0.08], type=float)
-        parser.add_argument("--accelerations", nargs="+", default=[4], type=int)
-
         # training params (opt)
         parser.add_argument("--lr", default=0.001, type=float)
         parser.add_argument("--lr_step_size", default=40, type=int)
@@ -200,85 +158,3 @@ class VarNetModule(MriModule):
         parser.add_argument("--weight_decay", default=0.0, type=float)
 
         return parser
-
-
-class DataTransform(object):
-    """
-    Data Transformer for training VarNet models.
-    """
-
-    def __init__(self, mask_func=None, use_seed=True):
-        """
-        Args:
-            mask_func (fastmri.data.subsample.MaskFunc): A function that can
-                create a mask of appropriate shape.
-            use_seed (bool): If true, this class computes a pseudo random
-                number generator seed from the filename. This ensures that the
-                same mask is used for all the slices of a given volume every
-                time.
-        """
-        self.mask_func = mask_func
-        self.use_seed = use_seed
-
-    def __call__(self, kspace, mask, target, attrs, fname, slice_num):
-        """
-        Args:
-            kspace (numpy.array): Input k-space of shape (num_coils, rows,
-                cols, 2) for multi-coil data or (rows, cols, 2) for single coil
-                data.
-            mask (numpy.array): Mask from the test dataset.
-            target (numpy.array): Target image.
-            attrs (dict): Acquisition related information stored in the HDF5
-                object.
-            fname (str): File name.
-            slice_num (int): Serial number of the slice.
-
-        Returns:
-            (tuple): tuple containing:
-                masked_kspace (torch.Tensor): k-space after applying sampling
-                    mask.
-                mask (torch.Tensor): The applied sampling mask
-                target (torch.Tensor): The target image (if applicable).
-                fname (str): File name.
-                slice_num (int): The slice index.
-                max_value (float): Maximum image value.
-                crop_size (torch.Tensor): the size to crop the final image.
-        """
-        if target is not None:
-            target = T.to_tensor(target)
-            max_value = attrs["max"]
-        else:
-            target = torch.tensor(0)
-            max_value = 0.0
-
-        kspace = T.to_tensor(kspace)
-        seed = None if not self.use_seed else tuple(map(ord, fname))
-        acq_start = attrs["padding_left"]
-        acq_end = attrs["padding_right"]
-
-        crop_size = torch.tensor([attrs["recon_size"][0], attrs["recon_size"][1]])
-
-        if self.mask_func:
-            masked_kspace, mask = T.apply_mask(
-                kspace, self.mask_func, seed, (acq_start, acq_end)
-            )
-        else:
-            masked_kspace = kspace
-            shape = np.array(kspace.shape)
-            num_cols = shape[-2]
-            shape[:-3] = 1
-            mask_shape = [1 for _ in shape]
-            mask_shape[-2] = num_cols
-            mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
-            mask[:, :, :acq_start] = 0
-            mask[:, :, acq_end:] = 0
-
-        return (
-            masked_kspace,
-            mask.byte(),
-            target,
-            fname,
-            slice_num,
-            max_value,
-            crop_size,
-        )

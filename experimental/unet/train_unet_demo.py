@@ -17,6 +17,8 @@ from fastmri.pl_modules import FastMriDataModule, UnetModule, configure_checkpoi
 
 
 def cli_main(args):
+    pl.seed_everything(args.seed)
+
     # ------------
     # data
     # ------------
@@ -42,7 +44,6 @@ def cli_main(args):
     # ------------
     # model
     # ------------
-    pl.seed_everything(args.seed)
     model = UnetModule(
         in_chans=args.in_chans,
         out_chans=args.out_chans,
@@ -89,13 +90,7 @@ def build_args():
 
     # data config
     parser.set_defaults(
-        data_path=None,
-        challenge="singlecoil",
-        test_split="test",
-        sample_rate=1.0,
-        batch_size=batch_size,
-        num_workers=4,
-        distributed_sampler=(backend == "ddp"),
+        batch_size=batch_size, distributed_sampler=(backend == "ddp"),
     )
 
     # module config
@@ -126,7 +121,6 @@ def build_args():
         default=pathlib.Path("../../fastmri_dirs.yaml"),
         type=pathlib.Path,
     )
-    parser.add_argument("--log_path", default=None, type=pathlib.Path)
     parser.add_argument("--mode", default="train", type=str)
 
     # data transform params
@@ -142,12 +136,10 @@ def build_args():
     if args.path_config is not None:
         if args.data_path is None:
             args.data_path = fetch_dir("knee_path", args.path_config)
-        if args.log_path is None:
+        if args.default_root_dir is None:
             args.default_root_dir = (
                 fetch_dir("log_path", args.path_config) / "unet" / "unet_demo"
             )
-        else:
-            args.default_root_dir = args.log_path
 
     if args.default_root_dir is None:
         args.default_root_dir = pathlib.Path.cwd()

@@ -127,16 +127,43 @@ class UnetModule(MriModule):
         parser = MriModule.add_model_specific_args(parser)
 
         # network params
-        parser.add_argument("--in_chans", default=1, type=int)
-        parser.add_argument("--out_chans", default=1, type=int)
-        parser.add_argument("--chans", default=1, type=int)
-        parser.add_argument("--num_pool_layers", default=4, type=int)
-        parser.add_argument("--drop_prob", default=0.0, type=float)
+        parser.add_argument(
+            "--in_chans", default=1, type=int, help="Number of U-Net input channels"
+        )
+        parser.add_argument(
+            "--out_chans", default=1, type=int, help="Number of U-Net output chanenls"
+        )
+        parser.add_argument(
+            "--chans", default=1, type=int, help="Number of top-level U-Net filters."
+        )
+        parser.add_argument(
+            "--num_pool_layers",
+            default=4,
+            type=int,
+            help="Number of U-Net pooling layers.",
+        )
+        parser.add_argument(
+            "--drop_prob", default=0.0, type=float, help="U-Net dropout probability"
+        )
 
         # training params (opt)
-        parser.add_argument("--lr", default=0.001, type=float)
-        parser.add_argument("--lr_step_size", default=40, type=int)
-        parser.add_argument("--lr_gamma", default=0.1, type=float)
-        parser.add_argument("--weight_decay", default=0.0, type=float)
+        parser.add_argument(
+            "--lr", default=0.001, type=float, help="RMSProp learning rate"
+        )
+        parser.add_argument(
+            "--lr_step_size",
+            default=40,
+            type=int,
+            help="Epoch at which to decrease step size",
+        )
+        parser.add_argument(
+            "--lr_gamma", default=0.1, type=float, help="Amount to decrease step size"
+        )
+        parser.add_argument(
+            "--weight_decay",
+            default=0.0,
+            type=float,
+            help="Strength of weight decay regularization",
+        )
 
         return parser

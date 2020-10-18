@@ -145,16 +145,55 @@ class VarNetModule(MriModule):
         # param overwrites
 
         # network params
-        parser.add_argument("--num_cascades", default=12, type=int)
-        parser.add_argument("--pools", default=4, type=int)
-        parser.add_argument("--chans", default=18, type=int)
-        parser.add_argument("--sens_pools", default=4, type=int)
-        parser.add_argument("--sens_chans", default=8, type=float)
+        parser.add_argument(
+            "--num_cascades", default=12, type=int, help="Number of VarNet cascades",
+        )
+        parser.add_argument(
+            "--pools",
+            default=4,
+            type=int,
+            help="Number of U-Net pooling layers in VarNet blocks",
+        )
+        parser.add_argument(
+            "--chans",
+            default=18,
+            type=int,
+            help="Number of channels for U-Net in VarNet blocks",
+        )
+        parser.add_argument(
+            "--sens_pools",
+            default=4,
+            type=int,
+            help="Number of pooling layers for sensitivity map estimation U-Net in VarNet",
+        )
+        parser.add_argument(
+            "--sens_chans",
+            default=8,
+            type=float,
+            help="Number of channels for sensitivity map estimation U-Net in VarNet",
+        )
 
         # training params (opt)
-        parser.add_argument("--lr", default=0.001, type=float)
-        parser.add_argument("--lr_step_size", default=40, type=int)
-        parser.add_argument("--lr_gamma", default=0.1, type=float)
-        parser.add_argument("--weight_decay", default=0.0, type=float)
+        parser.add_argument(
+            "--lr", default=0.001, type=float, help="Adam learning rate"
+        )
+        parser.add_argument(
+            "--lr_step_size",
+            default=40,
+            type=int,
+            help="Epoch at which to decrease step size",
+        )
+        parser.add_argument(
+            "--lr_gamma",
+            default=0.1,
+            type=float,
+            help="Extent to which step size should be decreased",
+        )
+        parser.add_argument(
+            "--weight_decay",
+            default=0.0,
+            type=float,
+            help="Strength of weight decay regularization",
+        )
 
         return parser

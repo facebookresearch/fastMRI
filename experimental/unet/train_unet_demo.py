@@ -78,22 +78,59 @@ def build_args():
     # ------------------------
     # TRAINING ARGUMENTS
     # ------------------------
-    parser = ArgumentParser(add_help=False)
+    parser = ArgumentParser()
 
-    parser = UnetModule.add_model_specific_args(parser)
-    parser = FastMriDataModule.add_data_specific_args(parser)
-    parser = pl.Trainer.add_argparse_args(parser)
-
+    # basic args
     num_gpus = 2
-    backend = "ddp"
+    backend = "dp"
     batch_size = 1 if backend == "ddp" else num_gpus
 
+    # client arguments
+    parser.add_argument(
+        "--path_config",
+        default=pathlib.Path("../../fastmri_dirs.yaml"),
+        type=pathlib.Path,
+        help="Path to .yaml path configuration file, can be used instead of data_path",
+    )
+    parser.add_argument(
+        "--mode",
+        default="train",
+        choices=("train", "test"),
+        type=str,
+        help="Operation mode",
+    )
+
+    # data transform params
+    parser.add_argument(
+        "--mask_type",
+        choices=("random", "equispaced"),
+        default="random",
+        type=str,
+        help="Type of k-space mask",
+    )
+    parser.add_argument(
+        "--center_fractions",
+        nargs="+",
+        default=[0.08],
+        type=float,
+        help="Number of center lines to use in mask",
+    )
+    parser.add_argument(
+        "--accelerations",
+        nargs="+",
+        default=[4],
+        type=int,
+        help="Acceleration rates to use for masks",
+    )
+
     # data config
+    parser = FastMriDataModule.add_data_specific_args(parser)
     parser.set_defaults(
         batch_size=batch_size, distributed_sampler=(backend == "ddp"),
     )
 
     # module config
+    parser = UnetModule.add_model_specific_args(parser)
     parser.set_defaults(
         in_chans=1,
         out_chans=1,
@@ -107,6 +144,7 @@ def build_args():
     )
 
     # trainer config
+    parser = pl.Trainer.add_argparse_args(parser)
     parser.set_defaults(
         gpus=num_gpus,
         replace_sampler_ddp=False,
@@ -114,22 +152,6 @@ def build_args():
         seed=42,
         deterministic=True,
     )
-
-    # client arguments
-    parser.add_argument(
-        "--path_config",
-        default=pathlib.Path("../../fastmri_dirs.yaml"),
-        type=pathlib.Path,
-    )
-    parser.add_argument("--mode", default="train", type=str)
-
-    # data transform params
-    parser.add_argument("--sample_rate", default=1.0, type=float)
-    parser.add_argument(
-        "--mask_type", choices=("random", "equispaced"), default="random", type=str
-    )
-    parser.add_argument("--center_fractions", nargs="+", default=[0.08], type=float)
-    parser.add_argument("--accelerations", nargs="+", default=[4], type=int)
 
     args = parser.parse_args()
 

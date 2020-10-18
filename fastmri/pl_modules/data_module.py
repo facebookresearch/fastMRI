@@ -57,15 +57,19 @@ class FastMriDataModule(pl.LightningDataModule):
         self.distributed_sampler = distributed_sampler
 
     def _create_data_loader(self, data_transform, data_partition, sample_rate=None):
-        sample_rate = sample_rate or self.sample_rate
+        if data_partition == "train":
+            is_train = True
+            sample_rate = sample_rate or self.sample_rate
+        else:
+            is_train = False
+            sample_rate = 1.0
+
         dataset = fastmri.data.SliceDataset(
             root=self.data_path / f"{self.challenge}_{data_partition}",
             transform=data_transform,
             sample_rate=sample_rate,
             challenge=self.challenge,
         )
-
-        is_train = data_partition == "train"
 
         # ensure that entire volumes go to the same GPU in the ddp setting
         sampler = None
@@ -104,22 +108,42 @@ class FastMriDataModule(pl.LightningDataModule):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
 
         # dataset arguments
-        parser.add_argument("--data_path", default=None, type=pathlib.Path)
+        parser.add_argument(
+            "--data_path",
+            default=None,
+            type=pathlib.Path,
+            help="Path to fastMRI data root",
+        )
         parser.add_argument(
             "--challenge",
             choices=("singlecoil", "multicoil"),
             default="singlecoil",
             type=str,
+            help="Which challenge to preprocess for",
         )
         parser.add_argument(
             "--test_split",
             choices=("test", "challenge"),
             default="test",
             type=str,
+            help="Which data split to use as test split",
+        )
+        parser.add_argument(
+            "--sample_rate",
+            default=1.0,
+            type=float,
+            help="Fraction of data set to use (train split only)",
         )
 
         # data loader arguments
-        parser.add_argument("--batch_size", default=1, type=int)
-        parser.add_argument("--num_workers", default=4, type=float)
+        parser.add_argument(
+            "--batch_size", default=1, type=int, help="Data loader batch size"
+        )
+        parser.add_argument(
+            "--num_workers",
+            default=4,
+            type=float,
+            help="Number of workers to use in data loader",
+        )
 
         return parser

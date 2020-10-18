@@ -205,9 +205,14 @@ class MriModule(pl.LightningModule):
         """
         Define parameters that only apply to this model
         """
-        parser = ArgumentParser(parents=[parent_parser])
+        parser = ArgumentParser(parents=[parent_parser], add_help=False)
 
         # logging params
-        parser.add_argument("--num_log_images", default=16, type=int)
+        parser.add_argument(
+            "--num_log_images",
+            default=16,
+            type=int,
+            help="Number of images to log to Tensorboard",
+        )
 
         return parser

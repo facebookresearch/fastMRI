@@ -9,6 +9,7 @@ import logging
 import pathlib
 import pickle
 import random
+from warnings import warn
 
 import h5py
 import ismrmrd
@@ -35,34 +36,26 @@ def fetch_dir(key, data_config_file=pathlib.Path("fastmri_dirs.yaml")):
         pathlib.Path: The path to the specified directory.
     """
     if not data_config_file.is_file():
-        default_config = dict(
-            knee_path="/path/to/knee",
-            brain_path="/path/to/brain",
-            log_path="/path/to/log",
-        )
+        default_config = {
+            "knee_path": "/path/to/knee",
+            "brain_path": "/path/to/brain",
+            "log_path": ".",
+        }
         with open(data_config_file, "w") as f:
             yaml.dump(default_config, f)
 
-        raise FileNotFoundError(
-            (
-                f"Path config at {data_config_file.resolve()} does not exist. "
-                "A template has been created for you. "
-                "Please populate it with directory paths for your system."
-            )
-        )
+        data_dir = default_config[key]
 
-    with open(data_config_file, "r") as f:
-        data_dir = yaml.safe_load(f)[key]
+        warn(
+            f"Path config at {data_config_file.resolve()} does not exist. "
+            "A template has been created for you. "
+            "Please enter the directory paths for your system to have defaults."
+        )
+    else:
+        with open(data_config_file, "r") as f:
+            data_dir = yaml.safe_load(f)[key]
 
     data_dir = pathlib.Path(data_dir)
-
-    if not data_dir.exists():
-        raise FileNotFoundError(
-            (
-                f"Path {data_dir.resolve()} from "
-                f"{data_config_file.resolve()} does not exist."
-            )
-        )
 
     return data_dir
 

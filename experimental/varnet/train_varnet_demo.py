@@ -5,6 +5,7 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+import os
 import pathlib
 from argparse import ArgumentParser
 
@@ -13,7 +14,7 @@ import pytorch_lightning as pl
 from fastmri.data.mri_data import fetch_dir
 from fastmri.data.subsample import create_mask_for_mask_type
 from fastmri.data.transforms import VarNetDataTransform
-from fastmri.pl_modules import FastMriDataModule, VarNetModule, configure_checkpoint
+from fastmri.pl_modules import FastMriDataModule, VarNetModule
 
 
 def cli_main(args):
@@ -56,6 +57,10 @@ def cli_main(args):
         weight_decay=args.weight_decay,
     )
 
+    if args.mode == "test":
+        model.load_from_checkpoint(args.resume_from_checkpoint)
+        args.resume_from_checkpoint = None
+
     # ------------
     # trainer
     # ------------
@@ -67,7 +72,6 @@ def cli_main(args):
     if args.mode == "train":
         trainer.fit(model, data_module)
     elif args.mode == "test":
-        assert args.resume_from_checkpoint is not None
         outputs = trainer.test(model, data_module)
         fastmri.save_reconstructions(outputs, args.default_root_dir / "reconstructions")
     else:
@@ -81,17 +85,24 @@ def build_args():
     parser = ArgumentParser()
 
     # basic args
+    path_config = pathlib.Path("../../fastmri_dirs.yaml")
     backend = "ddp"
     num_gpus = 2 if backend == "ddp" else 1
     batch_size = 1
 
+    # set defaults based on optional directory config
+    data_path = fetch_dir("knee_path", path_config)
+    default_root_dir = fetch_dir("log_path", path_config) / "varnet" / "varnet_demo"
+    checkpoint_path = default_root_dir / "checkpoints"
+
+    # set default checkpoint if one exists in our default directory
+    resume_from_checkpoint = None
+    if checkpoint_path.exists():
+        ckpt_list = sorted(checkpoint_path.glob("*.ckpt"), key=os.path.getmtime)
+        if ckpt_list:
+            resume_from_checkpoint = str(ckpt_list[-1])
+
     # client arguments
-    parser.add_argument(
-        "--path_config",
-        default=pathlib.Path("../../fastmri_dirs.yaml"),
-        type=pathlib.Path,
-        help="Path to .yaml path configuration file, can be used instead of data_path",
-    )
     parser.add_argument(
         "--mode",
         default="train",
@@ -126,7 +137,10 @@ def build_args():
     # data config
     parser = FastMriDataModule.add_data_specific_args(parser)
     parser.set_defaults(
-        mask_type="equispaced", challenge="multicoil", batch_size=batch_size,
+        data_path=data_path,
+        mask_type="equispaced",
+        challenge="multicoil",
+        batch_size=batch_size,
     )
 
     # module config
@@ -151,26 +165,25 @@ def build_args():
         accelerator=backend,
         seed=42,
         deterministic=True,
+        default_root_dir=default_root_dir,
+        resume_from_checkpoint=resume_from_checkpoint,
     )
 
     args = parser.parse_args()
 
-    if args.path_config is not None:
-        if args.data_path is None:
-            args.data_path = fetch_dir("knee_path", args.path_config)
-        if args.default_root_dir is None:
-            args.default_root_dir = (
-                fetch_dir("log_path", args.path_config) / "varnet" / "varnet_demo"
-            )
+    # configure checkpointing
+    checkpoint_dir = args.default_root_dir / "checkpoints"
+    if not checkpoint_dir.exists():
+        checkpoint_dir.mkdir(parents=True)
 
-    if args.default_root_dir is None:
-        args.default_root_dir = pathlib.Path.cwd()
-
-    args.checkpoint_callback, resume_from_checkpoint = configure_checkpoint(
-        args.default_root_dir
+    args.checkpoint_callback = pl.callbacks.ModelCheckpoint(
+        filepath=args.default_root_dir / "checkpoints",
+        save_top_k=True,
+        verbose=True,
+        monitor="val_loss",
+        mode="min",
+        prefix="",
     )
-    if args.resume_from_checkpoint is None:
-        args.resume_from_checkpoint = resume_from_checkpoint
 
     return args
 

@@ -5,20 +5,17 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import pathlib
 from argparse import ArgumentParser
 
 import pytest
+from fastmri.data.mri_data import fetch_dir
+from fastmri.pl_modules import UnetModule, VarNetModule
 from pytorch_lightning import Trainer
 
-from experimental.unet.unet_module import UnetModule
-from experimental.varnet.varnet_module import VarNetModule
-from fastmri.data.mri_data import fetch_dir
 
-
-def build_unet_args():
+def build_unet_args(tmp_path):
     knee_path = fetch_dir("knee_path")
-    logdir = fetch_dir("log_path") / "test_dir"
+    logdir = tmp_path / "unet_test_dir"
 
     parent_parser = ArgumentParser(add_help=False)
 
@@ -66,9 +63,9 @@ def build_unet_args():
     return args
 
 
-def build_varnet_args():
+def build_varnet_args(tmp_path):
     knee_path = fetch_dir("knee_path")
-    logdir = fetch_dir("log_path") / "test_dir"
+    logdir = tmp_path / "varnet_test_dir"
 
     parent_parser = ArgumentParser(add_help=False)
 
@@ -117,11 +114,11 @@ def build_varnet_args():
 
 
 @pytest.mark.parametrize("backend", [(None)])
-def test_unet_trainer(backend, skip_module_test):
+def test_unet_trainer(backend, skip_module_test, tmp_path):
     if skip_module_test:
         pytest.skip("config set to skip")
 
-    args = build_unet_args()
+    args = build_unet_args(tmp_path)
     args.fast_dev_run = True
     args.backend = backend
 
@@ -132,11 +129,11 @@ def test_unet_trainer(backend, skip_module_test):
 
 
 @pytest.mark.parametrize("backend", [(None)])
-def test_varnet_trainer(backend, skip_module_test):
+def test_varnet_trainer(backend, skip_module_test, tmp_path):
     if skip_module_test:
         pytest.skip("config set to skip")
 
-    args = build_varnet_args()
+    args = build_varnet_args(tmp_path)
     args.fast_dev_run = True
     args.backend = backend
 

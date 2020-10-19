@@ -19,5 +19,4 @@ from .math import (
     roll,
     tensor_to_complex_np,
 )
-from .mri_module import MriModule
 from .utils import save_reconstructions

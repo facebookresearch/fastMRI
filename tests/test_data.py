@@ -6,7 +6,6 @@ LICENSE file in the root directory of this source tree.
 """
 
 import pytest
-
 from fastmri.data.mri_data import CombinedSliceDataset, SliceDataset, fetch_dir
 
 

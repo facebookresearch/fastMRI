@@ -5,15 +5,12 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import pathlib
-
 import numpy as np
 import pytest
 import torch
-import yaml
 
 # these are really slow - skip by default
-skip_module_test_flag = True
+skip_module_test_flag = False
 skip_data_test_flag = True
 
 

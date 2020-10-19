@@ -28,7 +28,7 @@ def fetch_dir(key, data_config_file=pathlib.Path("fastmri_dirs.yaml")):
 
     Args:
         key (str): key to retrieve path from data_config_file.
-        data_config_file (pathlib.Path, 
+        data_config_file (pathlib.Path,
             default=pathlib.Path("fastmri_dirs.yaml")): Default path config
             file.
 

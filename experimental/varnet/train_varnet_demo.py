@@ -71,8 +71,7 @@ def cli_main(args):
     if args.mode == "train":
         trainer.fit(model, datamodule=data_module)
     elif args.mode == "test":
-        outputs = trainer.test(model, datamodule=data_module)
-        fastmri.save_reconstructions(outputs, args.default_root_dir / "reconstructions")
+        trainer.test(model, datamodule=data_module)
     else:
         raise ValueError(f"unrecognized mode {args.mode}")
 

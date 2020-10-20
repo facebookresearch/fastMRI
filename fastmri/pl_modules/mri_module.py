@@ -5,9 +5,11 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+import pathlib
 from argparse import ArgumentParser
 from collections import defaultdict
 
+import fastmri
 import numpy as np
 import pytorch_lightning as pl
 import torch
@@ -198,7 +200,12 @@ class MriModule(pl.LightningModule):
         for fname in outputs:
             outputs[fname] = np.stack([out for _, out in sorted(outputs[fname])])
 
-        return outputs
+        if hasattr(self, "trainer"):
+            save_path = pathlib.Path(self.trainer.default_root_dir) / "reconstructions"
+        else:
+            save_path = pathlib.Path.cwd() / "reconstructions"
+
+        fastmri.save_reconstructions(outputs, save_path)
 
     @staticmethod
     def add_model_specific_args(parent_parser):  # pragma: no-cover

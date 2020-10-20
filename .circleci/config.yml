@@ -14,11 +14,12 @@ setup_venv: &setup_venv
         python --version
         pip --version
 
-install_pyxb: &install_pyxb
+preinstall_packages: &preinstall_packages
   - run:
-      name: Manually install PyXB
+      name: Preinstallation Packages
       command: |
         pip install pyxb
+        pip install wheel
         
 install_fastmri: &install_fastmri
   - run:
@@ -32,7 +33,7 @@ jobs:
     steps:
       - checkout
       - <<: *setup_venv
-      - <<: *install_pyxb
+      - <<: *preinstall_packages
       - python/install-packages:
           pkg-manager: pip
       - <<: *install_fastmri

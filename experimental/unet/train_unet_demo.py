@@ -161,7 +161,7 @@ def build_args():
         seed=42,  # random seed
         deterministic=True,  # makes things slower, but deterministic
         default_root_dir=default_root_dir,  # directory for logs and checkpoints
-        resume_from_checkpoint=resume_from_checkpoint,  # a .ckpt file
+        resume_from_checkpoint=resume_from_checkpoint,  # a ptl .ckpt file
         max_epochs=50,  # max number of epochs
     )
 

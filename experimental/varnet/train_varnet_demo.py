@@ -23,12 +23,15 @@ def cli_main(args):
     # ------------
     # data
     # ------------
+    # this creates a k-space mask for transforming input data
     mask = create_mask_for_mask_type(
         args.mask_type, args.center_fractions, args.accelerations
     )
+    # use random masks for train transform, fixed masks for val transform
     train_transform = VarNetDataTransform(mask_func=mask, use_seed=False)
     val_transform = VarNetDataTransform(mask_func=mask)
     test_transform = VarNetDataTransform(mask_func=mask)
+    # ptl data module - use this separate module for making data loaders
     data_module = FastMriDataModule(
         data_path=args.data_path,
         challenge=args.challenge,
@@ -134,42 +137,42 @@ def build_args():
     # data config
     parser = FastMriDataModule.add_data_specific_args(parser)
     parser.set_defaults(
-        data_path=data_path,
-        mask_type="equispaced",
-        challenge="multicoil",
-        batch_size=batch_size,
+        data_path=data_path,  # path to fastMRI data
+        mask_type="equispaced",  # VarNet uses equispaced mask
+        challenge="multicoil",  # only multicoil implemented for VarNet
+        batch_size=batch_size,  # number of samples per batch
     )
 
     # module config
     parser = VarNetModule.add_model_specific_args(parser)
     parser.set_defaults(
-        num_cascades=8,
-        pools=4,
-        chans=18,
-        sens_pools=4,
-        sens_chans=8,
-        lr=0.001,
-        lr_step_size=40,
-        lr_gamma=0.1,
-        weight_decay=0.0,
+        num_cascades=8,  # number of unrolled iterations
+        pools=4,  # number of pooling layers for U-Net
+        chans=18,  # number of top-level channels for U-Net
+        sens_pools=4,  # number of pooling layers for sense est. U-Net
+        sens_chans=8,  # number of top-level channels for sense est. U-Net
+        lr=0.001,  # Adam learning rate
+        lr_step_size=40,  # epoch at which to decrease learning rate
+        lr_gamma=0.1,  # extent to which to decrease learning rate
+        weight_decay=0.0,  # weight regularization strength
     )
 
     # trainer config
     parser = pl.Trainer.add_argparse_args(parser)
     parser.set_defaults(
-        gpus=num_gpus,
-        replace_sampler_ddp=False,
-        accelerator=backend,
-        seed=42,
-        deterministic=True,
-        default_root_dir=default_root_dir,
-        resume_from_checkpoint=resume_from_checkpoint,
-        max_epochs=50,
+        gpus=num_gpus,  # number of gpus to use
+        replace_sampler_ddp=False,  # this is necessary for volume dispatch during val
+        accelerator=backend,  # what distributed version to use
+        seed=42,  # random seed
+        deterministic=True,  # makes things slower, but deterministic
+        default_root_dir=default_root_dir,  # directory for logs and checkpoints
+        resume_from_checkpoint=resume_from_checkpoint,  # a ptl .ckpt file
+        max_epochs=50,  # max number of epochs
     )
 
     args = parser.parse_args()
 
-    # configure checkpointing
+    # configure checkpointing in checkpoint_dir
     checkpoint_dir = args.default_root_dir / "checkpoints"
     if not checkpoint_dir.exists():
         checkpoint_dir.mkdir(parents=True)

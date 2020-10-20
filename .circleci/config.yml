@@ -13,6 +13,12 @@ setup_venv: &setup_venv
         . ~/venv/bin/activate
         python --version
         pip --version
+        
+install_fastmri: &install_fastmri
+  - run:
+      name: Install fastMRI
+      command: |
+        pip install -e .
 
 jobs:
   build-and-test:
@@ -22,6 +28,7 @@ jobs:
       - <<: *setup_venv
       - python/install-packages:
           pkg-manager: pip
+      - <<: *install_fastmri
       - python/install-packages:
           args: pytest
           pkg-manager: pip

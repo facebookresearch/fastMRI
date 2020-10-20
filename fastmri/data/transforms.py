@@ -248,7 +248,7 @@ class UnetDataTransform:
         kspace = to_tensor(kspace)
 
         # check for max value
-        max_value = attrs["max"] if "max" in attrs.keys() else None
+        max_value = attrs["max"] if "max" in attrs.keys() else 0.0
 
         # apply mask
         if self.mask_func:

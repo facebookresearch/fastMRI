@@ -60,10 +60,6 @@ def cli_main(args):
         weight_decay=args.weight_decay,
     )
 
-    if args.mode == "test":
-        model.load_from_checkpoint(args.resume_from_checkpoint)
-        args.resume_from_checkpoint = None
-
     # ------------
     # trainer
     # ------------
@@ -73,9 +69,9 @@ def cli_main(args):
     # run
     # ------------
     if args.mode == "train":
-        trainer.fit(model, data_module)
+        trainer.fit(model, datamodule=data_module)
     elif args.mode == "test":
-        outputs = trainer.test(model, data_module)
+        outputs = trainer.test(model, datamodule=data_module)
         fastmri.save_reconstructions(outputs, args.default_root_dir / "reconstructions")
     else:
         raise ValueError(f"unrecognized mode {args.mode}")
@@ -93,14 +89,6 @@ def build_args():
     # set defaults based on optional directory config
     data_path = fetch_dir("knee_path", path_config)
     default_root_dir = fetch_dir("log_path", path_config) / "varnet" / "varnet_demo"
-    checkpoint_path = default_root_dir / "checkpoints"
-
-    # set default checkpoint if one exists in our default directory
-    resume_from_checkpoint = None
-    if checkpoint_path.exists():
-        ckpt_list = sorted(checkpoint_path.glob("*.ckpt"), key=os.path.getmtime)
-        if ckpt_list:
-            resume_from_checkpoint = str(ckpt_list[-1])
 
     # client arguments
     parser.add_argument(
@@ -166,7 +154,6 @@ def build_args():
         seed=42,  # random seed
         deterministic=True,  # makes things slower, but deterministic
         default_root_dir=default_root_dir,  # directory for logs and checkpoints
-        resume_from_checkpoint=resume_from_checkpoint,  # a ptl .ckpt file
         max_epochs=50,  # max number of epochs
     )
 
@@ -185,6 +172,12 @@ def build_args():
         mode="min",
         prefix="",
     )
+
+    # set default checkpoint if one exists in our checkpoint directory
+    if args.resume_from_checkpoint is None:
+        ckpt_list = sorted(checkpoint_dir.glob("*.ckpt"), key=os.path.getmtime)
+        if ckpt_list:
+            args.resume_from_checkpoint = str(ckpt_list[-1])
 
     return args
 

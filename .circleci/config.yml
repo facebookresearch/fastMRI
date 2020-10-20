@@ -2,12 +2,33 @@
 version: 2.1
 # Use a package of configuration called an orb.
 orbs:
-  # Declare a dependency on the welcome-orb
-  welcome: circleci/welcome-orb@0.4.1
+  python: circleci/python@1.2.0
 # Orchestrate or schedule a set of jobs
-workflows:
-  # Name the workflow "welcome"
-  welcome:
-    # Run the welcome/run job in its own container
-    jobs:
-      - welcome/run
+
+setup_venv: &setup_venv
+  - run:
+      name: Activate venv
+      command: |
+        python -m venv ~/venv
+        echo ". ~/venv/bin/activate" >> $BASH_ENV
+        . ~/venv/bin/activate
+        python --version
+        pip --version
+
+jobs:
+  build-and-test:
+    executor: python/default
+    steps:
+      - checkout
+      - <<: *setup_venv
+      - python/install-packages:
+          pkg-manager: pip
+      - python/install-packages:
+          args: pytest
+          pkg-manager: pip
+          pypi-cache: false
+      - run:
+          command: |
+            pytest --version
+            pytest tests
+          name: Test

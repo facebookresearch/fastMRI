@@ -164,6 +164,7 @@ def build_args():
         deterministic=True,
         default_root_dir=default_root_dir,
         resume_from_checkpoint=resume_from_checkpoint,
+        max_epochs=50,
     )
 
     args = parser.parse_args()

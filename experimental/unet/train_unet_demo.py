@@ -101,12 +101,6 @@ def build_args():
 
     # client arguments
     parser.add_argument(
-        "--path_config",
-        default=pathlib.Path("../../fastmri_dirs.yaml"),
-        type=pathlib.Path,
-        help="Path to .yaml path configuration file, can be used instead of data_path",
-    )
-    parser.add_argument(
         "--mode",
         default="train",
         choices=("train", "test"),
@@ -165,6 +159,7 @@ def build_args():
         deterministic=True,
         default_root_dir=default_root_dir,
         resume_from_checkpoint=resume_from_checkpoint,
+        max_epochs=50,
     )
 
     args = parser.parse_args()

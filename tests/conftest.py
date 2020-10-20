@@ -10,7 +10,7 @@ import pytest
 import torch
 
 # these are really slow - skip by default
-skip_module_test_flag = False
+skip_module_test_flag = True
 skip_data_test_flag = True
 
 

@@ -1,5 +1,7 @@
 # fastMRI
 
+[![CircleCI](https://circleci.com/gh/facebookresearch/fastMRI.svg?style=shield)](https://app.circleci.com/pipelines/github/facebookresearch/fastMRI)
+
 [Website and Leaderboards](https://fastMRI.org) | [Dataset](https://fastmri.med.nyu.edu/) | [GitHub](https://github.com/facebookresearch/fastMRI) | [Publications](#list-of-papers)
 
 Accelerating Magnetic Resonance Imaging (MRI) by acquiring fewer measurements has the potential to reduce medical costs, minimize stress to patients and make MR imaging possible in applications where it is currently prohibitively slow or expensive.

@@ -6,3 +6,4 @@ LICENSE file in the root directory of this source tree.
 """
 
 from .mri_data import SliceDataset
+from .volume_sampler import VolumeSampler

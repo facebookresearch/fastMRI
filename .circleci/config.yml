@@ -4,43 +4,24 @@ version: 2.1
 orbs:
   python: circleci/python@1.2.0
 
-setup_venv: &setup_venv
-  - run:
-      name: Activate venv
-      command: |
-        python -m venv ~/venv
-        echo ". ~/venv/bin/activate" >> $BASH_ENV
-        . ~/venv/bin/activate
-        python --version
-        pip --version
-
-preinstall_packages: &preinstall_packages
-  - run:
-      name: Preinstallation Packages
-      command: |
-        pip install pyxb
-        pip install wheel
-        
-install_fastmri: &install_fastmri
-  - run:
-      name: Install fastMRI
-      command: |
-        pip install -e .
-
 jobs:
   build-and-test:
     executor: python/default
     steps:
       - checkout
-      - <<: *setup_venv
-      - <<: *preinstall_packages
+      - run:
+          name: Preinstallation Packages
+          command: |
+            pip install pyxb
+            pip install wheel
+            pip install pytest
       - python/install-packages:
           pkg-manager: pip
-      - <<: *install_fastmri
-      - python/install-packages:
-          args: pytest
-          pkg-manager: pip
-          pypi-cache: false
+      - run:
+          name: Install fastMRI
+          command: |
+            python setup.py bdist_wheel
+            pip install dist/*.whl
       - run:
           command: |
             pytest --version

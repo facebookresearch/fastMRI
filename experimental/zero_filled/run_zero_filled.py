@@ -6,15 +6,11 @@ LICENSE file in the root directory of this source tree.
 """
 
 import pathlib
-import sys
 from argparse import ArgumentParser
 
+import fastmri
 import h5py
 import ismrmrd
-
-sys.path.append("../../")  # noqa: E402
-
-import fastmri
 from fastmri.data import transforms
 
 

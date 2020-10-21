@@ -9,13 +9,11 @@ import pathlib
 from argparse import ArgumentParser
 from collections import defaultdict
 
+import fastmri
 import numpy as np
 import pytorch_lightning as pl
 import torch
 from fastmri import evaluate
-from fastmri.data import SliceDataset
-from fastmri.data.volume_sampler import VolumeSampler
-from torch.utils.data import DataLoader, DistributedSampler
 
 
 class DistributedMetricSum(pl.metrics.Metric):
@@ -37,14 +35,11 @@ class MriModule(pl.LightningModule):
 
     This is a subclass of the LightningModule class from pytorch_lightning,
     with some additional functionality specific to fastMRI:
-        - fastMRI data loaders
         - Evaluating reconstructions
         - Visualization
 
     To implement a new reconstruction model, inherit from this class and
     implement the following methods:
-        - train_data_transform, val_data_transform, test_data_transform:
-            Create and return data transformer objects for each data split
         - training_step, validation_step, test_step:
             Define what happens in one step of training, validation, and
             testing, respectively
@@ -54,38 +49,14 @@ class MriModule(pl.LightningModule):
     Other methods from LightningModule can be overridden as needed.
     """
 
-    def __init__(
-        self,
-        data_path,
-        challenge,
-        test_split="test",
-        sample_rate=1.0,
-        batch_size=1,
-        num_workers=4,
-        num_log_images=16,
-        **kwargs,
-    ):
+    def __init__(self, num_log_images=16):
         """
         Args:
-            data_path (pathlib.Path): Path to root data directory. For example, if
-                knee/path is the root directory with subdirectories
-                multicoil_train and multicoil_val, you would input knee/path for
-                data_path.
-            challenge (str): Name of challenge from ('multicoil', 'singlecoil').
-            test_split (str): Name of test split from ("test", "challenge").
-            sample_rate (float, default=1.0): Fraction of models from the
-                dataset to use.
-            batch_size (int, default=1): Batch size.
-            num_workers (int, default=4): Number of workers for PyTorch dataloader.
+            num_log_images (int, optional): Number of images to log. Defaults
+                to 16.
         """
         super().__init__()
 
-        self.data_path = data_path
-        self.challenge = challenge
-        self.test_split = test_split
-        self.sample_rate = sample_rate
-        self.batch_size = batch_size
-        self.num_workers = num_workers
         self.num_log_images = num_log_images
         self.val_log_indices = None
 
@@ -95,57 +66,6 @@ class MriModule(pl.LightningModule):
         self.ValLoss = DistributedMetricSum()
         self.TotExamples = DistributedMetricSum()
         self.TotSliceExamples = DistributedMetricSum()
-
-    def _create_data_loader(self, data_transform, data_partition, sample_rate=None):
-        sample_rate = sample_rate or self.sample_rate
-        dataset = SliceDataset(
-            root=self.data_path / f"{self.challenge}_{data_partition}",
-            transform=data_transform,
-            sample_rate=sample_rate,
-            challenge=self.challenge,
-        )
-
-        is_train = data_partition == "train"
-
-        # ensure that entire volumes go to the same GPU in the ddp setting
-        sampler = None
-        if self.use_ddp:
-            if is_train:
-                sampler = DistributedSampler(dataset)
-            else:
-                sampler = VolumeSampler(dataset)
-
-        dataloader = DataLoader(
-            dataset=dataset,
-            batch_size=self.batch_size,
-            num_workers=self.num_workers,
-            pin_memory=False,
-            sampler=sampler,
-        )
-
-        return dataloader
-
-    def train_data_transform(self):
-        raise NotImplementedError
-
-    def train_dataloader(self):
-        return self._create_data_loader(
-            self.train_data_transform(), data_partition="train"
-        )
-
-    def val_data_transform(self):
-        raise NotImplementedError
-
-    def val_dataloader(self):
-        return self._create_data_loader(self.val_data_transform(), data_partition="val")
-
-    def test_data_transform(self):
-        raise NotImplementedError
-
-    def test_dataloader(self):
-        return self._create_data_loader(
-            self.test_data_transform(), data_partition=self.test_split, sample_rate=1.0,
-        )
 
     def validation_step_end(self, val_logs):
         # check inputs
@@ -271,51 +191,38 @@ class MriModule(pl.LightningModule):
             self.log(f"val_metrics/{metric}", value / tot_examples)
 
     def test_epoch_end(self, test_logs):
-        outputs = defaultdict(list)
+        outputs = defaultdict(dict)
 
         for log in test_logs:
             for i, (fname, slice_num) in enumerate(zip(log["fname"], log["slice"])):
-                outputs[fname].append((slice_num, log["output"][i]))
+                outputs[fname][int(slice_num.cpu())] = log["output"][i]
 
         for fname in outputs:
-            outputs[fname] = np.stack([out for _, out in sorted(outputs[fname])])
+            outputs[fname] = np.stack(
+                [out for _, out in sorted(outputs[fname].items())]
+            )
 
-        return outputs
+        if hasattr(self, "trainer"):
+            save_path = pathlib.Path(self.trainer.default_root_dir) / "reconstructions"
+        else:
+            save_path = pathlib.Path.cwd() / "reconstructions"
+        self.print(f"Saving reconstructions to {save_path}")
+
+        fastmri.save_reconstructions(outputs, save_path)
 
     @staticmethod
     def add_model_specific_args(parent_parser):  # pragma: no-cover
         """
         Define parameters that only apply to this model
         """
-        parser = ArgumentParser(parents=[parent_parser])
-
-        # data arguments
-        parser.add_argument(
-            "--data_path", default=pathlib.Path("datasets/"), type=pathlib.Path
-        )
-        parser.add_argument(
-            "--challenge",
-            choices=["singlecoil", "multicoil"],
-            default="singlecoil",
-            type=str,
-        )
-        parser.add_argument(
-            "--sample_rate", default=1.0, type=float,
-        )
-        parser.add_argument(
-            "--batch_size", default=1, type=int,
-        )
-        parser.add_argument(
-            "--num_workers", default=4, type=float,
-        )
-        parser.add_argument(
-            "--seed", default=42, type=int,
-        )
+        parser = ArgumentParser(parents=[parent_parser], add_help=False)
 
         # logging params
         parser.add_argument(
-            "--test_split", default="test", type=str,
+            "--num_log_images",
+            default=16,
+            type=int,
+            help="Number of images to log to Tensorboard",
         )
-        parser.add_argument("--num_log_images", default=16, type=int)
 
         return parser

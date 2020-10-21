@@ -9,12 +9,13 @@ import logging
 import pathlib
 import pickle
 import random
+from warnings import warn
 
 import h5py
 import ismrmrd
 import numpy as np
+import torch
 import yaml
-from torch.utils.data import Dataset
 
 
 def fetch_dir(key, data_config_file=pathlib.Path("fastmri_dirs.yaml")):
@@ -27,7 +28,7 @@ def fetch_dir(key, data_config_file=pathlib.Path("fastmri_dirs.yaml")):
 
     Args:
         key (str): key to retrieve path from data_config_file.
-        data_config_file (pathlib.Path, 
+        data_config_file (pathlib.Path,
             default=pathlib.Path("fastmri_dirs.yaml")): Default path config
             file.
 
@@ -35,28 +36,31 @@ def fetch_dir(key, data_config_file=pathlib.Path("fastmri_dirs.yaml")):
         pathlib.Path: The path to the specified directory.
     """
     if not data_config_file.is_file():
-        default_config = dict(
-            knee_path="/path/to/knee",
-            brain_path="/path/to/brain",
-            log_path="/path/to/log",
-        )
+        default_config = {
+            "knee_path": "/path/to/knee",
+            "brain_path": "/path/to/brain",
+            "log_path": ".",
+        }
         with open(data_config_file, "w") as f:
             yaml.dump(default_config, f)
 
-        raise ValueError(f"Please populate {data_config_file} with directory paths.")
+        data_dir = default_config[key]
 
-    with open(data_config_file, "r") as f:
-        data_dir = yaml.safe_load(f)[key]
+        warn(
+            f"Path config at {data_config_file.resolve()} does not exist. "
+            "A template has been created for you. "
+            "Please enter the directory paths for your system to have defaults."
+        )
+    else:
+        with open(data_config_file, "r") as f:
+            data_dir = yaml.safe_load(f)[key]
 
     data_dir = pathlib.Path(data_dir)
-
-    if not data_dir.exists():
-        raise ValueError(f"Path {data_dir} from {data_config_file} does not exist.")
 
     return data_dir
 
 
-class CombinedSliceDataset(Dataset):
+class CombinedSliceDataset(torch.utils.data.Dataset):
     """
     A container for combining slice datasets.
 
@@ -108,7 +112,7 @@ class CombinedSliceDataset(Dataset):
                 i = i - len(dataset)
 
 
-class SliceDataset(Dataset):
+class SliceDataset(torch.utils.data.Dataset):
     """
     A PyTorch Dataset that provides access to MR image slices.
 

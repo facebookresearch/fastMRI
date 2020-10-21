@@ -1,5 +1,6 @@
 # fastMRI
 
+[![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebookresearch/fastMRI/blob/master/LICENSE.md)
 [![CircleCI](https://circleci.com/gh/facebookresearch/fastMRI.svg?style=shield)](https://app.circleci.com/pipelines/github/facebookresearch/fastMRI)
 
 [Website and Leaderboards](https://fastMRI.org) | [Dataset](https://fastmri.med.nyu.edu/) | [GitHub](https://github.com/facebookresearch/fastMRI) | [Publications](#list-of-papers)
@@ -9,10 +10,6 @@ Accelerating Magnetic Resonance Imaging (MRI) by acquiring fewer measurements ha
 [fastMRI](https://fastMRI.org) is a collaborative research project from Facebook AI Research (FAIR) and NYU Langone Health to investigate the use of AI to make MRI scans faster. NYU Langone Health has released fully anonymized knee and brain MRI datasets that can be downloaded from [the fastMRI dataset page](https://fastmri.med.nyu.edu/). Publications associated with the fastMRI project can be found [at the end of this README](#list-of-papers).
 
 This repository contains convenient PyTorch data loaders, subsampling functions, evaluation metrics, and reference implementations of simple baseline methods. It also contains implementations for methods in some of the publications of the fastMRI project.
-
-## Note to 2020 fastMRI Brain Challenge Participants
-
-We have added a new folder, `experimental/brain_challenge_inference`, where we include new scripts for running inference on the brain challenge set. In particular, these scripts illustrate an aspect of the GE data where there is no frequency oversampling. For further details on the inference scripts, please consult the [README](https://github.com/facebookresearch/fastMRI/blob/master/experimental/brain_challenge_inference/README.md). For further details on submitting to the challenge, please consult [this forum post](https://discuss.fastmri.org/t/2020-fastmri-reconstruction-challenge-launch/208).
 
 ## Outline
 

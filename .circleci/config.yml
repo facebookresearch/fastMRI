@@ -25,7 +25,8 @@ install_fastmri: &install_fastmri
   - run:
       name: Install fastMRI
       command: |
-        pip install -e .
+        python setup.py bdist_wheel
+        pip install dist/*.whl
 
 jobs:
   build-and-test:

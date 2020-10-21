@@ -1,5 +1,6 @@
 # fastMRI
 
+[![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebookresearch/fastMRI/blob/master/LICENSE.md)
 [![CircleCI](https://circleci.com/gh/facebookresearch/fastMRI.svg?style=shield)](https://app.circleci.com/pipelines/github/facebookresearch/fastMRI)
 
 [Website and Leaderboards](https://fastMRI.org) | [Dataset](https://fastmri.med.nyu.edu/) | [GitHub](https://github.com/facebookresearch/fastMRI) | [Publications](#list-of-papers)

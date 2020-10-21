@@ -10,14 +10,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Activate venv
-          command: |
-            python -m venv ~/venv
-            echo ". ~/venv/bin/activate" >> $BASH_ENV
-            . ~/venv/bin/activate
-            python --version
-            pip --version
-      - run:
           name: Preinstallation Packages
           command: |
             pip install pyxb

@@ -191,14 +191,16 @@ class MriModule(pl.LightningModule):
             self.log(f"val_metrics/{metric}", value / tot_examples)
 
     def test_epoch_end(self, test_logs):
-        outputs = defaultdict(list)
+        outputs = defaultdict(dict)
 
         for log in test_logs:
             for i, (fname, slice_num) in enumerate(zip(log["fname"], log["slice"])):
-                outputs[fname].append((slice_num, log["output"][i]))
+                outputs[fname][int(slice_num.cpu())] = log["output"][i]
 
         for fname in outputs:
-            outputs[fname] = np.stack([out for _, out in sorted(outputs[fname])])
+            outputs[fname] = np.stack(
+                [out for _, out in sorted(outputs[fname].items())]
+            )
 
         if hasattr(self, "trainer"):
             save_path = pathlib.Path(self.trainer.default_root_dir) / "reconstructions"

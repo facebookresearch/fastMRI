@@ -30,7 +30,7 @@ def cli_main(args):
     train_transform = UnetDataTransform(args.challenge, mask_func=mask, use_seed=False)
     val_transform = UnetDataTransform(args.challenge, mask_func=mask)
     test_transform = UnetDataTransform(args.challenge, mask_func=mask)
-    # ptl data module - use this separate module for making data loaders
+    # ptl data module - this handles data loaders
     data_module = FastMriDataModule(
         data_path=args.data_path,
         challenge=args.challenge,

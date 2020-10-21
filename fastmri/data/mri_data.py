@@ -18,15 +18,30 @@ import torch
 import yaml
 
 
-def et_query(root, qlist, prefix="mrd"):
+def et_query(root, qlist, namespace="http://www.ismrm.org/ISMRMRD"):
+    """
+    ElementTree query function.
+
+    This can be used to query an xml document via ElementTree. It uses qlist
+    for nexted queries.
+
+    Args:
+        root (xml.etree.ElementTree.Element): Root of the xml.
+        qlist (Sequence): A list of strings for nested searches.
+        namespace (str): xml namespace.
+
+    Returns:
+        str: The retrieved data.
+    """
     s = "."
+    prefix = "ismrmrd_namespace"
+
+    ns = {prefix: namespace}
 
     for el in qlist:
         s = s + f"//{prefix}:{el}"
 
-    namespace = {prefix: "http://www.ismrm.org/ISMRMRD"}
-
-    return root.find(s, namespace).text
+    return root.find(s, ns).text
 
 
 def fetch_dir(key, data_config_file=pathlib.Path("fastmri_dirs.yaml")):

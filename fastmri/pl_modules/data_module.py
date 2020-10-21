@@ -36,6 +36,7 @@ class FastMriDataModule(pl.LightningDataModule):
         val_transform,
         test_transform,
         test_split="test",
+        test_path=None,
         sample_rate=1.0,
         batch_size=1,
         num_workers=4,
@@ -56,6 +57,9 @@ class FastMriDataModule(pl.LightningDataModule):
             test_transform (Callable): A transform object for the test split.
             test_split (str, optional): Name of test split from ("test",
                 "challenge"). Defaults to "test".
+            test_path (pathlib.Path, optional): An optional test path.
+                Passing this overwrites data_path and test_split. Defaults to
+                None.
             sample_rate (float, optional): Fraction of of the training data
                 split to use. Can be set to less than 1.0 for rapid
                 prototyping. Defaults to 1.0.
@@ -74,6 +78,7 @@ class FastMriDataModule(pl.LightningDataModule):
         self.val_transform = val_transform
         self.test_transform = test_transform
         self.test_split = test_split
+        self.test_path = test_path
         self.sample_rate = sample_rate
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -87,8 +92,13 @@ class FastMriDataModule(pl.LightningDataModule):
             is_train = False
             sample_rate = 1.0
 
+        if data_partition in ("test", "challenge") and self.test_path is not None:
+            data_path = self.test_path
+        else:
+            data_path = self.data_path / f"{self.challenge}_{data_partition}"
+
         dataset = fastmri.data.SliceDataset(
-            root=self.data_path / f"{self.challenge}_{data_partition}",
+            root=data_path,
             transform=data_transform,
             sample_rate=sample_rate,
             challenge=self.challenge,
@@ -138,6 +148,12 @@ class FastMriDataModule(pl.LightningDataModule):
             default=None,
             type=pathlib.Path,
             help="Path to fastMRI data root",
+        )
+        parser.add_argument(
+            "--test_path",
+            default=None,
+            type=pathlib.Path,
+            help="Path to data for test mode. This overwrites data_path and test_split",
         )
         parser.add_argument(
             "--challenge",

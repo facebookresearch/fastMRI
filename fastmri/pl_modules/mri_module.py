@@ -206,6 +206,7 @@ class MriModule(pl.LightningModule):
             save_path = pathlib.Path(self.trainer.default_root_dir) / "reconstructions"
         else:
             save_path = pathlib.Path.cwd() / "reconstructions"
+        self.print(f"Saving reconstructions to {save_path}")
 
         fastmri.save_reconstructions(outputs, save_path)
 

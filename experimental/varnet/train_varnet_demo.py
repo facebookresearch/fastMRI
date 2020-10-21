@@ -38,6 +38,7 @@ def cli_main(args):
         val_transform=val_transform,
         test_transform=test_transform,
         test_split=args.test_split,
+        test_path=args.test_path,
         sample_rate=args.sample_rate,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
@@ -127,6 +128,7 @@ def build_args():
         mask_type="equispaced",  # VarNet uses equispaced mask
         challenge="multicoil",  # only multicoil implemented for VarNet
         batch_size=batch_size,  # number of samples per batch
+        test_path=None,  # path for test split, overwrites data_path
     )
 
     # module config

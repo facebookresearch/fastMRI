@@ -38,6 +38,7 @@ def cli_main(args):
         val_transform=val_transform,
         test_transform=test_transform,
         test_split=args.test_split,
+        test_path=args.test_path,
         sample_rate=args.sample_rate,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
@@ -122,7 +123,7 @@ def build_args():
 
     # data config with path to fastMRI data and batch size
     parser = FastMriDataModule.add_data_specific_args(parser)
-    parser.set_defaults(data_path=data_path, batch_size=batch_size)
+    parser.set_defaults(data_path=data_path, batch_size=batch_size, test_path=None)
 
     # module config
     parser = UnetModule.add_model_specific_args(parser)

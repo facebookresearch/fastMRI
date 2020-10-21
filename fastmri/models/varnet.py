@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import fastmri
-from fastmri.data import transforms as T
+from fastmri.data import transforms
 
 from .unet import Unet
 
@@ -173,7 +173,7 @@ class SensitivityModel(nn.Module):
         l, r = get_low_frequency_lines(mask)
         num_low_freqs = r - l
         pad = (mask.shape[-2] - num_low_freqs + 1) // 2
-        x = T.mask_center(masked_kspace, pad, pad + num_low_freqs)
+        x = transforms.mask_center(masked_kspace, pad, pad + num_low_freqs)
         x = fastmri.ifft2c(x)
         x, b = self.chans_to_batch_dim(x)
         x = self.norm_unet(x)

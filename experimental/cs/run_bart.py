@@ -8,20 +8,15 @@ LICENSE file in the root directory of this source tree.
 import logging
 import multiprocessing
 import pathlib
-import random
-import sys
 import time
 from argparse import ArgumentParser
 from collections import defaultdict
 
+import bart
+import fastmri
 import numpy as np
 import torch
 import yaml
-
-sys.path.append("../../")
-
-import bart
-import fastmri
 from fastmri import tensor_to_complex_np
 from fastmri.data import SliceDataset
 from fastmri.data import transforms as T

@@ -9,12 +9,9 @@ jobs:
     executor: python/default
     steps:
       - checkout
-      - run:
-          name: Preinstallation Packages
-          command: |
-            pip install wheel
-            pip install pytest
-            pip install mypy
+      - python/install-packages:
+          pip-dependency-file: dev-requirements.txt
+          pkg-manager: pip
       - python/install-packages:
           pkg-manager: pip
       - run:

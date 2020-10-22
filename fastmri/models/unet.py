@@ -20,17 +20,21 @@ class Unet(nn.Module):
     Springer, 2015.
     """
 
-    def __init__(self, in_chans, out_chans, chans=32, num_pool_layers=4, drop_prob=0.0):
+    def __init__(
+        self,
+        in_chans: int,
+        out_chans: int,
+        chans: int = 32,
+        num_pool_layers: int = 4,
+        drop_prob: float = 0.0,
+    ):
         """
         Args:
-            in_chans (int): Number of channels in the input to the U-Net model.
-            out_chans (int): Number of channels in the output to the U-Net
-                model.
-            chans (int): Number of output channels of the first convolution
-                layer.
-            num_pool_layers (int): Number of down-sampling and up-sampling
-                layers.
-            drop_prob (float): Dropout probability.
+            in_chans: Number of channels in the input to the U-Net model.
+            out_chans: Number of channels in the output to the U-Net model.
+            chans: Number of output channels of the first convolution layer.
+            num_pool_layers: Number of down-sampling and up-sampling layers.
+            drop_prob: Dropout probability.
         """
         super().__init__()
 
@@ -62,15 +66,13 @@ class Unet(nn.Module):
             )
         ]
 
-    def forward(self, image):
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            image (torch.Tensor): Input tensor of shape [batch_size,
-                self.in_chans, height, width]
+            image: Input 4D tensor of shape `(N, in_chans, H, W)`.
 
         Returns:
-            (torch.Tensor): Output tensor of shape [batch_size, self.out_chans,
-                height, width]
+            Output tensor of shape `(N, out_chans, H, W)`.
         """
         stack = []
         output = image
@@ -109,12 +111,12 @@ class ConvBlock(nn.Module):
     instance normalization, LeakyReLU activation and dropout.
     """
 
-    def __init__(self, in_chans, out_chans, drop_prob):
+    def __init__(self, in_chans: int, out_chans: int, drop_prob: float):
         """
         Args:
-            in_chans (int): Number of channels in the input.
-            out_chans (int): Number of channels in the output.
-            drop_prob (float): Dropout probability.
+            in_chans: Number of channels in the input.
+            out_chans: Number of channels in the output.
+            drop_prob: Dropout probability.
         """
         super().__init__()
 
@@ -133,23 +135,15 @@ class ConvBlock(nn.Module):
             nn.Dropout2d(drop_prob),
         )
 
-    def forward(self, image):
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            image (torch.Tensor): Input tensor of shape [batch_size,
-                self.in_chans, height, width]
+            image: Input 4D tensor of shape `(N, in_chans, H, W)`.
 
         Returns:
-            (torch.Tensor): Output tensor of shape [batch_size, self.out_chans,
-                height, width]
+            Output tensor of shape `(N, out_chans, H, W)`.
         """
         return self.layers(image)
-
-    def __repr__(self):
-        return (
-            f"ConvBlock(in_chans={self.in_chans}, out_chans={self.out_chans}, "
-            f"drop_prob={self.drop_prob})"
-        )
 
 
 class TransposeConvBlock(nn.Module):
@@ -158,11 +152,11 @@ class TransposeConvBlock(nn.Module):
     layers followed by instance normalization and LeakyReLU activation.
     """
 
-    def __init__(self, in_chans, out_chans):
+    def __init__(self, in_chans: int, out_chans: int):
         """
         Args:
-            in_chans (int): Number of channels in the input.
-            out_chans (int): Number of channels in the output.
+            in_chans: Number of channels in the input.
+            out_chans: Number of channels in the output.
         """
         super().__init__()
 
@@ -177,17 +171,12 @@ class TransposeConvBlock(nn.Module):
             nn.LeakyReLU(negative_slope=0.2, inplace=True),
         )
 
-    def forward(self, image):
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            image (torch.Tensor): Input tensor of shape [batch_size,
-                self.in_chans, height, width]
+            image: Input 4D tensor of shape `(N, in_chans, H, W)`.
 
         Returns:
-            (torch.Tensor): Output tensor of shape [batch_size, self.out_chans,
-                height, width]
+            Output tensor of shape `(N, out_chans, H*2, W*2)`.
         """
         return self.layers(image)
-
-    def __repr__(self):
-        return f"ConvBlock(in_chans={self.in_chans}, out_chans={self.out_chans})"

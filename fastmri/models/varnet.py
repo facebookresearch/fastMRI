@@ -118,10 +118,14 @@ class NormUnet(nn.Module):
         return x[..., h_pad[0] : h_mult - h_pad[1], w_pad[0] : w_mult - w_pad[1]]
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # get shapes for unet and normalize
         x = self.complex_to_chan_dim(x)
         x, mean, std = self.norm(x)
         x, pad_sizes = self.pad(x)
+
         x = self.unet(x)
+
+        # get shapes back and unnormalize
         x = self.unpad(x, *pad_sizes)
         x = self.unnorm(x, mean, std)
         x = self.chan_complex_to_last_dim(x)
@@ -179,22 +183,23 @@ class SensitivityModel(nn.Module):
         return x / fastmri.rss_complex(x, dim=1).unsqueeze(-1).unsqueeze(1)
 
     def forward(self, masked_kspace: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        def get_low_frequency_lines(mask):
-            left = right = mask.shape[-2] // 2
-            while mask[..., right, :]:
-                right += 1
+        # get low frequency line locations and mask them out
+        left = right = mask.shape[-2] // 2
+        while mask[..., right, :]:
+            right += 1
 
-            while mask[..., left, :]:
-                left -= 1
-
-            return left + 1, right
-
-        left, right = get_low_frequency_lines(mask)
+        while mask[..., left, :]:
+            left -= 1
         num_low_freqs = right - left
         pad = (mask.shape[-2] - num_low_freqs + 1) // 2
+
         x = transforms.mask_center(masked_kspace, pad, pad + num_low_freqs)
+
+        # convert to image space
         x = fastmri.ifft2c(x)
         x, b = self.chans_to_batch_dim(x)
+
+        # estimate sensitivities
         x = self.norm_unet(x)
         x = self.batch_chans_to_chan_dim(x, b)
         x = self.divide_root_sum_of_squares(x)
@@ -283,9 +288,7 @@ class VarNetBlock(nn.Module):
         sens_maps: torch.Tensor,
     ) -> torch.Tensor:
         zero = torch.zeros(1, 1, 1, 1, 1).to(current_kspace)
-        soft_dc = (
-            torch.where(mask, current_kspace - ref_kspace, zero) * self.dc_weight
-        )
+        soft_dc = torch.where(mask, current_kspace - ref_kspace, zero) * self.dc_weight
         model_term = self.sens_expand(
             self.model(self.sens_reduce(current_kspace, sens_maps)), sens_maps
         )

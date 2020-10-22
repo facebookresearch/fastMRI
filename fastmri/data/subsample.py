@@ -6,14 +6,14 @@ LICENSE file in the root directory of this source tree.
 """
 
 import contextlib
-from typing import Sequence, Optional
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
 
 
 @contextlib.contextmanager
-def temp_seed(rng: np.random, seed: Optional[int]):
+def temp_seed(rng: np.random, seed: Optional[Union[int, Tuple[int, ...]]]):
     if seed is None:
         try:
             yield
@@ -56,7 +56,7 @@ class MaskFunc:
         self.rng = np.random
 
     def __call__(
-        self, shape: Sequence[int], seed: Optional[int] = None
+        self, shape: Sequence[int], seed: Optional[Union[int, Tuple[int, ...]]] = None
     ) -> torch.Tensor:
         raise NotImplementedError
 
@@ -93,7 +93,7 @@ class RandomMaskFunc(MaskFunc):
     """
 
     def __call__(
-        self, shape: Sequence[int], seed: Optional[int] = None
+        self, shape: Sequence[int], seed: Optional[Union[int, Tuple[int, ...]]] = None
     ) -> torch.Tensor:
         """
         Create the mask.
@@ -157,7 +157,7 @@ class EquispacedMaskFunc(MaskFunc):
     """
 
     def __call__(
-        self, shape: Sequence[int], seed: Optional[int] = None
+        self, shape: Sequence[int], seed: Optional[Union[int, Tuple[int, ...]]] = None
     ) -> torch.Tensor:
         """
         Args:

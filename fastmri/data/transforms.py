@@ -51,7 +51,7 @@ def tensor_to_complex_np(data: torch.Tensor) -> np.ndarray:
 def apply_mask(
     data: torch.Tensor,
     mask_func: MaskFunc,
-    seed: Optional[Tuple[int, ...]] = None,
+    seed: Optional[Union[int, Tuple[int, ...]]] = None,
     padding: Optional[Sequence[int]] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """

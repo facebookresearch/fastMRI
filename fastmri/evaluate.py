@@ -8,6 +8,7 @@ LICENSE file in the root directory of this source tree.
 import argparse
 import pathlib
 from argparse import ArgumentParser
+from typing import Optional
 
 import h5py
 import numpy as np
@@ -17,22 +18,22 @@ from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from fastmri.data import transforms
 
 
-def mse(gt, pred):
+def mse(gt: np.ndarray, pred: np.ndarray) -> np.ndarray:
     """Compute Mean Squared Error (MSE)"""
     return np.mean((gt - pred) ** 2)
 
 
-def nmse(gt, pred):
+def nmse(gt: np.ndarray, pred: np.ndarray) -> np.ndarray:
     """Compute Normalized Mean Squared Error (NMSE)"""
     return np.linalg.norm(gt - pred) ** 2 / np.linalg.norm(gt) ** 2
 
 
-def psnr(gt, pred):
+def psnr(gt: np.ndarray, pred: np.ndarray) -> np.ndarray:
     """Compute Peak Signal to Noise Ratio metric (PSNR)"""
     return peak_signal_noise_ratio(gt, pred, data_range=gt.max())
 
 
-def ssim(gt, pred, maxval=None):
+def ssim(gt: np.ndarray, pred: np.ndarray, maxval: Optional[float]) -> np.ndarray:
     """Compute Structural Similarity Index Metric (SSIM)"""
     maxval = gt.max() if maxval is None else maxval
 
@@ -42,15 +43,13 @@ def ssim(gt, pred, maxval=None):
             gt[slice_num], pred[slice_num], data_range=maxval
         )
 
-    ssim = ssim / gt.shape[0]
-
-    return ssim
+    return ssim / gt.shape[0]
 
 
 METRIC_FUNCS = dict(MSE=mse, NMSE=nmse, PSNR=psnr, SSIM=ssim,)
 
 
-class Metrics(object):
+class Metrics:
     """
     Maintains running statistics for a given collection of metrics.
     """

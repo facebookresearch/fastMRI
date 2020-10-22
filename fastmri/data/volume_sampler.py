@@ -28,8 +28,8 @@ class VolumeSampler(Sampler):
     def __init__(
         self,
         dataset: Union[CombinedSliceDataset, SliceDataset],
-        num_replicas: Optional[int],
-        rank: Optional[int],
+        num_replicas: Optional[int] = None,
+        rank: Optional[int] = None,
         shuffle: bool = True,
         seed: int = 0,
     ):

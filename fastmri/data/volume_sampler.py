@@ -6,10 +6,12 @@ LICENSE file in the root directory of this source tree.
 """
 
 import math
+from typing import List, Optional, Union
 
 import numpy as np
 import torch
 import torch.distributed as dist
+from fastmri.data.mri_data import CombinedSliceDataset, SliceDataset
 from torch.utils.data import Sampler
 
 
@@ -23,21 +25,27 @@ class VolumeSampler(Sampler):
     fname is essentially the volume name (actually a filename).
     """
 
-    def __init__(self, dataset, num_replicas=None, rank=None, shuffle=True, seed=0):
+    def __init__(
+        self,
+        dataset: Union[CombinedSliceDataset, SliceDataset],
+        num_replicas: Optional[int],
+        rank: Optional[int],
+        shuffle: bool = True,
+        seed: int = 0,
+    ):
         """
         Args:
-            dataset (torch.utils.data.Dataset): An MRI dataset (e.g., SliceData).
-            num_replicas (int, optional): Number of processes participating in
-                distributed training. By default, :attr:`rank` is retrieved
-                from the current distributed group.
-            rank (int, optional): Rank of the current process within
-                :attr:`num_replicas`. By default, :attr:`rank` is retrieved
-                from the current distributed group.
-            shuffle (bool, optional): If ``True`` (default), sampler will
-                shuffle the indices.
-            seed (int, optional): random seed used to shuffle the sampler if
+            dataset: An MRI dataset (e.g., SliceData).
+            num_replicas: Number of processes participating in distributed
+                training. By default, :attr:`rank` is retrieved from the
+                current distributed group.
+            rank: Rank of the current process within :attr:`num_replicas`. By
+                default, :attr:`rank` is retrieved from the current distributed
+                group.
+            shuffle: If ``True`` (default), sampler will shuffle the indices.
+            seed: random seed used to shuffle the sampler if
                 :attr:`shuffle=True`. This number should be identical across
-                all processes in the distributed group. Default: ``0``.
+                all processes in the distributed group.
         """
         if num_replicas is None:
             if not dist.is_available():
@@ -59,14 +67,14 @@ class VolumeSampler(Sampler):
 
         # get all file names and split them based on number of processes
         self.all_volume_names = np.array(
-            sorted(list({example[0] for example in self.dataset.examples}))
+            sorted([example[0] for example in self.dataset.examples])
         )
         self.all_volumes_split = np.array_split(
             self.all_volume_names, self.num_replicas
         )
 
         # get slice indices for each file name
-        indices = [list() for _ in range(self.num_replicas)]
+        indices: List[List[int]] = [[] for _ in range(self.num_replicas)]
 
         for i, example in enumerate(self.dataset.examples):
             vname = example[0]

@@ -141,15 +141,12 @@ class FastMriDataModule(pl.LightningDataModule):
 
         # dataset arguments
         parser.add_argument(
-            "--data_path",
-            default=None,
-            type=pathlib.Path,
-            help="Path to fastMRI data root",
+            "--data_path", default=None, type=Path, help="Path to fastMRI data root",
         )
         parser.add_argument(
             "--test_path",
             default=None,
-            type=pathlib.Path,
+            type=Path,
             help="Path to data for test mode. This overwrites data_path and test_split",
         )
         parser.add_argument(

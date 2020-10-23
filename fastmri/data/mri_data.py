@@ -9,13 +9,39 @@ import logging
 import pathlib
 import pickle
 import random
+import xml.etree.ElementTree as etree
 from warnings import warn
 
 import h5py
-import ismrmrd
 import numpy as np
 import torch
 import yaml
+
+
+def et_query(root, qlist, namespace="http://www.ismrm.org/ISMRMRD"):
+    """
+    ElementTree query function.
+
+    This can be used to query an xml document via ElementTree. It uses qlist
+    for nexted queries.
+
+    Args:
+        root (xml.etree.ElementTree.Element): Root of the xml.
+        qlist (Sequence): A list of strings for nested searches.
+        namespace (str): xml namespace.
+
+    Returns:
+        str: The retrieved data.
+    """
+    s = "."
+    prefix = "ismrmrd_namespace"
+
+    ns = {prefix: namespace}
+
+    for el in qlist:
+        s = s + f"//{prefix}:{el}"
+
+    return root.find(s, ns).text
 
 
 def fetch_dir(key, data_config_file=pathlib.Path("fastmri_dirs.yaml")):
@@ -162,24 +188,25 @@ class SliceDataset(torch.utils.data.Dataset):
             files = list(pathlib.Path(root).iterdir())
             for fname in sorted(files):
                 with h5py.File(fname, "r") as hf:
-                    hdr = ismrmrd.xsd.CreateFromDocument(hf["ismrmrd_header"][()])
-                    enc = hdr.encoding[0]
+                    et_root = etree.fromstring(hf["ismrmrd_header"][()])
 
+                    enc = ["encoding", "encodedSpace", "matrixSize"]
                     enc_size = (
-                        enc.encodedSpace.matrixSize.x,
-                        enc.encodedSpace.matrixSize.y,
-                        enc.encodedSpace.matrixSize.z,
+                        int(et_query(et_root, enc + ["x"])),
+                        int(et_query(et_root, enc + ["y"])),
+                        int(et_query(et_root, enc + ["z"])),
                     )
+                    rec = ["encoding", "reconSpace", "matrixSize"]
                     recon_size = (
-                        enc.reconSpace.matrixSize.x,
-                        enc.reconSpace.matrixSize.y,
-                        enc.reconSpace.matrixSize.z,
+                        int(et_query(et_root, rec + ["x"])),
+                        int(et_query(et_root, rec + ["y"])),
+                        int(et_query(et_root, rec + ["z"])),
                     )
 
-                    enc_limits_center = enc.encodingLimits.kspace_encoding_step_1.center
-                    enc_limits_max = (
-                        enc.encodingLimits.kspace_encoding_step_1.maximum + 1
-                    )
+                    lims = ["encoding", "encodingLimits", "kspace_encoding_step_1"]
+                    enc_limits_center = int(et_query(et_root, lims + ["center"]))
+                    enc_limits_max = int(et_query(et_root, lims + ["maximum"])) + 1
+
                     padding_left = enc_size[1] // 2 - enc_limits_center
                     padding_right = padding_left + enc_limits_max
 

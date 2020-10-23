@@ -16,8 +16,6 @@ install_requires = [
     "pytorch_lightning",
     "h5py",
     "PyYAML",
-    "pytest",
-    "ismrmrd @ git+https://github.com/ismrmrd/ismrmrd-python.git",
 ]
 
 setup(

@@ -5,25 +5,31 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import pathlib
+import xml.etree.ElementTree as etree
 from argparse import ArgumentParser
+from pathlib import Path
 
 import fastmri
 import h5py
-import ismrmrd
 from fastmri.data import transforms
+from fastmri.data.mri_data import et_query
+from tqdm import tqdm
 
 
 def save_zero_filled(data_dir, out_dir, which_challenge):
     reconstructions = {}
 
-    for f in data_dir.iterdir():
-        with h5py.File(f, "r") as hf:
-            enc = ismrmrd.xsd.CreateFromDocument(hf["ismrmrd_header"][()]).encoding[0]
+    for fname in tqdm(list(data_dir.glob("*.h5"))):
+        with h5py.File(fname, "r") as hf:
+            et_root = etree.fromstring(hf["ismrmrd_header"][()])
             masked_kspace = transforms.to_tensor(hf["kspace"][()])
 
             # extract target image width, height from ismrmrd header
-            crop_size = (enc.reconSpace.matrixSize.x, enc.reconSpace.matrixSize.y)
+            enc = ["encoding", "encodedSpace", "matrixSize"]
+            crop_size = (
+                int(et_query(et_root, enc + ["x"])),
+                int(et_query(et_root, enc + ["y"])),
+            )
 
             # inverse Fourier Transform to get zero filled solution
             image = fastmri.ifft2c(masked_kspace)
@@ -42,20 +48,20 @@ def save_zero_filled(data_dir, out_dir, which_challenge):
             if which_challenge == "multicoil":
                 image = fastmri.rss(image, dim=1)
 
-            reconstructions[f.name] = image
+            reconstructions[fname.name] = image
 
     fastmri.save_reconstructions(reconstructions, out_dir)
 
 
 def create_arg_parser():
-    parser = ArgumentParser(add_help=False)
+    parser = ArgumentParser()
 
     parser.add_argument(
-        "--data_path", type=pathlib.Path, required=True, help="Path to the data",
+        "--data_path", type=Path, required=True, help="Path to the data",
     )
     parser.add_argument(
         "--out_path",
-        type=pathlib.Path,
+        type=Path,
         required=True,
         help="Path to save the reconstructions to",
     )

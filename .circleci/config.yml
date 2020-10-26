@@ -12,8 +12,6 @@ jobs:
       - python/install-packages:
           pip-dependency-file: dev-requirements.txt
           pkg-manager: pip
-      - python/install-packages:
-          pkg-manager: pip
       - run:
           name: Install fastMRI
           command: |

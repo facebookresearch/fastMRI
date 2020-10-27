@@ -11,7 +11,7 @@ import torch
 from .create_temp_data import create_temp_data
 
 # these are really slow - skip by default
-skip_integrations = True
+SKIP_INTEGRATIONS = True
 
 
 def create_input(shape):
@@ -30,7 +30,7 @@ def fastmri_mock_dataset(tmp_path_factory):
 
 @pytest.fixture
 def skip_integration_tests():
-    return skip_integrations
+    return SKIP_INTEGRATIONS
 
 
 @pytest.fixture

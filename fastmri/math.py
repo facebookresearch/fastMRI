@@ -11,7 +11,7 @@ import numpy as np
 import torch
 from packaging import version
 
-if version.parse(torch.__version__) >= version.parse("1.6.0"):
+if version.parse(torch.__version__) >= version.parse("1.7.0"):
     USE_COMPLEX_FFT = True
     import torch.fft  # type: ignore
 else:

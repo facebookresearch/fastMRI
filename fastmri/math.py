@@ -13,7 +13,7 @@ from packaging import version
 
 if version.parse(torch.__version__) >= version.parse("1.6.0"):
     USE_COMPLEX_FFT = True
-    import torch.fft
+    import torch.fft  # type: ignore
 else:
     USE_COMPLEX_FFT = False
 

@@ -19,6 +19,7 @@ jobs:
             pip install dist/*.whl
       - run:
           command: |
+            pip show torch | grep Version
             pytest --version
             pytest tests
             mypy fastmri

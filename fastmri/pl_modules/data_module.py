@@ -5,8 +5,9 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import pathlib
 from argparse import ArgumentParser
+from pathlib import Path
+from typing import Callable, Optional
 
 import fastmri
 import pytorch_lightning as pl
@@ -30,45 +31,36 @@ class FastMriDataModule(pl.LightningDataModule):
 
     def __init__(
         self,
-        data_path,
-        challenge,
-        train_transform,
-        val_transform,
-        test_transform,
-        test_split="test",
-        test_path=None,
-        sample_rate=1.0,
-        batch_size=1,
-        num_workers=4,
-        distributed_sampler=False,
+        data_path: Path,
+        challenge: str,
+        train_transform: Callable,
+        val_transform: Callable,
+        test_transform: Callable,
+        test_split: str = "test",
+        test_path: Optional[Path] = None,
+        sample_rate: float = 1.0,
+        batch_size: int = 1,
+        num_workers: int = 4,
+        distributed_sampler: bool = False,
     ):
         """
         Args:
-            data_path (pathlib.Path): Path to root data directory. For example,
-                if knee/path is the root directory with subdirectories
-                multicoil_train and multicoil_val, you would input knee/path
-                for data_path.
-            challenge (str): Name of challenge from ('multicoil',
-                'singlecoil').
-            train_transform (Callable): A transform object for the training
-                split.
-            val_transform (Callable): A transform object for the validation
-                split.
-            test_transform (Callable): A transform object for the test split.
-            test_split (str, optional): Name of test split from ("test",
-                "challenge"). Defaults to "test".
-            test_path (pathlib.Path, optional): An optional test path.
-                Passing this overwrites data_path and test_split. Defaults to
-                None.
-            sample_rate (float, optional): Fraction of of the training data
-                split to use. Can be set to less than 1.0 for rapid
-                prototyping. Defaults to 1.0.
-            batch_size (int, optional): Batch size. Defaults to 1.
-            num_workers (int, optional): Number of workers for PyTorch
-                dataloader. Defaults to 4.
-            distributed_sampler (bool, optional): Whether to use a distributed
-                sampler. This should be set to True if training with ddp.
-                Defaults to False.
+            data_path: Path to root data directory. For example, if knee/path
+                is the root directory with subdirectories multicoil_train and
+                multicoil_val, you would input knee/path for data_path.
+            challenge: Name of challenge from ('multicoil', 'singlecoil').
+            train_transform: A transform object for the training split.
+            val_transform: A transform object for the validation split.
+            test_transform: A transform object for the test split.
+            test_split: Name of test split from ("test", "challenge").
+            test_path: An optional test path. Passing this overwrites data_path
+                and test_split.
+            sample_rate: Fraction of of the training data split to use. Can be
+                set to less than 1.0 for rapid prototyping.
+            batch_size: Batch size.
+            num_workers: Number of workers for PyTorch dataloader.
+            distributed_sampler: Whether to use a distributed sampler. This
+                should be set to True if training with ddp.
         """
         super().__init__()
 
@@ -84,7 +76,12 @@ class FastMriDataModule(pl.LightningDataModule):
         self.num_workers = num_workers
         self.distributed_sampler = distributed_sampler
 
-    def _create_data_loader(self, data_transform, data_partition, sample_rate=None):
+    def _create_data_loader(
+        self,
+        data_transform: Callable,
+        data_partition: str,
+        sample_rate: Optional[float] = None,
+    ) -> torch.utils.data.DataLoader:
         if data_partition == "train":
             is_train = True
             sample_rate = sample_rate or self.sample_rate
@@ -144,15 +141,12 @@ class FastMriDataModule(pl.LightningDataModule):
 
         # dataset arguments
         parser.add_argument(
-            "--data_path",
-            default=None,
-            type=pathlib.Path,
-            help="Path to fastMRI data root",
+            "--data_path", default=None, type=Path, help="Path to fastMRI data root",
         )
         parser.add_argument(
             "--test_path",
             default=None,
-            type=pathlib.Path,
+            type=Path,
             help="Path to data for test mode. This overwrites data_path and test_split",
         )
         parser.add_argument(

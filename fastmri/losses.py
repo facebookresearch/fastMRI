@@ -15,12 +15,12 @@ class SSIMLoss(nn.Module):
     SSIM loss module.
     """
 
-    def __init__(self, win_size=7, k1=0.01, k2=0.03):
+    def __init__(self, win_size: int = 7, k1: float = 0.01, k2: float = 0.03):
         """
         Args:
-            win_size (int, default=7): Window size for SSIM calculation.
-            k1 (float, default=0.1): k1 parameter for SSIM calculation.
-            k2 (float, default=0.03): k2 parameter for SSIM calculation.
+            win_size: Window size for SSIM calculation.
+            k1: k1 parameter for SSIM calculation.
+            k2: k2 parameter for SSIM calculation.
         """
         super().__init__()
         self.win_size = win_size
@@ -29,12 +29,14 @@ class SSIMLoss(nn.Module):
         NP = win_size ** 2
         self.cov_norm = NP / (NP - 1)
 
-    def forward(self, X, Y, data_range):
+    def forward(self, X: torch.Tensor, Y: torch.Tensor, data_range: torch.Tensor):
+        assert isinstance(self.w, torch.Tensor)
+
         data_range = data_range[:, None, None, None]
         C1 = (self.k1 * data_range) ** 2
         C2 = (self.k2 * data_range) ** 2
-        ux = F.conv2d(X, self.w)
-        uy = F.conv2d(Y, self.w)
+        ux = F.conv2d(X, self.w)  # typing: ignore
+        uy = F.conv2d(Y, self.w)  #
         uxx = F.conv2d(X * X, self.w)
         uyy = F.conv2d(Y * Y, self.w)
         uxy = F.conv2d(X * Y, self.w)

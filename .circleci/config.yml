@@ -9,12 +9,8 @@ jobs:
     executor: python/default
     steps:
       - checkout
-      - run:
-          name: Preinstallation Packages
-          command: |
-            pip install wheel
-            pip install pytest
       - python/install-packages:
+          pip-dependency-file: dev-requirements.txt
           pkg-manager: pip
       - run:
           name: Install fastMRI
@@ -25,6 +21,7 @@ jobs:
           command: |
             pytest --version
             pytest tests
+            mypy fastmri
           name: Test
 
 workflows:

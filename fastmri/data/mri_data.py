@@ -6,10 +6,12 @@ LICENSE file in the root directory of this source tree.
 """
 
 import logging
-import pathlib
+import os
 import pickle
 import random
 import xml.etree.ElementTree as etree
+from pathlib import Path
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 from warnings import warn
 
 import h5py
@@ -18,7 +20,11 @@ import torch
 import yaml
 
 
-def et_query(root, qlist, namespace="http://www.ismrm.org/ISMRMRD"):
+def et_query(
+    root: etree.Element,
+    qlist: Sequence[str],
+    namespace: str = "http://www.ismrm.org/ISMRMRD",
+) -> str:
     """
     ElementTree query function.
 
@@ -26,12 +32,13 @@ def et_query(root, qlist, namespace="http://www.ismrm.org/ISMRMRD"):
     for nexted queries.
 
     Args:
-        root (xml.etree.ElementTree.Element): Root of the xml.
-        qlist (Sequence): A list of strings for nested searches.
-        namespace (str): xml namespace.
+        root: Root of the xml to search through.
+        qlist: A list of strings for nested searches, e.g. ["Encoding",
+            "matrixSize"]
+        namespace: Optional; xml namespace to prepend query.
 
     Returns:
-        str: The retrieved data.
+        The retrieved data as a string.
     """
     s = "."
     prefix = "ismrmrd_namespace"
@@ -41,10 +48,16 @@ def et_query(root, qlist, namespace="http://www.ismrm.org/ISMRMRD"):
     for el in qlist:
         s = s + f"//{prefix}:{el}"
 
-    return root.find(s, ns).text
+    value = root.find(s, ns)
+    if value is None:
+        raise RuntimeError("Element not found")
+
+    return str(value.text)
 
 
-def fetch_dir(key, data_config_file=pathlib.Path("fastmri_dirs.yaml")):
+def fetch_dir(
+    key: str, data_config_file: Union[str, Path, os.PathLike] = "fastmri_dirs.yaml"
+) -> Path:
     """
     Data directory fetcher.
 
@@ -53,14 +66,15 @@ def fetch_dir(key, data_config_file=pathlib.Path("fastmri_dirs.yaml")):
     and this function will retrieve the requested subsplit of the data for use.
 
     Args:
-        key (str): key to retrieve path from data_config_file.
-        data_config_file (pathlib.Path,
-            default=pathlib.Path("fastmri_dirs.yaml")): Default path config
-            file.
+        key: key to retrieve path from data_config_file. Expected to be in
+            ("knee_path", "brain_path", "log_path").
+        data_config_file: Optional; Default path config file to fetch path
+            from.
 
     Returns:
-        pathlib.Path: The path to the specified directory.
+        The path to the specified directory.
     """
+    data_config_file = Path(data_config_file)
     if not data_config_file.is_file():
         default_config = {
             "knee_path": "/path/to/knee",
@@ -81,37 +95,44 @@ def fetch_dir(key, data_config_file=pathlib.Path("fastmri_dirs.yaml")):
         with open(data_config_file, "r") as f:
             data_dir = yaml.safe_load(f)[key]
 
-    data_dir = pathlib.Path(data_dir)
-
-    return data_dir
+    return Path(data_dir)
 
 
 class CombinedSliceDataset(torch.utils.data.Dataset):
     """
     A container for combining slice datasets.
-
-    Args:
-        roots (list of pathlib.Path): Paths to the datasets.
-        transforms (list of callable): A callable object that pre-processes the
-            raw data into appropriate form. The transform function should take
-            'kspace', 'target', 'attributes', 'filename', and 'slice' as
-            inputs. 'target' may be null for test data.
-        challenges (list of str): "singlecoil" or "multicoil" depending on which
-            challenge to use.
-        sample_rates (list of float, optional): A float between 0 and 1. This
-            controls what fraction of the volumes should be loaded.
-        num_cols (tuple(int), optional): if provided, only slices with the desired
-            number of columns will be considered.
     """
 
-    def __init__(self, roots, transforms, challenges, sample_rates=None, num_cols=None):
+    def __init__(
+        self,
+        roots: Sequence[Path],
+        transforms: Sequence[Callable],
+        challenges: Sequence[str],
+        sample_rates: Optional[Sequence[float]] = None,
+        num_cols: Optional[Tuple[int]] = None,
+    ):
+        """
+        Args:
+            roots: Paths to the datasets.
+            transforms: A callable object that preprocesses the raw data into
+                appropriate form. The transform function should take 'kspace',
+                'target', 'attributes', 'filename', and 'slice' as inputs.
+                'target' may be null for test data.
+            challenges: "singlecoil" or "multicoil" depending on which
+                challenge to use.
+            sample_rates: Optional; A float between 0 and 1. This controls
+                what fraction of the volumes should be loaded.
+            num_cols: Optional; If provided, only slices with the desired
+                number of columns will be considered.
+        """
         assert len(roots) == len(transforms) == len(challenges)
         if sample_rates is not None:
             assert len(sample_rates) == len(roots)
         else:
             sample_rates = [1] * len(roots)
 
-        self.datasets = list()
+        self.datasets = []
+        self.examples: List[Tuple[Path, int, Dict[str, object]]] = []
         for i in range(len(roots)):
             self.datasets.append(
                 SliceDataset(
@@ -122,6 +143,8 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
                     num_cols=num_cols,
                 )
             )
+
+            self.examples = self.examples + self.datasets[-1].examples
 
     def __len__(self):
         length = 0
@@ -141,36 +164,37 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
 class SliceDataset(torch.utils.data.Dataset):
     """
     A PyTorch Dataset that provides access to MR image slices.
-
-    Args:
-        root (pathlib.Path): Path to the dataset.
-        transform (callable): A callable object that pre-processes the raw data
-            into appropriate form. The transform function should take 'kspace',
-            'target', 'attributes', 'filename', and 'slice' as inputs. 'target'
-            may be null for test data.
-        challenge (str): "singlecoil" or "multicoil" depending on which
-            challenge to use.
-        sample_rate (float, optional): A float between 0 and 1. This controls
-            what fraction of the volumes should be loaded.
-        dataset_cache_file (pathlib.Path). A file in which to cache dataset
-            information for faster load times. Default: dataset_cache.pkl.
-        num_cols (tuple(int), optional): if provided, only slices with the desired
-            number of columns will be considered.
     """
 
     def __init__(
         self,
-        root,
-        transform,
-        challenge,
-        sample_rate=1,
-        dataset_cache_file=pathlib.Path("dataset_cache.pkl"),
-        num_cols=None,
+        root: Union[str, Path, os.PathLike],
+        transform: Callable,
+        challenge: str,
+        sample_rate: float = 1.0,
+        dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
+        num_cols: Optional[Tuple[int]] = None,
     ):
+        """
+        Args:
+            root: Path to the dataset.
+            transform: A callable object that pre-processes the raw data into
+                appropriate form. The transform function should take 'kspace',
+                'target', 'attributes', 'filename', and 'slice' as inputs.
+                'target' may be null for test data.
+            challenge: "singlecoil" or "multicoil" depending on which challenge
+                to use.
+            sample_rate: Optional; A float between 0 and 1. This controls what
+                fraction of the volumes should be loaded. Defaults to 1.0.
+            dataset_cache_file: Optional; A file in which to cache dataset
+                information for faster load times.
+            num_cols: Optional; If provided, only slices with the desired
+                number of columns will be considered.
+        """
         if challenge not in ("singlecoil", "multicoil"):
             raise ValueError('challenge should be either "singlecoil" or "multicoil"')
 
-        self.dataset_cache_file = dataset_cache_file
+        self.dataset_cache_file = Path(dataset_cache_file)
 
         self.transform = transform
         self.recons_key = (
@@ -185,7 +209,7 @@ class SliceDataset(torch.utils.data.Dataset):
             dataset_cache = {}
 
         if dataset_cache.get(root) is None:
-            files = list(pathlib.Path(root).iterdir())
+            files = list(Path(root).iterdir())
             for fname in sorted(files):
                 with h5py.File(fname, "r") as hf:
                     et_root = etree.fromstring(hf["ismrmrd_header"][()])
@@ -238,13 +262,15 @@ class SliceDataset(torch.utils.data.Dataset):
 
         if num_cols:
             self.examples = [
-                ex for ex in self.examples if ex[2]["encoding_size"][1] in num_cols
+                ex
+                for ex in self.examples
+                if ex[2]["encoding_size"][1] in num_cols  # type: ignore
             ]
 
     def __len__(self):
         return len(self.examples)
 
-    def __getitem__(self, i):
+    def __getitem__(self, i: int):
         fname, dataslice, metadata = self.examples[i]
 
         with h5py.File(fname, "r") as hf:

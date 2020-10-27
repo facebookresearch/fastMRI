@@ -22,7 +22,7 @@ class DistributedMetricSum(pl.metrics.Metric):
 
         self.add_state("quantity", default=torch.tensor(0.0), dist_reduce_fx="sum")
 
-    def update(self, batch):
+    def update(self, batch: torch.Tensor):  # type: ignore
         self.quantity += batch
 
     def compute(self):
@@ -49,11 +49,10 @@ class MriModule(pl.LightningModule):
     Other methods from LightningModule can be overridden as needed.
     """
 
-    def __init__(self, num_log_images=16):
+    def __init__(self, num_log_images: int = 16):
         """
         Args:
-            num_log_images (int, optional): Number of images to log. Defaults
-                to 16.
+            num_log_images: Number of images to log. Defaults to 16.
         """
         super().__init__()
 

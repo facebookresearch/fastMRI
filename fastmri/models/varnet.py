@@ -6,12 +6,12 @@ LICENSE file in the root directory of this source tree.
 """
 
 import math
+from typing import Tuple
 
+import fastmri
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-import fastmri
 from fastmri.data import transforms
 
 from .unet import Unet
@@ -26,17 +26,21 @@ class NormUnet(nn.Module):
     during training.
     """
 
-    def __init__(self, chans, num_pools, in_chans=2, out_chans=2, drop_prob=0):
+    def __init__(
+        self,
+        chans: int,
+        num_pools: int,
+        in_chans: int = 2,
+        out_chans: int = 2,
+        drop_prob: float = 0.0,
+    ):
         """
         Args:
-            chans (int): Number of output channels of the first convolution
-                layer.
-            num_pools (int): Number of down-sampling and up-sampling layers.
-            in_chans (int, default=2): Number of channels in the input to the
-                U-Net model.
-            out_chans (int, default=2): Number of channels in the output to the
-                U-Net model.
-            drop_prob (float, default=0): Dropout probability.
+            chans: Number of output channels of the first convolution layer.
+            num_pools: Number of down-sampling and up-sampling layers.
+            in_chans: Number of channels in the input to the U-Net model.
+            out_chans: Number of channels in the output to the U-Net model.
+            drop_prob: Dropout probability.
         """
         super().__init__()
 
@@ -48,18 +52,18 @@ class NormUnet(nn.Module):
             drop_prob=drop_prob,
         )
 
-    def complex_to_chan_dim(self, x):
+    def complex_to_chan_dim(self, x: torch.Tensor) -> torch.Tensor:
         b, c, h, w, two = x.shape
         assert two == 2
         return x.permute(0, 4, 1, 2, 3).contiguous().view(b, 2 * c, h, w)
 
-    def chan_complex_to_last_dim(self, x):
+    def chan_complex_to_last_dim(self, x: torch.Tensor) -> torch.Tensor:
         b, c2, h, w = x.shape
         assert c2 % 2 == 0
         c = c2 // 2
         return x.view(b, 2, c, h, w).permute(0, 2, 3, 4, 1).contiguous()
 
-    def norm(self, x):
+    def norm(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # Group norm
         b, c, h, w = x.shape
         x = x.contiguous().view(b, 2, c // 2 * h * w)
@@ -83,10 +87,14 @@ class NormUnet(nn.Module):
 
         return (x - mean) / std, mean, std
 
-    def unnorm(self, x, mean, std):
+    def unnorm(
+        self, x: torch.Tensor, mean: torch.Tensor, std: torch.Tensor
+    ) -> torch.Tensor:
         return x * std + mean
 
-    def pad(self, x):
+    def pad(
+        self, x: torch.Tensor
+    ) -> Tuple[torch.Tensor, Tuple[Tuple[int, int], Tuple[int, int], int, int]]:
         def floor_ceil(n):
             return math.floor(n), math.ceil(n)
 
@@ -99,14 +107,25 @@ class NormUnet(nn.Module):
 
         return x, (h_pad, w_pad, h_mult, w_mult)
 
-    def unpad(self, x, h_pad, w_pad, h_mult, w_mult):
+    def unpad(
+        self,
+        x: torch.Tensor,
+        h_pad: Tuple[int, int],
+        w_pad: Tuple[int, int],
+        h_mult: int,
+        w_mult: int,
+    ) -> torch.Tensor:
         return x[..., h_pad[0] : h_mult - h_pad[1], w_pad[0] : w_mult - w_pad[1]]
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # get shapes for unet and normalize
         x = self.complex_to_chan_dim(x)
         x, mean, std = self.norm(x)
         x, pad_sizes = self.pad(x)
+
         x = self.unet(x)
+
+        # get shapes back and unnormalize
         x = self.unpad(x, *pad_sizes)
         x = self.unnorm(x, mean, std)
         x = self.chan_complex_to_last_dim(x)
@@ -123,17 +142,21 @@ class SensitivityModel(nn.Module):
     end-to-end variational network.
     """
 
-    def __init__(self, chans, num_pools, in_chans=2, out_chans=2, drop_prob=0):
+    def __init__(
+        self,
+        chans: int,
+        num_pools: int,
+        in_chans: int = 2,
+        out_chans: int = 2,
+        drop_prob: float = 0.0,
+    ):
         """
         Args:
-            chans (int): Number of output channels of the first convolution
-                layer.
-            num_pools (int): Number of down-sampling and up-sampling layers.
-            in_chans (int, default=2): Number of channels in the input to the
-                U-Net model.
-            out_chans (int, default=2): Number of channels in the output to the
-                U-Net model.
-            drop_prob (float, default=0): Dropout probability.
+            chans: Number of output channels of the first convolution layer.
+            num_pools: Number of down-sampling and up-sampling layers.
+            in_chans: Number of channels in the input to the U-Net model.
+            out_chans: Number of channels in the output to the U-Net model.
+            drop_prob: Dropout probability.
         """
         super().__init__()
 
@@ -145,37 +168,38 @@ class SensitivityModel(nn.Module):
             drop_prob=drop_prob,
         )
 
-    def chans_to_batch_dim(self, x):
+    def chans_to_batch_dim(self, x: torch.Tensor) -> Tuple[torch.Tensor, int]:
         b, c, *other = x.shape
 
         return x.contiguous().view(b * c, 1, *other), b
 
-    def batch_chans_to_chan_dim(self, x, batch_size):
+    def batch_chans_to_chan_dim(self, x: torch.Tensor, batch_size: int) -> torch.Tensor:
         bc, _, *other = x.shape
         c = bc // batch_size
 
         return x.view(batch_size, c, *other)
 
-    def divide_root_sum_of_squares(self, x):
+    def divide_root_sum_of_squares(self, x: torch.Tensor) -> torch.Tensor:
         return x / fastmri.rss_complex(x, dim=1).unsqueeze(-1).unsqueeze(1)
 
-    def forward(self, masked_kspace, mask):
-        def get_low_frequency_lines(mask):
-            l = r = mask.shape[-2] // 2
-            while mask[..., r, :]:
-                r += 1
+    def forward(self, masked_kspace: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        # get low frequency line locations and mask them out
+        left = right = mask.shape[-2] // 2
+        while mask[..., right, :]:
+            right += 1
 
-            while mask[..., l, :]:
-                l -= 1
-
-            return l + 1, r
-
-        l, r = get_low_frequency_lines(mask)
-        num_low_freqs = r - l
+        while mask[..., left, :]:
+            left -= 1
+        num_low_freqs = right - left
         pad = (mask.shape[-2] - num_low_freqs + 1) // 2
+
         x = transforms.mask_center(masked_kspace, pad, pad + num_low_freqs)
+
+        # convert to image space
         x = fastmri.ifft2c(x)
         x, b = self.chans_to_batch_dim(x)
+
+        # estimate sensitivities
         x = self.norm_unet(x)
         x = self.batch_chans_to_chan_dim(x, b)
         x = self.divide_root_sum_of_squares(x)
@@ -191,18 +215,24 @@ class VarNet(nn.Module):
     regularizer. To use non-U-Net regularizers, use VarNetBock.
     """
 
-    def __init__(self, num_cascades=12, sens_chans=8, sens_pools=4, chans=18, pools=4):
+    def __init__(
+        self,
+        num_cascades: int = 12,
+        sens_chans: int = 8,
+        sens_pools: int = 4,
+        chans: int = 18,
+        pools: int = 4,
+    ):
         """
         Args:
-            num_cascades (int, default=12): Number of cascades (i.e., layers)
-                for variational network.
-            sens_chans (int, default=8): Number of channels for sensitivity map
+            num_cascades: Number of cascades (i.e., layers) for variational
+                network.
+            sens_chans: Number of channels for sensitivity map U-Net.
+            sens_pools Number of downsampling and upsampling layers for
+                sensitivity map U-Net.
+            chans: Number of channels for cascade U-Net.
+            pools: Number of downsampling and upsampling layers for cascade
                 U-Net.
-            sens_pools (int, default=8): Number of downsampling and upsampling
-                layers for sensitivity map U-Net.
-            chans (int, default=18): Number of channels for cascade U-Net.
-            pools (int, default=4): Number of downsampling and upsampling
-                layers for cascade U-Net.
         """
         super().__init__()
 
@@ -211,7 +241,7 @@ class VarNet(nn.Module):
             [VarNetBlock(NormUnet(chans, pools)) for _ in range(num_cascades)]
         )
 
-    def forward(self, masked_kspace, mask):
+    def forward(self, masked_kspace: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         sens_maps = self.sens_net(masked_kspace, mask)
         kspace_pred = masked_kspace.clone()
 
@@ -230,33 +260,37 @@ class VarNetBlock(nn.Module):
     the full variational network.
     """
 
-    def __init__(self, model):
+    def __init__(self, model: nn.Module):
         """
         Args:
-            model (torch.nn.Module): Module for "regularization" component of
-                variational network.
+            model: Module for "regularization" component of variational
+                network.
         """
         super().__init__()
 
         self.model = model
         self.dc_weight = nn.Parameter(torch.ones(1))
-        self.register_buffer("zero", torch.zeros(1, 1, 1, 1, 1))
 
-    def forward(self, current_kspace, ref_kspace, mask, sens_maps):
-        def sens_expand(x):
-            return fastmri.fft2c(fastmri.complex_mul(x, sens_maps))
+    def sens_expand(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
+        return fastmri.fft2c(fastmri.complex_mul(x, sens_maps))
 
-        def sens_reduce(x):
-            x = fastmri.ifft2c(x)
-            return fastmri.complex_mul(x, fastmri.complex_conj(sens_maps)).sum(
-                dim=1, keepdim=True
-            )
-
-        def soft_dc(x):
-            return torch.where(mask, x - ref_kspace, self.zero) * self.dc_weight
-
-        return (
-            current_kspace
-            - soft_dc(current_kspace)
-            - sens_expand(self.model(sens_reduce(current_kspace)))
+    def sens_reduce(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
+        x = fastmri.ifft2c(x)
+        return fastmri.complex_mul(x, fastmri.complex_conj(sens_maps)).sum(
+            dim=1, keepdim=True
         )
+
+    def forward(
+        self,
+        current_kspace: torch.Tensor,
+        ref_kspace: torch.Tensor,
+        mask: torch.Tensor,
+        sens_maps: torch.Tensor,
+    ) -> torch.Tensor:
+        zero = torch.zeros(1, 1, 1, 1, 1).to(current_kspace)
+        soft_dc = torch.where(mask, current_kspace - ref_kspace, zero) * self.dc_weight
+        model_term = self.sens_expand(
+            self.model(self.sens_reduce(current_kspace, sens_maps)), sens_maps
+        )
+
+        return current_kspace - soft_dc - model_term

@@ -22,36 +22,31 @@ class VarNetModule(MriModule):
 
     def __init__(
         self,
-        num_cascades=12,
-        pools=4,
-        chans=18,
-        sens_pools=4,
-        sens_chans=8,
-        lr=0.0003,
-        lr_step_size=40,
-        lr_gamma=0.1,
-        weight_decay=0.0,
+        num_cascades: int = 12,
+        pools: int = 4,
+        chans: int = 18,
+        sens_pools: int = 4,
+        sens_chans: int = 8,
+        lr: float = 0.0003,
+        lr_step_size: int = 40,
+        lr_gamma: float = 0.1,
+        weight_decay: float = 0.0,
         **kwargs,
     ):
         """
         Args:
-            num_cascades (int, optional): Number of cascades (i.e., layers)
-                for variational network. Defaults to 12.
-            pools (int, optional): Number of downsampling and upsampling
-                layers for cascade U-Net. Defaults to 4.
-            chans (int, optional): Number of channels for cascade U-Net.
-                Defaults to 18.
-            sens_pools (int, optional): Number of downsampling and upsampling
-                layers for sensitivity map U-Net. Defaults to 4.
-            sens_chans (int, optional): Number of channels for sensitivity map
-                U-Net. Defaults to 8.
-            lr (float, optional): Learning rate. Defaults to 0.0003.
-            lr_step_size (int, optional): Learning rate step size. Defaults to
-                40.
-            lr_gamma (float, optional): Learning rate gamma decay. Defaults to
-                0.0.
-            weight_decay (float, optional): Parameter for penalizing weights
-                norm. Defaults to 0.0.
+            num_cascades: Number of cascades (i.e., layers) for variational
+                network.
+            pools: Number of downsampling and upsampling layers for cascade
+                U-Net.
+            chans: Number of channels for cascade U-Net.
+            sens_pools: Number of downsampling and upsampling layers for
+                sensitivity map U-Net.
+            sens_chans: Number of channels for sensitivity map U-Net.
+            lr: Learning rate.
+            lr_step_size: Learning rate step size.
+            lr_gamma: Learning rate gamma decay.
+            weight_decay: Parameter for penalizing weights norm.
         """
         super().__init__(**kwargs)
         self.save_hyperparameters()

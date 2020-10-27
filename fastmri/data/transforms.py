@@ -5,12 +5,16 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+from typing import Dict, Optional, Sequence, Tuple, Union
+
 import fastmri
 import numpy as np
 import torch
 
+from .subsample import MaskFunc
 
-def to_tensor(data):
+
+def to_tensor(data: np.ndarray) -> torch.Tensor:
     """
     Convert numpy array to PyTorch tensor.
 
@@ -18,10 +22,10 @@ def to_tensor(data):
     dimension.
 
     Args:
-        data (np.array): Input numpy array.
+        data: Input numpy array.
 
     Returns:
-        torch.Tensor: PyTorch version of data.
+        PyTorch version of data.
     """
     if np.iscomplexobj(data):
         data = np.stack((data.real, data.imag), axis=-1)
@@ -29,41 +33,43 @@ def to_tensor(data):
     return torch.from_numpy(data)
 
 
-def tensor_to_complex_np(data):
+def tensor_to_complex_np(data: torch.Tensor) -> np.ndarray:
     """
     Converts a complex torch tensor to numpy array.
 
     Args:
-        data (torch.Tensor): Input data to be converted to numpy.
+        data: Input data to be converted to numpy.
 
     Returns:
-        np.array: Complex numpy version of data.
+        Complex numpy version of data.
     """
     data = data.numpy()
 
     return data[..., 0] + 1j * data[..., 1]
 
 
-def apply_mask(data, mask_func, seed=None, padding=None):
+def apply_mask(
+    data: torch.Tensor,
+    mask_func: MaskFunc,
+    seed: Optional[Union[int, Tuple[int, ...]]] = None,
+    padding: Optional[Sequence[int]] = None,
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Subsample given k-space by multiplying with a mask.
 
     Args:
-        data (torch.Tensor): The input k-space data. This should have at
-            least 3 dimensions, where dimensions -3 and -2 are the spatial
-            dimensions, and the final dimension has size 2 (for complex
-            values).
-        mask_func (Callable): A function that takes a shape (tuple of ints)
-            and a random number seed and returns a mask.
-        seed (int or 1-d array_like, optional): Seed for the random number
-            generator. Defaults to None.
-        padding (tuple, optional): Padding value to apply for mask. Defaults to
-            None.
+        data: The input k-space data. This should have at least 3 dimensions,
+            where dimensions -3 and -2 are the spatial dimensions, and the
+            final dimension has size 2 (for complex values).
+        mask_func: A function that takes a shape (tuple of ints) and a random
+            number seed and returns a mask.
+        seed: Seed for the random number generator.
+        padding: Padding value to apply for mask.
 
     Returns:
-        (tuple): tuple containing:
-            masked data (torch.Tensor): Subsampled k-space data
-            mask (torch.Tensor): The generated mask
+        tuple containing:
+            masked data: Subsampled k-space data
+            mask: The generated mask
     """
     shape = np.array(data.shape)
     shape[:-3] = 1
@@ -77,26 +83,36 @@ def apply_mask(data, mask_func, seed=None, padding=None):
     return masked_data, mask
 
 
-def mask_center(x, mask_from, mask_to):
+def mask_center(x: torch.Tensor, mask_from: int, mask_to: int) -> torch.Tensor:
+    """
+    Initializes a mask with the center filled in.
+
+    Args:
+        mask_from: Part of center to start filling.
+        mask_to: Part of center to end filling.
+
+    Returns:
+        A mask with the center filled.
+    """
     mask = torch.zeros_like(x)
     mask[:, :, :, mask_from:mask_to] = x[:, :, :, mask_from:mask_to]
 
     return mask
 
 
-def center_crop(data, shape):
+def center_crop(data: torch.Tensor, shape: Tuple[int, int]) -> torch.Tensor:
     """
     Apply a center crop to the input real image or batch of real images.
 
     Args:
-        data (torch.Tensor): The input tensor to be center cropped. It should
+        data: The input tensor to be center cropped. It should
             have at least 2 dimensions and the cropping is applied along the
             last two dimensions.
-        shape (int, int): The output shape. The shape should be smaller than
-            the corresponding dimensions of data.
+        shape: The output shape. The shape should be smaller
+            than the corresponding dimensions of data.
 
     Returns:
-        torch.Tensor: The center cropped image.
+        The center cropped image.
     """
     assert 0 < shape[0] <= data.shape[-2]
     assert 0 < shape[1] <= data.shape[-1]
@@ -109,20 +125,19 @@ def center_crop(data, shape):
     return data[..., w_from:w_to, h_from:h_to]
 
 
-def complex_center_crop(data, shape):
+def complex_center_crop(data: torch.Tensor, shape: Tuple[int, int]) -> torch.Tensor:
     """
     Apply a center crop to the input image or batch of complex images.
 
     Args:
-        data (torch.Tensor): The complex input tensor to be center cropped. It
-            should have at least 3 dimensions and the cropping is applied along
-            dimensions -3 and -2 and the last dimensions should have a size of
-            2.
-        shape (int): The output shape. The shape should be smaller than
-            the corresponding dimensions of data.
+        data: The complex input tensor to be center cropped. It should have at
+            least 3 dimensions and the cropping is applied along dimensions -3
+            and -2 and the last dimensions should have a size of 2.
+        shape: The output shape. The shape should be smaller than the
+            corresponding dimensions of data.
 
     Returns:
-        torch.Tensor: The center cropped image
+        The center cropped image
     """
     assert 0 < shape[0] <= data.shape[-3]
     assert 0 < shape[1] <= data.shape[-2]
@@ -135,7 +150,9 @@ def complex_center_crop(data, shape):
     return data[..., w_from:w_to, h_from:h_to, :]
 
 
-def center_crop_to_smallest(x, y):
+def center_crop_to_smallest(
+    x: torch.Tensor, y: torch.Tensor
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Apply a center crop on the larger image to the size of the smaller.
 
@@ -144,11 +161,11 @@ def center_crop_to_smallest(x, y):
     be a mixture of the two.
 
     Args:
-        x (torch.Tensor): The first image.
-        y (torch.Tensor): The second image
+        x: The first image.
+        y: The second image.
 
     Returns:
-        tuple: tuple of tensors x and y, each cropped to the minimim size.
+        tuple of tensors x and y, each cropped to the minimim size.
     """
     smallest_width = min(x.shape[-1], y.shape[-1])
     smallest_height = min(x.shape[-2], y.shape[-2])
@@ -158,26 +175,32 @@ def center_crop_to_smallest(x, y):
     return x, y
 
 
-def normalize(data, mean, stddev, eps=0.0):
+def normalize(
+    data: torch.Tensor,
+    mean: Union[float, torch.Tensor],
+    stddev: Union[float, torch.Tensor],
+    eps: Union[float, torch.Tensor] = 0.0,
+) -> torch.Tensor:
     """
     Normalize the given tensor.
 
     Applies the formula (data - mean) / (stddev + eps).
 
     Args:
-        data (torch.Tensor): Input data to be normalized.
-        mean (float): Mean value.
-        stddev (float): Standard deviation.
-        eps (float, optional): Added to stddev to prevent dividing by zero.
-            Defaults to 0.0.
+        data: Input data to be normalized.
+        mean: Mean value.
+        stddev: Standard deviation.
+        eps: Added to stddev to prevent dividing by zero.
 
     Returns:
-        torch.Tensor: Normalized tensor
+        Normalized tensor.
     """
     return (data - mean) / (stddev + eps)
 
 
-def normalize_instance(data, eps=0.0):
+def normalize_instance(
+    data: torch.Tensor, eps: Union[float, torch.Tensor] = 0.0
+) -> Tuple[torch.Tensor, Union[torch.Tensor], Union[torch.Tensor]]:
     """
     Normalize the given tensor  with instance norm/
 
@@ -185,9 +208,8 @@ def normalize_instance(data, eps=0.0):
     are computed from the data itself.
 
     Args:
-        data (torch.Tensor): Input data to be normalized
-        eps (float, optional): Added to stddev to prevent dividing by zero.
-            Defaults to 0.0.
+        data: Input data to be normalized
+        eps: Added to stddev to prevent dividing by zero.
 
     Returns:
         torch.Tensor: Normalized tensor
@@ -203,17 +225,20 @@ class UnetDataTransform:
     Data Transformer for training U-Net models.
     """
 
-    def __init__(self, which_challenge, mask_func=None, use_seed=True):
+    def __init__(
+        self,
+        which_challenge: str,
+        mask_func: Optional[MaskFunc] = None,
+        use_seed: bool = True,
+    ):
         """
         Args:
-            which_challenge (str): Either "singlecoil" or "multicoil" denoting
-                the dataset.
-            mask_func (fastmri.data.subsample.MaskFunc, optional): A function
-                that can create a mask of appropriate shape. Defaults to None.
-            use_seed (bool, optional): If true, this class computes a pseudo
-                random number generator seed from the filename. This ensures
-                that the same mask is used for all the slices of a given volume
-                every time. Defaults to True.
+            which_challenge: Challenge from ("singlecoil", "multicoil").
+            mask_func: Optional; A function that can create a mask of
+                appropriate shape.
+            use_seed: If true, this class computes a pseudo random number
+                generator seed from the filename. This ensures that the same
+                mask is used for all the slices of a given volume every time.
         """
         if which_challenge not in ("singlecoil", "multicoil"):
             raise ValueError("Challenge should either be 'singlecoil' or 'multicoil'")
@@ -222,28 +247,33 @@ class UnetDataTransform:
         self.which_challenge = which_challenge
         self.use_seed = use_seed
 
-    def __call__(self, kspace, mask, target, attrs, fname, slice_num):
+    def __call__(
+        self,
+        kspace: np.ndarray,
+        mask: torch.Tensor,
+        target: np.ndarray,
+        attrs: Dict,
+        fname: str,
+        slice_num: int,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, str, int, float]:
         """
         Args:
-            kspace (numpy.array): Input k-space of shape (num_coils, rows,
-                cols, 2) for multi-coil data or (rows, cols, 2) for single coil
-                data.
-            mask (numpy.array): Mask from the test dataset.
-            target (numpy.array): Target image.
-            attrs (dict): Acquisition related information stored in the HDF5
-                object.
-            fname (str): File name.
-            slice_num (int): Serial number of the slice.
+            kspace: Input k-space of shape (num_coils, rows, cols, 2) for
+                multi-coil data or (rows, cols, 2) for single coil data.
+            mask: Mask from the test dataset.
+            target: Target image.
+            attrs: Acquisition related information stored in the HDF5 object.
+            fname: File name.
+            slice_num: Serial number of the slice.
 
         Returns:
-            (tuple): tuple containing:
-                image (torch.Tensor): Zero-filled input image.
-                target (torch.Tensor): Target image converted to a torch
-                    Tensor.
-                mean (float): Mean value used for normalization.
-                std (float): Standard deviation value used for normalization.
-                fname (str): File name.
-                slice_num (int): Serial number of the slice.
+            tuple containing:
+                image: Zero-filled input image.
+                target: Target image converted to a torch.Tensor.
+                mean: Mean value used for normalization.
+                std: Standard deviation value used for normalization.
+                fname: File name.
+                slice_num: Serial number of the slice.
         """
         kspace = to_tensor(kspace)
 
@@ -300,42 +330,46 @@ class VarNetDataTransform:
     Data Transformer for training VarNet models.
     """
 
-    def __init__(self, mask_func=None, use_seed=True):
+    def __init__(self, mask_func: Optional[MaskFunc] = None, use_seed: bool = True):
         """
         Args:
-            mask_func (fastmri.data.subsample.MaskFunc, optional): A function
-                that can create a mask of appropriate shape. Defaults to None.
-            use_seed (bool, optional): If true, this class computes a pseudo
-                random number generator seed from the filename. This ensures
-                that the same mask is used for all the slices of a given volume
-                every time. Defaults to True.
+            mask_func: Optional; A function that can create a mask of
+                appropriate shape. Defaults to None.
+            use_seed: If True, this class computes a pseudo random number
+                generator seed from the filename. This ensures that the same
+                mask is used for all the slices of a given volume every time.
         """
         self.mask_func = mask_func
         self.use_seed = use_seed
 
-    def __call__(self, kspace, mask, target, attrs, fname, slice_num):
+    def __call__(
+        self,
+        kspace: np.ndarray,
+        mask: torch.Tensor,
+        target: torch.Tensor,
+        attrs: Dict,
+        fname: str,
+        slice_num: int,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, str, int, float, torch.Tensor]:
         """
         Args:
-            kspace (numpy.array): Input k-space of shape (num_coils, rows,
-                cols, 2) for multi-coil data or (rows, cols, 2) for single coil
-                data.
-            mask (numpy.array): Mask from the test dataset.
-            target (numpy.array): Target image.
-            attrs (dict): Acquisition related information stored in the HDF5
-                object.
-            fname (str): File name.
-            slice_num (int): Serial number of the slice.
+            kspace: Input k-space of shape (num_coils, rows, cols, 2) for
+                multi-coil data.
+            mask: Mask from the test dataset.
+            target: Target image.
+            attrs: Acquisition related information stored in the HDF5 object.
+            fname: File name.
+            slice_num: Serial number of the slice.
 
         Returns:
-            (tuple): tuple containing:
-                masked_kspace (torch.Tensor): k-space after applying sampling
-                    mask.
-                mask (torch.Tensor): The applied sampling mask
-                target (torch.Tensor): The target image (if applicable).
-                fname (str): File name.
-                slice_num (int): The slice index.
-                max_value (float): Maximum image value.
-                crop_size (torch.Tensor): the size to crop the final image.
+            tuple containing:
+                masked_kspace: k-space after applying sampling mask.
+                mask: The applied sampling mask
+                target: The target image (if applicable).
+                fname: File name.
+                slice_num: The slice index.
+                max_value: Maximum image value.
+                crop_size: The size to crop the final image.
         """
         if target is not None:
             target = to_tensor(target)
@@ -362,7 +396,7 @@ class VarNetDataTransform:
             shape[:-3] = 1
             mask_shape = [1 for _ in shape]
             mask_shape[-2] = num_cols
-            mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
+            mask = mask.reshape(*mask_shape)
             mask[:, :, :acq_start] = 0
             mask[:, :, acq_end:] = 0
 

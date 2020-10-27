@@ -6,31 +6,29 @@ LICENSE file in the root directory of this source tree.
 """
 
 import contextlib
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
 
 
 @contextlib.contextmanager
-def temp_seed(rng, seed):
-    state = rng.get_state()
-    rng.seed(seed)
-    try:
-        yield
-    finally:
-        rng.set_state(state)
-
-
-def create_mask_for_mask_type(mask_type_str, center_fractions, accelerations):
-    if mask_type_str == "random":
-        return RandomMaskFunc(center_fractions, accelerations)
-    elif mask_type_str == "equispaced":
-        return EquispacedMaskFunc(center_fractions, accelerations)
+def temp_seed(rng: np.random, seed: Optional[Union[int, Tuple[int, ...]]]):
+    if seed is None:
+        try:
+            yield
+        finally:
+            pass
     else:
-        raise Exception(f"{mask_type_str} not supported")
+        state = rng.get_state()
+        rng.seed(seed)
+        try:
+            yield
+        finally:
+            rng.set_state(state)
 
 
-class MaskFunc(object):
+class MaskFunc:
     """
     An object for GRAPPA-style sampling masks.
 
@@ -38,15 +36,15 @@ class MaskFunc(object):
     subsampling outer k-space regions based on the undersampling factor.
     """
 
-    def __init__(self, center_fractions, accelerations):
+    def __init__(self, center_fractions: Sequence[float], accelerations: Sequence[int]):
         """
         Args:
-            center_fractions (List[float]): Fraction of low-frequency columns to be
-                retained. If multiple values are provided, then one of these
-                numbers is chosen uniformly each time. 
-            accelerations (List[int]): Amount of under-sampling. This should have
-                the same length as center_fractions. If multiple values are
-                provided, then one of these is chosen uniformly each time.
+            center_fractions: Fraction of low-frequency columns to be retained.
+                If multiple values are provided, then one of these numbers is
+                chosen uniformly each time.
+            accelerations: Amount of under-sampling. This should have the same
+                length as center_fractions. If multiple values are provided,
+                then one of these is chosen uniformly each time.
         """
         if len(center_fractions) != len(accelerations):
             raise ValueError(
@@ -56,6 +54,11 @@ class MaskFunc(object):
         self.center_fractions = center_fractions
         self.accelerations = accelerations
         self.rng = np.random
+
+    def __call__(
+        self, shape: Sequence[int], seed: Optional[Union[int, Tuple[int, ...]]] = None
+    ) -> torch.Tensor:
+        raise NotImplementedError
 
     def choose_acceleration(self):
         """Choose acceleration based on class parameters."""
@@ -89,20 +92,22 @@ class RandomMaskFunc(MaskFunc):
     center fraction is selected.
     """
 
-    def __call__(self, shape, seed=None):
+    def __call__(
+        self, shape: Sequence[int], seed: Optional[Union[int, Tuple[int, ...]]] = None
+    ) -> torch.Tensor:
         """
         Create the mask.
 
         Args:
-            shape (iterable[int]): The shape of the mask to be created. The
-                shape should have at least 3 dimensions. Samples are drawn
-                along the second last dimension.
-            seed (int, optional): Seed for the random number generator. Setting
-                the seed ensures the same mask is generated each time for the
-                same shape. The random state is reset afterwards.
-                
+            shape: The shape of the mask to be created. The shape should have
+                at least 3 dimensions. Samples are drawn along the second last
+                dimension.
+            seed: Seed for the random number generator. Setting the seed
+                ensures the same mask is generated each time for the same
+                shape. The random state is reset afterwards.
+
         Returns:
-            torch.Tensor: A mask of the specified shape.
+            A mask of the specified shape.
         """
         if len(shape) < 3:
             raise ValueError("Shape should have 3 or more dimensions")
@@ -151,18 +156,20 @@ class EquispacedMaskFunc(MaskFunc):
     the function has been preserved to match the public multicoil data. 
     """
 
-    def __call__(self, shape, seed):
+    def __call__(
+        self, shape: Sequence[int], seed: Optional[Union[int, Tuple[int, ...]]] = None
+    ) -> torch.Tensor:
         """
         Args:
-            shape (iterable[int]): The shape of the mask to be created. The
-                shape should have at least 3 dimensions. Samples are drawn
-                along the second last dimension.
-            seed (int, optional): Seed for the random number generator. Setting
-                the seed ensures the same mask is generated each time for the
-                same shape. The random state is reset afterwards.
+            shape: The shape of the mask to be created. The shape should have
+                at least 3 dimensions. Samples are drawn along the second last
+                dimension.
+            seed: Seed for the random number generator. Setting the seed
+                ensures the same mask is generated each time for the same
+                shape. The random state is reset afterwards.
 
         Returns:
-            torch.Tensor: A mask of the specified shape.
+            A mask of the specified shape.
         """
         if len(shape) < 3:
             raise ValueError("Shape should have 3 or more dimensions")
@@ -193,3 +200,21 @@ class EquispacedMaskFunc(MaskFunc):
             mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
 
         return mask
+
+
+def create_mask_for_mask_type(
+    mask_type_str: str, center_fractions: Sequence[float], accelerations: Sequence[int],
+) -> MaskFunc:
+    """
+    Creates a mask of the specified type.
+
+    Args:
+        center_fractions: What fraction of the center of k-space to include.
+        accelerations: What accelerations to apply.
+    """
+    if mask_type_str == "random":
+        return RandomMaskFunc(center_fractions, accelerations)
+    elif mask_type_str == "equispaced":
+        return EquispacedMaskFunc(center_fractions, accelerations)
+    else:
+        raise Exception(f"{mask_type_str} not supported")

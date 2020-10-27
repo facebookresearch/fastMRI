@@ -79,7 +79,9 @@ def fft2c(data: torch.Tensor) -> torch.Tensor:
     data = ifftshift(data, dim=(-3, -2))
     if USE_COMPLEX_FFT:
         data = torch.view_as_real(
-            torch.fft.fftn(torch.view_as_complex(data), dim=(-2, -1), norm="ortho")
+            torch.fft.fftn(  # type: ignore
+                torch.view_as_complex(data), dim=(-2, -1), norm="ortho"
+            )
         )
     else:
         data = torch.fft(data, 2, normalized=True)
@@ -106,7 +108,9 @@ def ifft2c(data: torch.Tensor) -> torch.Tensor:
     data = ifftshift(data, dim=(-3, -2))
     if USE_COMPLEX_FFT:
         data = torch.view_as_real(
-            torch.fft.ifftn(torch.view_as_complex(data), dim=(-2, -1), norm="ortho")
+            torch.fft.ifftn(  # type: ignore
+                torch.view_as_complex(data), dim=(-2, -1), norm="ortho"
+            )
         )
     else:
         data = torch.ifft(data, 2, normalized=True)

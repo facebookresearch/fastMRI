@@ -13,16 +13,19 @@ jobs:
           pip-dependency-file: dev-requirements.txt
           pkg-manager: pip
       - run:
+          command: |
+            mypy fastmri
+          name: Check Typing
+      - run:
           name: Install fastMRI
           command: |
             python setup.py bdist_wheel
             pip install dist/*.whl
       - run:
           command: |
-            pip show torch | grep Version
+            echo "PyTorch \c" && pip show torch | grep Version 
             pytest --version
             pytest tests
-            mypy fastmri
           name: Test
 
 workflows:

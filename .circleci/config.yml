@@ -23,7 +23,7 @@ jobs:
             pip install dist/*.whl
       - run:
           command: |
-            echo "PyTorch \c" && pip show torch | grep Version 
+            echo -e "PyTorch \c" && pip show torch | grep Version 
             pytest --version
             pytest tests
           name: Test

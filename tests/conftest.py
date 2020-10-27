@@ -8,10 +8,10 @@ LICENSE file in the root directory of this source tree.
 import numpy as np
 import pytest
 import torch
+from .create_temp_data import create_temp_data
 
 # these are really slow - skip by default
-skip_module_test_flag = True
-skip_data_test_flag = True
+skip_integrations = True
 
 
 def create_input(shape):
@@ -21,14 +21,16 @@ def create_input(shape):
     return x
 
 
-@pytest.fixture
-def skip_module_test():
-    return skip_module_test_flag
+@pytest.fixture(scope="session")
+def fastmri_mock_dataset(tmp_path_factory):
+    path = tmp_path_factory.mktemp("fastmri_data")
+
+    return create_temp_data(path)
 
 
 @pytest.fixture
-def skip_data_test():
-    return skip_data_test_flag
+def skip_integration_tests():
+    return skip_integrations
 
 
 @pytest.fixture

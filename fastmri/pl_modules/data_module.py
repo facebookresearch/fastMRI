@@ -39,6 +39,7 @@ class FastMriDataModule(pl.LightningDataModule):
         test_split: str = "test",
         test_path: Optional[Path] = None,
         sample_rate: float = 1.0,
+        use_dataset_cache_file: bool = True,
         batch_size: int = 1,
         num_workers: int = 4,
         distributed_sampler: bool = False,
@@ -57,6 +58,8 @@ class FastMriDataModule(pl.LightningDataModule):
                 and test_split.
             sample_rate: Fraction of of the training data split to use. Can be
                 set to less than 1.0 for rapid prototyping.
+            use_dataset_cache_file: Whether to cache dataset metadata. This is
+                very useful for large datasets like the brain data.
             batch_size: Batch size.
             num_workers: Number of workers for PyTorch dataloader.
             distributed_sampler: Whether to use a distributed sampler. This
@@ -72,6 +75,7 @@ class FastMriDataModule(pl.LightningDataModule):
         self.test_split = test_split
         self.test_path = test_path
         self.sample_rate = sample_rate
+        self.use_dataset_cache_file = use_dataset_cache_file
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.distributed_sampler = distributed_sampler
@@ -99,6 +103,7 @@ class FastMriDataModule(pl.LightningDataModule):
             transform=data_transform,
             sample_rate=sample_rate,
             challenge=self.challenge,
+            use_dataset_cache=self.use_dataset_cache_file,
         )
 
         # ensure that entire volumes go to the same GPU in the ddp setting
@@ -129,7 +134,9 @@ class FastMriDataModule(pl.LightningDataModule):
 
     def test_dataloader(self):
         return self._create_data_loader(
-            self.test_transform, data_partition=self.test_split, sample_rate=1.0,
+            self.test_transform,
+            data_partition=self.test_split,
+            sample_rate=1.0,
         )
 
     @staticmethod
@@ -141,7 +148,10 @@ class FastMriDataModule(pl.LightningDataModule):
 
         # dataset arguments
         parser.add_argument(
-            "--data_path", default=None, type=Path, help="Path to fastMRI data root",
+            "--data_path",
+            default=None,
+            type=Path,
+            help="Path to fastMRI data root",
         )
         parser.add_argument(
             "--test_path",
@@ -168,6 +178,12 @@ class FastMriDataModule(pl.LightningDataModule):
             default=1.0,
             type=float,
             help="Fraction of data set to use (train split only)",
+        )
+        parser.add_argument(
+            "--use_dataset_cache_file",
+            default=True,
+            type=bool,
+            help="Whether to cache dataset metadata in a pkl file",
         )
 
         # data loader arguments

@@ -8,22 +8,18 @@ LICENSE file in the root directory of this source tree.
 from argparse import ArgumentParser
 
 import pytest
-from fastmri.data.mri_data import fetch_dir
+from fastmri.data import SliceDataset
 from fastmri.data.subsample import create_mask_for_mask_type
 from fastmri.data.transforms import UnetDataTransform, VarNetDataTransform
 from fastmri.pl_modules import FastMriDataModule, UnetModule, VarNetModule
 from pytorch_lightning import Trainer
 
 
-def build_unet_args(tmp_path):
-    knee_path = fetch_dir("knee_path")
-    logdir = tmp_path / "unet_test_dir"
-
+def build_unet_args(data_path, logdir, backend):
     parser = ArgumentParser()
 
-    num_gpus = 1
-    backend = "dp"
-    batch_size = 1 if backend == "ddp" else num_gpus
+    num_gpus = 0
+    batch_size = 1
 
     # data transform params
     parser.add_argument(
@@ -50,15 +46,15 @@ def build_unet_args(tmp_path):
 
     # data config
     parser = FastMriDataModule.add_data_specific_args(parser)
-    parser.set_defaults(data_path=knee_path, batch_size=batch_size)
+    parser.set_defaults(data_path=data_path, batch_size=batch_size)
 
     # module config
     parser = UnetModule.add_model_specific_args(parser)
     parser.set_defaults(
         in_chans=1,
         out_chans=1,
-        chans=32,
-        num_pool_layers=4,
+        chans=8,
+        num_pool_layers=2,
         drop_prob=0.0,
         lr=0.001,
         lr_step_size=40,
@@ -82,14 +78,10 @@ def build_unet_args(tmp_path):
     return args
 
 
-def build_varnet_args(tmp_path):
-    knee_path = fetch_dir("knee_path")
-    logdir = tmp_path / "varnet_test_dir"
-
+def build_varnet_args(data_path, logdir, backend):
     parser = ArgumentParser()
 
-    backend = "dp"
-    num_gpus = 2 if backend == "ddp" else 1
+    num_gpus = 0
     batch_size = 1
 
     # data transform params
@@ -118,7 +110,7 @@ def build_varnet_args(tmp_path):
     # data config
     parser = FastMriDataModule.add_data_specific_args(parser)
     parser.set_defaults(
-        data_path=knee_path,
+        data_path=data_path,
         mask_type="equispaced",
         challenge="multicoil",
         batch_size=batch_size,
@@ -127,11 +119,11 @@ def build_varnet_args(tmp_path):
     # module config
     parser = VarNetModule.add_model_specific_args(parser)
     parser.set_defaults(
-        num_cascades=8,
-        pools=4,
-        chans=18,
-        sens_pools=4,
-        sens_chans=8,
+        num_cascades=4,
+        pools=2,
+        chans=8,
+        sens_pools=2,
+        sens_chans=4,
         lr=0.001,
         lr_step_size=40,
         lr_gamma=0.1,
@@ -154,89 +146,101 @@ def build_varnet_args(tmp_path):
     return args
 
 
-@pytest.mark.parametrize("backend", [(None)])
-def test_unet_trainer(backend, skip_module_test, tmp_path):
-    if skip_module_test:
-        pytest.skip("config set to skip")
+@pytest.mark.parametrize("backend", [None])
+def test_unet_trainer(fastmri_mock_dataset, backend, tmp_path, monkeypatch):
+    knee_path, _, metadata = fastmri_mock_dataset
 
-    args = build_unet_args(tmp_path)
-    args.fast_dev_run = True
-    args.backend = backend
+    def retrieve_metadata_mock(a, fname):
+        return metadata[str(fname)]
+
+    monkeypatch.setattr(SliceDataset, "_retrieve_metadata", retrieve_metadata_mock)
+
+    params = build_unet_args(knee_path, tmp_path, backend)
+    params.fast_dev_run = True
+    params.backend = backend
 
     mask = create_mask_for_mask_type(
-        args.mask_type, args.center_fractions, args.accelerations
+        params.mask_type, params.center_fractions, params.accelerations
     )
-    train_transform = UnetDataTransform(args.challenge, mask_func=mask, use_seed=False)
-    val_transform = UnetDataTransform(args.challenge, mask_func=mask)
-    test_transform = UnetDataTransform(args.challenge, mask_func=mask)
+    train_transform = UnetDataTransform(
+        params.challenge, mask_func=mask, use_seed=False
+    )
+    val_transform = UnetDataTransform(params.challenge, mask_func=mask)
+    test_transform = UnetDataTransform(params.challenge, mask_func=mask)
     data_module = FastMriDataModule(
-        data_path=args.data_path,
-        challenge=args.challenge,
+        data_path=params.data_path,
+        challenge=params.challenge,
         train_transform=train_transform,
         val_transform=val_transform,
         test_transform=test_transform,
-        test_split=args.test_split,
-        sample_rate=args.sample_rate,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-        distributed_sampler=(args.accelerator == "ddp"),
+        test_split=params.test_split,
+        sample_rate=params.sample_rate,
+        batch_size=params.batch_size,
+        num_workers=params.num_workers,
+        distributed_sampler=(params.accelerator == "ddp"),
+        use_dataset_cache_file=False,
     )
 
     model = UnetModule(
-        in_chans=args.in_chans,
-        out_chans=args.out_chans,
-        chans=args.chans,
-        num_pool_layers=args.num_pool_layers,
-        drop_prob=args.drop_prob,
-        lr=args.lr,
-        lr_step_size=args.lr_step_size,
-        lr_gamma=args.lr_gamma,
-        weight_decay=args.weight_decay,
+        in_chans=params.in_chans,
+        out_chans=params.out_chans,
+        chans=params.chans,
+        num_pool_layers=params.num_pool_layers,
+        drop_prob=params.drop_prob,
+        lr=params.lr,
+        lr_step_size=params.lr_step_size,
+        lr_gamma=params.lr_gamma,
+        weight_decay=params.weight_decay,
     )
 
-    trainer = Trainer.from_argparse_args(args)
+    trainer = Trainer.from_argparse_args(params)
 
     trainer.fit(model, data_module)
 
 
-@pytest.mark.parametrize("backend", [(None)])
-def test_varnet_trainer(backend, skip_module_test, tmp_path):
-    if skip_module_test:
-        pytest.skip("config set to skip")
+@pytest.mark.parametrize("backend", [None])
+def test_varnet_trainer(fastmri_mock_dataset, backend, tmp_path, monkeypatch):
+    knee_path, _, metadata = fastmri_mock_dataset
 
-    args = build_varnet_args(tmp_path)
-    args.fast_dev_run = True
-    args.backend = backend
+    def retrieve_metadata_mock(a, fname):
+        return metadata[str(fname)]
+
+    monkeypatch.setattr(SliceDataset, "_retrieve_metadata", retrieve_metadata_mock)
+
+    params = build_varnet_args(knee_path, tmp_path, backend)
+    params.fast_dev_run = True
+    params.backend = backend
 
     mask = create_mask_for_mask_type(
-        args.mask_type, args.center_fractions, args.accelerations
+        params.mask_type, params.center_fractions, params.accelerations
     )
     train_transform = VarNetDataTransform(mask_func=mask, use_seed=False)
     val_transform = VarNetDataTransform(mask_func=mask)
     test_transform = VarNetDataTransform(mask_func=mask)
     data_module = FastMriDataModule(
-        data_path=args.data_path,
-        challenge=args.challenge,
+        data_path=params.data_path,
+        challenge=params.challenge,
         train_transform=train_transform,
         val_transform=val_transform,
         test_transform=test_transform,
-        test_split=args.test_split,
-        sample_rate=args.sample_rate,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-        distributed_sampler=(args.accelerator == "ddp"),
+        test_split=params.test_split,
+        sample_rate=params.sample_rate,
+        batch_size=params.batch_size,
+        num_workers=params.num_workers,
+        distributed_sampler=(params.accelerator == "ddp"),
+        use_dataset_cache_file=False,
     )
     model = VarNetModule(
-        num_cascades=args.num_cascades,
-        pools=args.pools,
-        chans=args.chans,
-        sens_pools=args.sens_pools,
-        sens_chans=args.sens_chans,
-        lr=args.lr,
-        lr_step_size=args.lr_step_size,
-        lr_gamma=args.lr_gamma,
-        weight_decay=args.weight_decay,
+        num_cascades=params.num_cascades,
+        pools=params.pools,
+        chans=params.chans,
+        sens_pools=params.sens_pools,
+        sens_chans=params.sens_chans,
+        lr=params.lr,
+        lr_step_size=params.lr_step_size,
+        lr_gamma=params.lr_gamma,
+        weight_decay=params.weight_decay,
     )
-    trainer = Trainer.from_argparse_args(args)
+    trainer = Trainer.from_argparse_args(params)
 
     trainer.fit(model, data_module)

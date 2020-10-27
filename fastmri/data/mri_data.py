@@ -106,7 +106,7 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         roots: Sequence[Path],
-        transforms: Sequence[Callable],
+        transforms: Sequence[Optional[Callable]],
         challenges: Sequence[str],
         sample_rates: Optional[Sequence[float]] = None,
         num_cols: Optional[Tuple[int]] = None,
@@ -136,10 +136,10 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
         for i in range(len(roots)):
             self.datasets.append(
                 SliceDataset(
-                    roots[i],
-                    transforms[i],
-                    challenges[i],
-                    sample_rates[i],
+                    root=roots[i],
+                    transform=transforms[i],
+                    challenge=challenges[i],
+                    sample_rate=sample_rates[i],
                     num_cols=num_cols,
                 )
             )
@@ -169,23 +169,26 @@ class SliceDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         root: Union[str, Path, os.PathLike],
-        transform: Callable,
         challenge: str,
+        transform: Optional[Callable] = None,
         sample_rate: float = 1.0,
+        use_dataset_cache: bool = False,
         dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
         num_cols: Optional[Tuple[int]] = None,
     ):
         """
         Args:
             root: Path to the dataset.
-            transform: A callable object that pre-processes the raw data into
-                appropriate form. The transform function should take 'kspace',
-                'target', 'attributes', 'filename', and 'slice' as inputs.
-                'target' may be null for test data.
             challenge: "singlecoil" or "multicoil" depending on which challenge
                 to use.
+            transform: Optional; A callable object that pre-processes the raw
+                data into appropriate form. The transform function should take
+                'kspace', 'target', 'attributes', 'filename', and 'slice' as
+                inputs. 'target' may be null for test data.
             sample_rate: Optional; A float between 0 and 1. This controls what
                 fraction of the volumes should be loaded. Defaults to 1.0.
+            use_dataset_cache: Whether to cache dataset metadata. This is very
+                useful for large datasets like the brain data.
             dataset_cache_file: Optional; A file in which to cache dataset
                 information for faster load times.
             num_cols: Optional; If provided, only slices with the desired
@@ -202,55 +205,26 @@ class SliceDataset(torch.utils.data.Dataset):
         )
         self.examples = []
 
-        if self.dataset_cache_file.exists():
+        if self.dataset_cache_file.exists() and use_dataset_cache:
             with open(self.dataset_cache_file, "rb") as f:
                 dataset_cache = pickle.load(f)
         else:
             dataset_cache = {}
 
-        if dataset_cache.get(root) is None:
+        if dataset_cache.get(root) is None or not use_dataset_cache:
             files = list(Path(root).iterdir())
             for fname in sorted(files):
-                with h5py.File(fname, "r") as hf:
-                    et_root = etree.fromstring(hf["ismrmrd_header"][()])
-
-                    enc = ["encoding", "encodedSpace", "matrixSize"]
-                    enc_size = (
-                        int(et_query(et_root, enc + ["x"])),
-                        int(et_query(et_root, enc + ["y"])),
-                        int(et_query(et_root, enc + ["z"])),
-                    )
-                    rec = ["encoding", "reconSpace", "matrixSize"]
-                    recon_size = (
-                        int(et_query(et_root, rec + ["x"])),
-                        int(et_query(et_root, rec + ["y"])),
-                        int(et_query(et_root, rec + ["z"])),
-                    )
-
-                    lims = ["encoding", "encodingLimits", "kspace_encoding_step_1"]
-                    enc_limits_center = int(et_query(et_root, lims + ["center"]))
-                    enc_limits_max = int(et_query(et_root, lims + ["maximum"])) + 1
-
-                    padding_left = enc_size[1] // 2 - enc_limits_center
-                    padding_right = padding_left + enc_limits_max
-
-                    num_slices = hf["kspace"].shape[0]
-
-                metadata = {
-                    "padding_left": padding_left,
-                    "padding_right": padding_right,
-                    "encoding_size": enc_size,
-                    "recon_size": recon_size,
-                }
+                metadata, num_slices = self._retrieve_metadata(fname)
 
                 self.examples += [
                     (fname, slice_ind, metadata) for slice_ind in range(num_slices)
                 ]
 
-            dataset_cache[root] = self.examples
-            logging.info(f"Saving dataset cache to {self.dataset_cache_file}.")
-            with open(self.dataset_cache_file, "wb") as f:
-                pickle.dump(dataset_cache, f)
+            if use_dataset_cache:
+                dataset_cache[root] = self.examples
+                logging.info(f"Saving dataset cache to {self.dataset_cache_file}.")
+                with open(self.dataset_cache_file, "wb") as f:
+                    pickle.dump(dataset_cache, f)
         else:
             logging.info(f"Using dataset cache from {self.dataset_cache_file}.")
             self.examples = dataset_cache[root]
@@ -266,6 +240,41 @@ class SliceDataset(torch.utils.data.Dataset):
                 for ex in self.examples
                 if ex[2]["encoding_size"][1] in num_cols  # type: ignore
             ]
+
+    def _retrieve_metadata(self, fname):
+        with h5py.File(fname, "r") as hf:
+            et_root = etree.fromstring(hf["ismrmrd_header"][()])
+
+            enc = ["encoding", "encodedSpace", "matrixSize"]
+            enc_size = (
+                int(et_query(et_root, enc + ["x"])),
+                int(et_query(et_root, enc + ["y"])),
+                int(et_query(et_root, enc + ["z"])),
+            )
+            rec = ["encoding", "reconSpace", "matrixSize"]
+            recon_size = (
+                int(et_query(et_root, rec + ["x"])),
+                int(et_query(et_root, rec + ["y"])),
+                int(et_query(et_root, rec + ["z"])),
+            )
+
+            lims = ["encoding", "encodingLimits", "kspace_encoding_step_1"]
+            enc_limits_center = int(et_query(et_root, lims + ["center"]))
+            enc_limits_max = int(et_query(et_root, lims + ["maximum"])) + 1
+
+            padding_left = enc_size[1] // 2 - enc_limits_center
+            padding_right = padding_left + enc_limits_max
+
+            num_slices = hf["kspace"].shape[0]
+
+        metadata = {
+            "padding_left": padding_left,
+            "padding_right": padding_right,
+            "encoding_size": enc_size,
+            "recon_size": recon_size,
+        }
+
+        return metadata, num_slices
 
     def __len__(self):
         return len(self.examples)
@@ -283,4 +292,9 @@ class SliceDataset(torch.utils.data.Dataset):
             attrs = dict(hf.attrs)
             attrs.update(metadata)
 
-        return self.transform(kspace, mask, target, attrs, fname.name, dataslice)
+        if self.transform is None:
+            sample = (kspace, mask, target, attrs, fname.name, dataslice)
+        else:
+            sample = self.transform(kspace, mask, target, attrs, fname.name, dataslice)
+
+        return sample

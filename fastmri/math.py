@@ -9,6 +9,13 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import torch
+from packaging import version
+
+if version.parse(torch.__version__) >= version.parse("1.6.0"):
+    USE_COMPLEX_FFT = True
+    import torch.fft
+else:
+    USE_COMPLEX_FFT = False
 
 
 def complex_mul(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
@@ -70,7 +77,12 @@ def fft2c(data: torch.Tensor) -> torch.Tensor:
         raise ValueError("Tensor does not have separate complex dim.")
 
     data = ifftshift(data, dim=(-3, -2))
-    data = torch.fft(data, 2, normalized=True)
+    if USE_COMPLEX_FFT:
+        data = torch.view_as_real(
+            torch.fft.fftn(torch.view_as_complex(data), dim=(-2, -1), norm="ortho")
+        )
+    else:
+        data = torch.fft(data, 2, normalized=True)
     data = fftshift(data, dim=(-3, -2))
 
     return data
@@ -92,7 +104,12 @@ def ifft2c(data: torch.Tensor) -> torch.Tensor:
         raise ValueError("Tensor does not have separate complex dim.")
 
     data = ifftshift(data, dim=(-3, -2))
-    data = torch.ifft(data, 2, normalized=True)
+    if USE_COMPLEX_FFT:
+        data = torch.view_as_real(
+            torch.fft.ifftn(torch.view_as_complex(data), dim=(-2, -1), norm="ortho")
+        )
+    else:
+        data = torch.ifft(data, 2, normalized=True)
     data = fftshift(data, dim=(-3, -2))
 
     return data

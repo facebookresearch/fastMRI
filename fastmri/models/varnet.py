@@ -95,14 +95,11 @@ class NormUnet(nn.Module):
     def pad(
         self, x: torch.Tensor
     ) -> Tuple[torch.Tensor, Tuple[Tuple[int, int], Tuple[int, int], int, int]]:
-        def floor_ceil(n):
-            return math.floor(n), math.ceil(n)
-
         _, _, h, w = x.shape
         w_mult = ((w - 1) | 15) + 1
         h_mult = ((h - 1) | 15) + 1
-        w_pad = floor_ceil((w_mult - w) / 2)
-        h_pad = floor_ceil((h_mult - h) / 2)
+        w_pad = (math.floor((w_mult - w) / 2), math.ceil((w_mult - w) / 2))
+        h_pad = (math.floor((h_mult - h) / 2), math.ceil((h_mult - h) / 2))
         x = F.pad(x, w_pad + h_pad)
 
         return x, (h_pad, w_pad, h_mult, w_mult)
@@ -169,27 +166,24 @@ class SensitivityModel(nn.Module):
         )
 
     def chans_to_batch_dim(self, x: torch.Tensor) -> Tuple[torch.Tensor, int]:
-        b, c, *other = x.shape
+        b, c, h, w, comp = x.shape
 
-        return x.contiguous().view(b * c, 1, *other), b
+        return x.contiguous().view(b * c, 1, h, w, comp), b
 
     def batch_chans_to_chan_dim(self, x: torch.Tensor, batch_size: int) -> torch.Tensor:
-        bc, _, *other = x.shape
+        bc, _, h, w, comp = x.shape
         c = bc // batch_size
 
-        return x.view(batch_size, c, *other)
+        return x.view(batch_size, c, h, w, comp)
 
     def divide_root_sum_of_squares(self, x: torch.Tensor) -> torch.Tensor:
         return x / fastmri.rss_complex(x, dim=1).unsqueeze(-1).unsqueeze(1)
 
     def forward(self, masked_kspace: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         # get low frequency line locations and mask them out
-        left = right = mask.shape[-2] // 2
-        while mask[..., right, :]:
-            right += 1
-
-        while mask[..., left, :]:
-            left -= 1
+        cent = mask.shape[-2] // 2
+        left = torch.nonzero(mask.squeeze()[:cent] == 0)[-1]
+        right = torch.nonzero(mask.squeeze()[cent:] == 0)[0] + cent
         num_low_freqs = right - left
         pad = (mask.shape[-2] - num_low_freqs + 1) // 2
 

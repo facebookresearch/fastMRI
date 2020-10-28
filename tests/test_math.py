@@ -70,7 +70,13 @@ def test_root_sum_of_squares(shape, dim):
 @pytest.mark.parametrize("shape", [[5, 6, 2], [3, 4, 5],])
 def test_roll(shift, dim, shape):
     x = np.arange(np.product(shape)).reshape(shape)
-    out_torch = fastmri.roll(torch.from_numpy(x), shift, dim).numpy()
+    if isinstance(shift, int) and isinstance(dim, int):
+        torch_shift = (shift,)
+        torch_dim = (dim,)
+    else:
+        torch_shift = shift
+        torch_dim = dim
+    out_torch = fastmri.roll(torch.from_numpy(x), torch_shift, torch_dim).numpy()
     out_numpy = np.roll(x, shift, dim)
 
     assert np.allclose(out_torch, out_numpy)

@@ -7,11 +7,12 @@ LICENSE file in the root directory of this source tree.
 
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 import fastmri
 import pytorch_lightning as pl
 import torch
+from fastmri.data import CombinedSliceDataset, SliceDataset
 
 
 class FastMriDataModule(pl.LightningDataModule):
@@ -97,6 +98,7 @@ class FastMriDataModule(pl.LightningDataModule):
             is_train = False
             sample_rate = 1.0
 
+        dataset: Union[SliceDataset, CombinedSliceDataset]
         if data_partition == "train" and self.combine_test_val:
             data_paths = [
                 self.data_path / f"{self.challenge}_train",
@@ -105,7 +107,7 @@ class FastMriDataModule(pl.LightningDataModule):
             data_transforms = [data_transform, data_transform]
             challenges = [self.challenge, self.challenge]
             sample_rates = [sample_rate, sample_rate]
-            dataset = fastmri.data.CombinedSliceDataset(
+            dataset = CombinedSliceDataset(
                 roots=data_paths,
                 transforms=data_transforms,
                 challenges=challenges,
@@ -118,7 +120,7 @@ class FastMriDataModule(pl.LightningDataModule):
             else:
                 data_path = self.data_path / f"{self.challenge}_{data_partition}"
 
-            dataset = fastmri.data.SliceDataset(
+            dataset = SliceDataset(
                 root=data_path,
                 transform=data_transform,
                 sample_rate=sample_rate,

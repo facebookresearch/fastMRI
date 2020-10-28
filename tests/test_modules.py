@@ -8,7 +8,6 @@ LICENSE file in the root directory of this source tree.
 from argparse import ArgumentParser
 
 import pytest
-import torch
 from fastmri.data import SliceDataset
 from fastmri.data.subsample import create_mask_for_mask_type
 from fastmri.data.transforms import UnetDataTransform, VarNetDataTransform
@@ -245,35 +244,3 @@ def test_varnet_trainer(fastmri_mock_dataset, backend, tmp_path, monkeypatch):
     trainer = Trainer.from_argparse_args(params)
 
     trainer.fit(model, data_module)
-
-
-def test_unet_scripting():
-    model = UnetModule(
-        in_chans=1,
-        out_chans=1,
-        chans=8,
-        num_pool_layers=2,
-        drop_prob=0.0,
-        lr=0.001,
-        lr_step_size=40,
-        lr_gamma=0.1,
-        weight_decay=0.0,
-    )
-    scr = torch.jit.script(model.unet)
-    assert scr is not None
-
-
-def test_varnet_scripting():
-    model = VarNetModule(
-        num_cascades=4,
-        pools=2,
-        chans=8,
-        sens_pools=2,
-        sens_chans=4,
-        lr=0.001,
-        lr_step_size=40,
-        lr_gamma=0.1,
-        weight_decay=0.0,
-    )
-    scr = torch.jit.script(model.varnet)
-    assert scr is not None

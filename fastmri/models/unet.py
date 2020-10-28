@@ -96,7 +96,7 @@ class Unet(nn.Module):
                 padding[1] = 1  # padding right
             if output.shape[-2] != downsample_layer.shape[-2]:
                 padding[3] = 1  # padding bottom
-            if sum(padding) != 0:
+            if torch.sum(torch.tensor(padding)) != 0:
                 output = F.pad(output, padding, "reflect")
 
             output = torch.cat([output, downsample_layer], dim=1)

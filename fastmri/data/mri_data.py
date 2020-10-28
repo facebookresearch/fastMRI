@@ -109,6 +109,8 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
         transforms: Sequence[Optional[Callable]],
         challenges: Sequence[str],
         sample_rates: Optional[Sequence[float]] = None,
+        use_dataset_cache: bool = False,
+        dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
         num_cols: Optional[Tuple[int]] = None,
     ):
         """
@@ -122,6 +124,10 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
                 challenge to use.
             sample_rates: Optional; A float between 0 and 1. This controls
                 what fraction of the volumes should be loaded.
+            use_dataset_cache: Whether to cache dataset metadata. This is very
+                useful for large datasets like the brain data.
+            dataset_cache_file: Optional; A file in which to cache dataset
+                information for faster load times.
             num_cols: Optional; If provided, only slices with the desired
                 number of columns will be considered.
         """
@@ -140,6 +146,8 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
                     transform=transforms[i],
                     challenge=challenges[i],
                     sample_rate=sample_rates[i],
+                    use_dataset_cache=use_dataset_cache,
+                    dataset_cache_file=dataset_cache_file,
                     num_cols=num_cols,
                 )
             )

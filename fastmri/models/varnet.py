@@ -98,8 +98,8 @@ class NormUnet(nn.Module):
         _, _, h, w = x.shape
         w_mult = ((w - 1) | 15) + 1
         h_mult = ((h - 1) | 15) + 1
-        w_pad = (math.floor((w_mult - w) / 2), math.ceil((w_mult - w) / 2))
-        h_pad = (math.floor((h_mult - h) / 2), math.ceil((h_mult - h) / 2))
+        w_pad = [math.floor((w_mult - w) / 2), math.ceil((w_mult - w) / 2)]
+        h_pad = [math.floor((h_mult - h) / 2), math.ceil((h_mult - h) / 2)]
         x = F.pad(x, w_pad + h_pad)
 
         return x, (h_pad, w_pad, h_mult, w_mult)

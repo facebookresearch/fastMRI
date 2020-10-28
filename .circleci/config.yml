@@ -9,6 +9,9 @@ jobs:
     executor: python/default
     steps:
       - checkout
+      - run:
+          command: |
+            pip install pip
       - python/install-packages:
           pip-dependency-file: dev-requirements.txt
           pkg-manager: pip

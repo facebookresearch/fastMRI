@@ -12,6 +12,7 @@ jobs:
       - python/install-packages:
           pip-dependency-file: dev-requirements.txt
           pkg-manager: pip
+          cache-version: v2
       - run:
           command: |
             mypy --version

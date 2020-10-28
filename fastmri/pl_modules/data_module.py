@@ -36,6 +36,7 @@ class FastMriDataModule(pl.LightningDataModule):
         train_transform: Callable,
         val_transform: Callable,
         test_transform: Callable,
+        combine_test_val: bool = False,
         test_split: str = "test",
         test_path: Optional[Path] = None,
         sample_rate: float = 1.0,
@@ -53,6 +54,8 @@ class FastMriDataModule(pl.LightningDataModule):
             train_transform: A transform object for the training split.
             val_transform: A transform object for the validation split.
             test_transform: A transform object for the test split.
+            combine_test_val: Whether to combine test and val splits into one
+                large train dataset. Use this for leaderboard submission.
             test_split: Name of test split from ("test", "challenge").
             test_path: An optional test path. Passing this overwrites data_path
                 and test_split.
@@ -72,6 +75,7 @@ class FastMriDataModule(pl.LightningDataModule):
         self.train_transform = train_transform
         self.val_transform = val_transform
         self.test_transform = test_transform
+        self.combine_test_val = combine_test_val
         self.test_split = test_split
         self.test_path = test_path
         self.sample_rate = sample_rate
@@ -93,18 +97,34 @@ class FastMriDataModule(pl.LightningDataModule):
             is_train = False
             sample_rate = 1.0
 
-        if data_partition in ("test", "challenge") and self.test_path is not None:
-            data_path = self.test_path
+        if data_partition == "train" and self.combine_test_val:
+            data_paths = [
+                self.data_path / f"{self.challenge}_train",
+                self.data_path / f"{self.challenge}_val",
+            ]
+            data_transforms = [data_transform, data_transform]
+            challenges = [self.challenge, self.challenge]
+            sample_rates = [sample_rate, sample_rate]
+            dataset = fastmri.data.CombinedSliceDataset(
+                roots=data_paths,
+                transforms=data_transforms,
+                challenges=challenges,
+                sample_rates=sample_rates,
+                use_dataset_cache=self.use_dataset_cache_file,
+            )
         else:
-            data_path = self.data_path / f"{self.challenge}_{data_partition}"
+            if data_partition in ("test", "challenge") and self.test_path is not None:
+                data_path = self.test_path
+            else:
+                data_path = self.data_path / f"{self.challenge}_{data_partition}"
 
-        dataset = fastmri.data.SliceDataset(
-            root=data_path,
-            transform=data_transform,
-            sample_rate=sample_rate,
-            challenge=self.challenge,
-            use_dataset_cache=self.use_dataset_cache_file,
-        )
+            dataset = fastmri.data.SliceDataset(
+                root=data_path,
+                transform=data_transform,
+                sample_rate=sample_rate,
+                challenge=self.challenge,
+                use_dataset_cache=self.use_dataset_cache_file,
+            )
 
         # ensure that entire volumes go to the same GPU in the ddp setting
         sampler = None

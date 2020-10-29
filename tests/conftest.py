@@ -11,7 +11,7 @@ import torch
 from .create_temp_data import create_temp_data
 
 # these are really slow - skip by default
-SKIP_INTEGRATIONS = False
+SKIP_INTEGRATIONS = True
 
 
 def create_input(shape):

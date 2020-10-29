@@ -112,9 +112,15 @@ class MriModule(pl.LightningModule):
                 output = output / output.max()
                 target = target / target.max()
                 error = error / error.max()
-                self.logger.experiment.add_image(f"{key}/target", target)
-                self.logger.experiment.add_image(f"{key}/reconstruction", output)
-                self.logger.experiment.add_image(f"{key}/error", error)
+                self.logger.experiment.add_image(
+                    f"{key}/target", target, global_step=self.global_step
+                )
+                self.logger.experiment.add_image(
+                    f"{key}/reconstruction", output, global_step=self.global_step
+                )
+                self.logger.experiment.add_image(
+                    f"{key}/error", error, global_step=self.global_step
+                )
 
         # compute evaluation metrics
         nmse_vals = defaultdict(dict)
@@ -126,11 +132,15 @@ class MriModule(pl.LightningModule):
             output = val_logs["output"][i].cpu().numpy()
             target = val_logs["target"][i].cpu().numpy()
 
-            nmse_vals[fname][slice_num] = torch.tensor(evaluate.nmse(target, output))
+            nmse_vals[fname][slice_num] = torch.tensor(
+                evaluate.nmse(target, output)
+            ).view(1)
             ssim_vals[fname][slice_num] = torch.tensor(
                 evaluate.ssim(target, output, maxval=maxval)
-            )
-            psnr_vals[fname][slice_num] = torch.tensor(evaluate.psnr(target, output))
+            ).view(1)
+            psnr_vals[fname][slice_num] = torch.tensor(
+                evaluate.psnr(target, output)
+            ).view(1)
 
         return {
             "val_loss": val_logs["val_loss"],

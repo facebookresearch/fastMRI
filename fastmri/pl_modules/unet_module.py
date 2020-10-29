@@ -17,6 +17,11 @@ from .mri_module import MriModule
 class UnetModule(MriModule):
     """
     Unet training module.
+
+    This can be used to train baseline U-Nets from the paper:
+
+    J. Zbontar et al. fastMRI: An Open Dataset and Benchmarks for Accelerated
+    MRI. arXiv:1811.08839. 2018.
     """
 
     def __init__(

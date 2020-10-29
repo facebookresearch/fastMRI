@@ -15,7 +15,10 @@ from .conftest import create_input
 
 @pytest.mark.parametrize(
     "shape, center_fractions, accelerations",
-    [([4, 32, 32, 2], [0.08], [4]), ([2, 64, 64, 2], [0.04, 0.08], [8, 4]),],
+    [
+        ([4, 32, 32, 2], [0.08], [4]),
+        ([2, 64, 64, 2], [0.04, 0.08], [8, 4]),
+    ],
 )
 def test_apply_mask(shape, center_fractions, accelerations):
     state = np.random.get_state()
@@ -33,7 +36,12 @@ def test_apply_mask(shape, center_fractions, accelerations):
 
 
 @pytest.mark.parametrize(
-    "shape, target_shape", [[[10, 10], [4, 4]], [[4, 6], [2, 4]], [[8, 4], [4, 4]],]
+    "shape, target_shape",
+    [
+        [[10, 10], [4, 4]],
+        [[4, 6], [2, 4]],
+        [[8, 4], [4, 4]],
+    ],
 )
 def test_center_crop(shape, target_shape):
     x = create_input(shape)
@@ -43,7 +51,12 @@ def test_center_crop(shape, target_shape):
 
 
 @pytest.mark.parametrize(
-    "shape, target_shape", [[[10, 10], [4, 4]], [[4, 6], [2, 4]], [[8, 4], [4, 4]],]
+    "shape, target_shape",
+    [
+        [[10, 10], [4, 4]],
+        [[4, 6], [2, 4]],
+        [[8, 4], [4, 4]],
+    ],
 )
 def test_complex_center_crop(shape, target_shape):
     shape = shape + [2]
@@ -56,7 +69,12 @@ def test_complex_center_crop(shape, target_shape):
 
 
 @pytest.mark.parametrize(
-    "shape, mean, stddev", [[[10, 10], 0, 1], [[4, 6], 4, 10], [[8, 4], 2, 3],]
+    "shape, mean, stddev",
+    [
+        [[10, 10], 0, 1],
+        [[4, 6], 4, 10],
+        [[8, 4], 2, 3],
+    ],
 )
 def test_normalize(shape, mean, stddev):
     x = create_input(shape)
@@ -66,7 +84,13 @@ def test_normalize(shape, mean, stddev):
     assert np.isclose(output.std(), x.numpy().std() / stddev)
 
 
-@pytest.mark.parametrize("shape", [[10, 10], [20, 40, 30],])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        [10, 10],
+        [20, 40, 30],
+    ],
+)
 def test_normalize_instance(shape):
     x = create_input(shape)
     output, mean, stddev = transforms.normalize_instance(x)

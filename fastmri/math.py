@@ -7,7 +7,6 @@ LICENSE file in the root directory of this source tree.
 
 import numpy as np
 import torch
-from packaging import version
 
 
 def complex_mul(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
@@ -24,7 +23,7 @@ def complex_mul(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     Returns:
         A PyTorch tensor with the last dimension of size 2.
     """
-    if not (x.shape[-1] == y.shape[-1] == 2):
+    if not x.shape[-1] == y.shape[-1] == 2:
         raise ValueError("Tensors do not have separate complex dim.")
 
     re = x[..., 0] * y[..., 0] - x[..., 1] * y[..., 1]

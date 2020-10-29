@@ -83,7 +83,7 @@ class VolumeSampler(Sampler):
                     indices[rank].append(i)
 
         # need to send equal number of samples to each process - take the max
-        self.num_samples = max([len(l) for l in indices])
+        self.num_samples = max([len(len_ind) for len_ind in indices])
         self.total_size = self.num_samples * self.num_replicas
         self.indices = indices[self.rank]
 

@@ -46,7 +46,12 @@ def ssim(gt: np.ndarray, pred: np.ndarray, maxval: Optional[float]) -> np.ndarra
     return ssim / gt.shape[0]
 
 
-METRIC_FUNCS = dict(MSE=mse, NMSE=nmse, PSNR=psnr, SSIM=ssim,)
+METRIC_FUNCS = dict(
+    MSE=mse,
+    NMSE=nmse,
+    PSNR=psnr,
+    SSIM=ssim,
+)
 
 
 class Metrics:

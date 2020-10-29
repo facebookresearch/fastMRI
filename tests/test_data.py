@@ -23,9 +23,8 @@ def test_slice_datasets(fastmri_mock_dataset, monkeypatch):
             )
 
             assert len(dataset) > 0
-
-            item = dataset[0]
-            assert item is not None
+            assert dataset[0] is not None
+            assert dataset[-1] is not None
 
     for challenge in ("multicoil",):
         for split in ("train", "val", "test", "challenge"):
@@ -34,7 +33,6 @@ def test_slice_datasets(fastmri_mock_dataset, monkeypatch):
             )
 
             assert len(dataset) > 0
-
             assert dataset[0] is not None
             assert dataset[-1] is not None
 

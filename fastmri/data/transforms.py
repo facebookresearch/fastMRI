@@ -114,8 +114,8 @@ def center_crop(data: torch.Tensor, shape: Tuple[int, int]) -> torch.Tensor:
     Returns:
         The center cropped image.
     """
-    assert 0 < shape[0] <= data.shape[-2]
-    assert 0 < shape[1] <= data.shape[-1]
+    if not (0 < shape[0] <= data.shape[-2] and 0 < shape[1] <= data.shape[-1]):
+        raise ValueError("Invalid shapes.")
 
     w_from = (data.shape[-2] - shape[0]) // 2
     h_from = (data.shape[-1] - shape[1]) // 2
@@ -139,8 +139,8 @@ def complex_center_crop(data: torch.Tensor, shape: Tuple[int, int]) -> torch.Ten
     Returns:
         The center cropped image
     """
-    assert 0 < shape[0] <= data.shape[-3]
-    assert 0 < shape[1] <= data.shape[-2]
+    if not (0 < shape[0] <= data.shape[-3] and 0 < shape[1] <= data.shape[-2]):
+        raise ValueError("Invalid shapes.")
 
     w_from = (data.shape[-3] - shape[0]) // 2
     h_from = (data.shape[-2] - shape[1]) // 2
@@ -394,7 +394,7 @@ class VarNetDataTransform:
             shape = np.array(kspace.shape)
             num_cols = shape[-2]
             shape[:-3] = 1
-            mask_shape = [1 for _ in shape]
+            mask_shape = [1] * len(shape)
             mask_shape[-2] = num_cols
             mask = mask.reshape(*mask_shape)
             mask[:, :, :acq_start] = 0

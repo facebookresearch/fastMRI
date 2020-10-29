@@ -27,5 +27,5 @@ def save_reconstructions(reconstructions: Dict[str, np.ndarray], out_dir: Path):
     """
     out_dir.mkdir(exist_ok=True, parents=True)
     for fname, recons in reconstructions.items():
-        with h5py.File(out_dir / fname, "w") as f:
-            f.create_dataset("reconstruction", data=recons)
+        with h5py.File(out_dir / fname, "w") as hf:
+            hf.create_dataset("reconstruction", data=recons)

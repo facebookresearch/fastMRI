@@ -47,24 +47,24 @@ class Unet(nn.Module):
         self.down_sample_layers = nn.ModuleList([ConvBlock(in_chans, chans, drop_prob)])
         ch = chans
         for _ in range(num_pool_layers - 1):
-            self.down_sample_layers += [ConvBlock(ch, ch * 2, drop_prob)]
+            self.down_sample_layers.append(ConvBlock(ch, ch * 2, drop_prob))
             ch *= 2
         self.conv = ConvBlock(ch, ch * 2, drop_prob)
 
         self.up_conv = nn.ModuleList()
         self.up_transpose_conv = nn.ModuleList()
         for _ in range(num_pool_layers - 1):
-            self.up_transpose_conv += [TransposeConvBlock(ch * 2, ch)]
-            self.up_conv += [ConvBlock(ch * 2, ch, drop_prob)]
+            self.up_transpose_conv.append(TransposeConvBlock(ch * 2, ch))
+            self.up_conv.append(ConvBlock(ch * 2, ch, drop_prob))
             ch //= 2
 
-        self.up_transpose_conv += [TransposeConvBlock(ch * 2, ch)]
-        self.up_conv += [
+        self.up_transpose_conv.append(TransposeConvBlock(ch * 2, ch))
+        self.up_conv.append(
             nn.Sequential(
                 ConvBlock(ch * 2, ch, drop_prob),
                 nn.Conv2d(ch, self.out_chans, kernel_size=1, stride=1),
             )
-        ]
+        )
 
     def forward(self, image: torch.Tensor) -> torch.Tensor:
         """

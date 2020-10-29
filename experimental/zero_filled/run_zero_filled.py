@@ -57,7 +57,10 @@ def create_arg_parser():
     parser = ArgumentParser()
 
     parser.add_argument(
-        "--data_path", type=Path, required=True, help="Path to the data",
+        "--data_path",
+        type=Path,
+        required=True,
+        help="Path to the data",
     )
     parser.add_argument(
         "--out_path",
@@ -66,7 +69,10 @@ def create_arg_parser():
         help="Path to save the reconstructions to",
     )
     parser.add_argument(
-        "--challenge", type=str, required=True, help="Which challenge",
+        "--challenge",
+        type=str,
+        required=True,
+        help="Which challenge",
     )
 
     return parser

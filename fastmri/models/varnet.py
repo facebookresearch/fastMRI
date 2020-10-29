@@ -55,7 +55,7 @@ class NormUnet(nn.Module):
     def complex_to_chan_dim(self, x: torch.Tensor) -> torch.Tensor:
         b, c, h, w, two = x.shape
         assert two == 2
-        return x.permute(0, 4, 1, 2, 3).contiguous().view(b, 2 * c, h, w)
+        return x.permute(0, 4, 1, 2, 3).reshape(b, 2 * c, h, w)
 
     def chan_complex_to_last_dim(self, x: torch.Tensor) -> torch.Tensor:
         b, c2, h, w = x.shape
@@ -64,24 +64,12 @@ class NormUnet(nn.Module):
         return x.view(b, 2, c, h, w).permute(0, 2, 3, 4, 1).contiguous()
 
     def norm(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        # Group norm
+        # group norm
         b, c, h, w = x.shape
-        x = x.contiguous().view(b, 2, c // 2 * h * w)
+        x = x.view(b, 2, c // 2 * h * w)
 
-        mean = (
-            x.mean(dim=2)
-            .view(b, 2, 1, 1, 1)
-            .expand(b, 2, c // 2, 1, 1)
-            .contiguous()
-            .view(b, c, 1, 1)
-        )
-        std = (
-            x.std(dim=2)
-            .view(b, 2, 1, 1, 1)
-            .expand(b, 2, c // 2, 1, 1)
-            .contiguous()
-            .view(b, c, 1, 1)
-        )
+        mean = x.mean(dim=2).view(b, c, 1, 1)
+        std = x.std(dim=2).view(b, c, 1, 1)
 
         x = x.view(b, c, h, w)
 
@@ -115,6 +103,9 @@ class NormUnet(nn.Module):
         return x[..., h_pad[0] : h_mult - h_pad[1], w_pad[0] : w_mult - w_pad[1]]
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if not x.shape[-1] == 2:
+            raise ValueError("Last dimension must be 2 for complex.")
+
         # get shapes for unet and normalize
         x = self.complex_to_chan_dim(x)
         x, mean, std = self.norm(x)
@@ -168,7 +159,7 @@ class SensitivityModel(nn.Module):
     def chans_to_batch_dim(self, x: torch.Tensor) -> Tuple[torch.Tensor, int]:
         b, c, h, w, comp = x.shape
 
-        return x.contiguous().view(b * c, 1, h, w, comp), b
+        return x.view(b * c, 1, h, w, comp), b
 
     def batch_chans_to_chan_dim(self, x: torch.Tensor, batch_size: int) -> torch.Tensor:
         bc, _, h, w, comp = x.shape

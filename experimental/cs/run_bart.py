@@ -80,7 +80,7 @@ class DataTransform(object):
         else:
             num_low_freqs = None
 
-        if self.retrieve_acc and self.reg_wt == None:
+        if self.retrieve_acc and self.reg_wt is None:
             acquisition = attrs["acquisition"]
             acceleration = attrs["acceleration"]
 
@@ -110,7 +110,7 @@ def cs_total_variation(args, kspace, reg_wt, crop_size, num_low_freqs):
         args (argparse.Namespace): Arguments including ESPIRiT parameters.
         reg_wt (float): Regularization parameter.
         crop_size (tuple): Size to crop final image to.
-    
+
     Returns:
         np.array: Reconstructed image.
     """
@@ -122,7 +122,7 @@ def cs_total_variation(args, kspace, reg_wt, crop_size, num_low_freqs):
 
     # estimate sensitivity maps
     if num_low_freqs is None:
-        sens_maps = bart.bart(1, f"ecalib -d0 -m1", kspace)
+        sens_maps = bart.bart(1, "ecalib -d0 -m1", kspace)
     else:
         sens_maps = bart.bart(1, f"ecalib -d0 -m1 -r {num_low_freqs}", kspace)
 
@@ -198,7 +198,10 @@ def create_arg_parser():
     parser = ArgumentParser(add_help=False)
 
     parser.add_argument(
-        "--data_path", type=pathlib.Path, required=True, help="Path to the data",
+        "--data_path",
+        type=pathlib.Path,
+        required=True,
+        help="Path to the data",
     )
     parser.add_argument(
         "--out_path",
@@ -207,10 +210,16 @@ def create_arg_parser():
         help="Path to save the reconstructions to",
     )
     parser.add_argument(
-        "--challenge", type=str, required=True, help="Which challenge",
+        "--challenge",
+        type=str,
+        required=True,
+        help="Which challenge",
     )
     parser.add_argument(
-        "--sample_rate", type=float, default=1.0, help="Percent of data to run",
+        "--sample_rate",
+        type=float,
+        default=1.0,
+        help="Percent of data to run",
     )
     parser.add_argument(
         "--mask_type", choices=["random", "equispaced"], default="random", type=str
@@ -249,7 +258,9 @@ if __name__ == "__main__":
 
     if args.split in ("train", "val"):
         mask = create_mask_for_mask_type(
-            args.mask_type, args.center_fractions, args.accelerations,
+            args.mask_type,
+            args.center_fractions,
+            args.accelerations,
         )
     else:
         mask = None

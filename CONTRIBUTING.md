@@ -39,7 +39,7 @@ directory. The `experimental`, `fastmri`, and `tests` directories are checked wi
 `black` and `flake8`.
 
 Configurations for the linters are in the root directory, `.flake8` for `flake8` and 
-`mypy.ini` for `mypy`. We use default configurations for black.
+`mypy.ini` for `mypy`. We use default configurations for `black`.
 
 If all of the following commands pass without modifications or failures, your code
 should be ready for CircleCI:

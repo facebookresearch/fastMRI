@@ -16,15 +16,11 @@ jobs:
       - run:
           command: |
             black --version
-            black experimental --check
-            black fastmri --check
-            black tests --check
+            black experimental fastmri tests --check
             mypy --version
             mypy fastmri
             flake8 --version
-            flake8 experimental
-            flake8 fastmri
-            flake8 tests
+            flake8 experimental fastmri tests
           name: Check Formatting and Lint
       - run:
           name: Install fastMRI

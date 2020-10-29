@@ -45,13 +45,9 @@ If all of the following commands pass without modifications or failures, your co
 should be ready for CircleCI:
 
 ```bash
-black experimental
-black fastmri
-black tests
+black experimental fastmri tests
 mypy fastmri
-flake8 experimental
-flake8 fastmri
-flake8 tests
+flake8 experimental fastmri tests
 ```
 
 ## License

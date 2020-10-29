@@ -79,16 +79,16 @@ class MriModule(pl.LightningModule):
         ):
             if k not in val_logs.keys():
                 raise RuntimeError(
-                    f"Expected key {k} in dict returned by validation_step"
+                    f"Expected key {k} in dict returned by validation_step."
                 )
         if val_logs["output"].ndim == 2:
             val_logs["output"] = val_logs["output"].unsqueeze(0)
         elif val_logs["output"].ndim != 3:
-            raise RuntimeError("Unexpected output size from validation_step")
+            raise RuntimeError("Unexpected output size from validation_step.")
         if val_logs["target"].ndim == 2:
             val_logs["target"] = val_logs["target"].unsqueeze(0)
         elif val_logs["target"].ndim != 3:
-            raise RuntimeError("Unexpected output size from validation_step")
+            raise RuntimeError("Unexpected output size from validation_step.")
 
         # pick a set of images to log if we don't have one already
         if self.val_log_indices is None:
@@ -112,9 +112,15 @@ class MriModule(pl.LightningModule):
                 output = output / output.max()
                 target = target / target.max()
                 error = error / error.max()
-                self.logger.experiment.add_image(f"{key}/target", target)
-                self.logger.experiment.add_image(f"{key}/reconstruction", output)
-                self.logger.experiment.add_image(f"{key}/error", error)
+                self.logger.experiment.add_image(
+                    f"{key}/target", target, global_step=self.global_step
+                )
+                self.logger.experiment.add_image(
+                    f"{key}/reconstruction", output, global_step=self.global_step
+                )
+                self.logger.experiment.add_image(
+                    f"{key}/error", error, global_step=self.global_step
+                )
 
         # compute evaluation metrics
         nmse_vals = defaultdict(dict)
@@ -126,11 +132,15 @@ class MriModule(pl.LightningModule):
             output = val_logs["output"][i].cpu().numpy()
             target = val_logs["target"][i].cpu().numpy()
 
-            nmse_vals[fname][slice_num] = torch.tensor(evaluate.nmse(target, output))
+            nmse_vals[fname][slice_num] = torch.tensor(
+                evaluate.nmse(target, output)
+            ).view(1)
             ssim_vals[fname][slice_num] = torch.tensor(
                 evaluate.ssim(target, output, maxval=maxval)
-            )
-            psnr_vals[fname][slice_num] = torch.tensor(evaluate.psnr(target, output))
+            ).view(1)
+            psnr_vals[fname][slice_num] = torch.tensor(
+                evaluate.psnr(target, output)
+            ).view(1)
 
         return {
             "val_loss": val_logs["val_loss"],
@@ -192,15 +202,18 @@ class MriModule(pl.LightningModule):
     def test_epoch_end(self, test_logs):
         outputs = defaultdict(dict)
 
+        # use dicts for aggregation to handle duplicate slices in ddp mode
         for log in test_logs:
             for i, (fname, slice_num) in enumerate(zip(log["fname"], log["slice"])):
                 outputs[fname][int(slice_num.cpu())] = log["output"][i]
 
+        # stack all the slices for each file
         for fname in outputs:
             outputs[fname] = np.stack(
                 [out for _, out in sorted(outputs[fname].items())]
             )
 
+        # pull the default_root_dir if we have a trainer, otherwise save to cwd
         if hasattr(self, "trainer"):
             save_path = pathlib.Path(self.trainer.default_root_dir) / "reconstructions"
         else:

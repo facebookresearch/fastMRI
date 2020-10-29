@@ -15,9 +15,13 @@ jobs:
           cache-version: v2
       - run:
           command: |
+            black --version
+            black experimental fastmri tests --check
             mypy --version
             mypy fastmri
-          name: Check Typing
+            flake8 --version
+            flake8 experimental fastmri tests
+          name: Check Formatting and Lint
       - run:
           name: Install fastMRI
           command: |

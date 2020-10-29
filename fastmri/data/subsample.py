@@ -46,7 +46,7 @@ class MaskFunc:
                 length as center_fractions. If multiple values are provided,
                 then one of these is chosen uniformly each time.
         """
-        if len(center_fractions) != len(accelerations):
+        if not len(center_fractions) == len(accelerations):
             raise ValueError(
                 "Number of center fractions should match number of accelerations"
             )
@@ -153,7 +153,7 @@ class EquispacedMaskFunc(MaskFunc):
     Note that this function may not give equispaced samples (documented in
     https://github.com/facebookresearch/fastMRI/issues/54), which will require
     modifications to standard GRAPPA approaches. Nonetheless, this aspect of
-    the function has been preserved to match the public multicoil data. 
+    the function has been preserved to match the public multicoil data.
     """
 
     def __call__(
@@ -203,7 +203,9 @@ class EquispacedMaskFunc(MaskFunc):
 
 
 def create_mask_for_mask_type(
-    mask_type_str: str, center_fractions: Sequence[float], accelerations: Sequence[int],
+    mask_type_str: str,
+    center_fractions: Sequence[float],
+    accelerations: Sequence[int],
 ) -> MaskFunc:
     """
     Creates a mask of the specified type.

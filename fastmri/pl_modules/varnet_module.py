@@ -18,6 +18,17 @@ from .mri_module import MriModule
 class VarNetModule(MriModule):
     """
     VarNet training module.
+
+    This can be used to train variational networks from the paper:
+
+    A. Sriram et al. End-to-end variational networks for accelerated MRI
+    reconstruction. In International Conference on Medical Image Computing and
+    Computer-Assisted Intervention, 2020.
+
+    which was inspired by the earlier paper:
+
+    K. Hammernik et al. Learning a variational network for reconstruction of
+    accelerated MRI data. Magnetic Resonance inMedicine, 79(6):3055–3071, 2018.
     """
 
     def __init__(
@@ -144,7 +155,10 @@ class VarNetModule(MriModule):
 
         # network params
         parser.add_argument(
-            "--num_cascades", default=12, type=int, help="Number of VarNet cascades",
+            "--num_cascades",
+            default=12,
+            type=int,
+            help="Number of VarNet cascades",
         )
         parser.add_argument(
             "--pools",

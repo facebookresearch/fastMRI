@@ -25,9 +25,8 @@ class FastMriDataModule(pl.LightningDataModule):
     Note that subsampling mask and transform configurations are expected to be
     done by the main client training scripts and passed into this data module.
 
-    For training with ddp this module will create data loaders after ddp
-    processes have launched. This correctly donfigures distributed sampling
-    ranks.
+    For training with ddp be sure to set distributed_sampler=True to make sure
+    that volumes are dispatched to the same GPU for the validation loop.
     """
 
     def __init__(
@@ -98,8 +97,9 @@ class FastMriDataModule(pl.LightningDataModule):
             is_train = False
             sample_rate = 1.0
 
+        # if desired, combine train and val together for the train split
         dataset: Union[SliceDataset, CombinedSliceDataset]
-        if data_partition == "train" and self.combine_test_val:
+        if is_train and self.combine_test_val:
             data_paths = [
                 self.data_path / f"{self.challenge}_train",
                 self.data_path / f"{self.challenge}_val",
@@ -140,7 +140,6 @@ class FastMriDataModule(pl.LightningDataModule):
             dataset=dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
-            pin_memory=False,
             sampler=sampler,
         )
 

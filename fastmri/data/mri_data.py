@@ -29,7 +29,7 @@ def et_query(
     ElementTree query function.
 
     This can be used to query an xml document via ElementTree. It uses qlist
-    for nexted queries.
+    for nested queries.
 
     Args:
         root: Root of the xml to search through.
@@ -106,8 +106,8 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         roots: Sequence[Path],
-        transforms: Sequence[Optional[Callable]],
         challenges: Sequence[str],
+        transforms: Optional[Sequence[Optional[Callable]]] = None,
         sample_rates: Optional[Sequence[float]] = None,
         use_dataset_cache: bool = False,
         dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
@@ -116,14 +116,15 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
         """
         Args:
             roots: Paths to the datasets.
-            transforms: A callable object that preprocesses the raw data into
-                appropriate form. The transform function should take 'kspace',
-                'target', 'attributes', 'filename', and 'slice' as inputs.
-                'target' may be null for test data.
             challenges: "singlecoil" or "multicoil" depending on which
                 challenge to use.
-            sample_rates: Optional; A float between 0 and 1. This controls
-                what fraction of the volumes should be loaded.
+            transforms: Optional; A sequence of callable objects that
+                preprocesses the raw data into appropriate form. The transform
+                function should take 'kspace', 'target', 'attributes',
+                'filename', and 'slice' as inputs. 'target' may be null for
+                test data.
+            sample_rates: A float between 0 and 1. This controls what fraction
+                of the volumes should be loaded.
             use_dataset_cache: Whether to cache dataset metadata. This is very
                 useful for large datasets like the brain data.
             dataset_cache_file: Optional; A file in which to cache dataset
@@ -131,11 +132,14 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
             num_cols: Optional; If provided, only slices with the desired
                 number of columns will be considered.
         """
-        assert len(roots) == len(transforms) == len(challenges)
-        if sample_rates is not None:
-            assert len(sample_rates) == len(roots)
-        else:
-            sample_rates = [1] * len(roots)
+        if transforms is None:
+            transforms = [None] * len(roots)
+        if sample_rates is None:
+            sample_rates = [1.0] * len(roots)
+        if not (len(roots) == len(transforms) == len(challenges) == len(sample_rates)):
+            raise ValueError(
+                "Lengths of roots, transforms, challenges, sample_rates do not match"
+            )
 
         self.datasets = []
         self.examples: List[Tuple[Path, int, Dict[str, object]]] = []
@@ -155,11 +159,7 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
             self.examples = self.examples + self.datasets[-1].examples
 
     def __len__(self):
-        length = 0
-        for dataset in self.datasets:
-            length = length + len(dataset)
-
-        return length
+        return sum(len(dataset) for dataset in self.datasets)
 
     def __getitem__(self, i):
         for dataset in self.datasets:
@@ -193,8 +193,8 @@ class SliceDataset(torch.utils.data.Dataset):
                 data into appropriate form. The transform function should take
                 'kspace', 'target', 'attributes', 'filename', and 'slice' as
                 inputs. 'target' may be null for test data.
-            sample_rate: Optional; A float between 0 and 1. This controls what
-                fraction of the volumes should be loaded. Defaults to 1.0.
+            sample_rate: A float between 0 and 1. This controls what fraction
+                of the volumes should be loaded.
             use_dataset_cache: Whether to cache dataset metadata. This is very
                 useful for large datasets like the brain data.
             dataset_cache_file: Optional; A file in which to cache dataset
@@ -213,12 +213,15 @@ class SliceDataset(torch.utils.data.Dataset):
         )
         self.examples = []
 
+        # load dataset cache if we have and user wants to use it
         if self.dataset_cache_file.exists() and use_dataset_cache:
             with open(self.dataset_cache_file, "rb") as f:
                 dataset_cache = pickle.load(f)
         else:
             dataset_cache = {}
 
+        # check if our dataset is in the cache
+        # if there, use that metadata, if not, then regenerate the metadata
         if dataset_cache.get(root) is None or not use_dataset_cache:
             files = list(Path(root).iterdir())
             for fname in sorted(files):
@@ -237,6 +240,7 @@ class SliceDataset(torch.utils.data.Dataset):
             logging.info(f"Using dataset cache from {self.dataset_cache_file}.")
             self.examples = dataset_cache[root]
 
+        # subsample if desired
         if sample_rate < 1:
             random.shuffle(self.examples)
             num_examples = round(len(self.examples) * sample_rate)

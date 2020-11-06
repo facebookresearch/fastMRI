@@ -36,7 +36,7 @@ class FastMriDataModule(pl.LightningDataModule):
         train_transform: Callable,
         val_transform: Callable,
         test_transform: Callable,
-        combine_test_val: bool = False,
+        combine_train_val: bool = False,
         test_split: str = "test",
         test_path: Optional[Path] = None,
         sample_rate: float = 1.0,
@@ -54,7 +54,7 @@ class FastMriDataModule(pl.LightningDataModule):
             train_transform: A transform object for the training split.
             val_transform: A transform object for the validation split.
             test_transform: A transform object for the test split.
-            combine_test_val: Whether to combine test and val splits into one
+            combine_train_val: Whether to combine train and val splits into one
                 large train dataset. Use this for leaderboard submission.
             test_split: Name of test split from ("test", "challenge").
             test_path: An optional test path. Passing this overwrites data_path
@@ -75,7 +75,7 @@ class FastMriDataModule(pl.LightningDataModule):
         self.train_transform = train_transform
         self.val_transform = val_transform
         self.test_transform = test_transform
-        self.combine_test_val = combine_test_val
+        self.combine_train_val = combine_train_val
         self.test_split = test_split
         self.test_path = test_path
         self.sample_rate = sample_rate
@@ -99,7 +99,7 @@ class FastMriDataModule(pl.LightningDataModule):
 
         # if desired, combine train and val together for the train split
         dataset: Union[SliceDataset, CombinedSliceDataset]
-        if is_train and self.combine_test_val:
+        if is_train and self.combine_train_val:
             data_paths = [
                 self.data_path / f"{self.challenge}_train",
                 self.data_path / f"{self.challenge}_val",
@@ -235,6 +235,12 @@ class FastMriDataModule(pl.LightningDataModule):
             default=True,
             type=bool,
             help="Whether to cache dataset metadata in a pkl file",
+        )
+        parser.add_argument(
+            "--combine_train_val",
+            default=False,
+            type=bool,
+            help="Whether to combine train and val splits for training",
         )
 
         # data loader arguments

@@ -131,7 +131,6 @@ def build_args():
         challenge="singlecoil",  # which challenge
         batch_size=batch_size,  # number of samples per batch
         test_path=None,  # path for test split, overwrites data_path
-        combine_test_val=True,  # combine test and val into one training set
     )
 
     # module config

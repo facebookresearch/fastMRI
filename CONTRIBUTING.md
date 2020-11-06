@@ -35,19 +35,19 @@ outlined on that page and do not file a public issue.
 
 Linters and formatters we use include `black`, `flake8`, and `mypy`. Please include
 type annotations in your code where reasonable. We only run `mypy` on the `fastmri`
-directory. The `experimental`, `fastmri`, and `tests` directories are checked with both
-`black` and `flake8`.
+directory. The `fastmri_examples`, `fastmri`, and `tests` directories are checked with
+both `black` and `flake8`.
 
-Configurations for the linters are in the root directory, `.flake8` for `flake8` and 
+Configurations for the linters are in the root directory, `.flake8` for `flake8` and
 `mypy.ini` for `mypy`. We use default configurations for `black`.
 
 If all of the following commands pass without modifications or failures, your code
 should be ready for CircleCI:
 
 ```bash
-black experimental fastmri tests
+black fastmri_examples fastmri tests
 mypy fastmri
-flake8 experimental fastmri tests
+flake8 fastmri_examples fastmri tests
 ```
 
 ## License

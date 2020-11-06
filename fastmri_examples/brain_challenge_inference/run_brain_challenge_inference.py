@@ -20,28 +20,13 @@ sys.path.append("../../")
 
 import fastmri
 import fastmri.data.transforms as T
-from experimental.varnet.varnet_module import DataTransform
+from fastmri_examples.varnet.varnet_module import DataTransform
 from fastmri.data import SliceDataset
 from fastmri.models import VarNet
 
 
-def add_ge_oversampling(masked_kspace):
-    # call all of these "masked_kspace" to preserve memory
-    readout_len = masked_kspace.shape[-3]
-    pad_size = (0, 0, 0, 0, readout_len // 2, readout_len // 2)
-    masked_kspace = fastmri.ifft2c(masked_kspace)
-    masked_kspace = F.pad(masked_kspace, pad_size)
-    masked_kspace = fastmri.fft2c(masked_kspace)
-
-    return masked_kspace
-
-
 def run_model(masked_kspace, mask, varnet, fname, device):
     masked_kspace = masked_kspace.to(device)
-    # simulate oversampling for GE data
-    if "_GE_" in fname:
-        masked_kspace = add_ge_oversampling(masked_kspace)
-
     varnet = varnet.to(device)
     output = varnet(masked_kspace, mask.to(device)).to(torch.device("cpu"))
 

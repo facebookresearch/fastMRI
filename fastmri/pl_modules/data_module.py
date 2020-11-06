@@ -92,7 +92,7 @@ class FastMriDataModule(pl.LightningDataModule):
     ) -> torch.utils.data.DataLoader:
         if data_partition == "train":
             is_train = True
-            sample_rate = sample_rate or self.sample_rate
+            sample_rate = self.sample_rate if sample_rate is None else sample_rate
         else:
             is_train = False
             sample_rate = 1.0
@@ -144,6 +144,36 @@ class FastMriDataModule(pl.LightningDataModule):
         )
 
         return dataloader
+
+    def prepare_data(self):
+        # call dataset for each split one time to make sure the cache is set up on the
+        # rank 0 ddp process. if not using cache, don't do this
+        if self.use_dataset_cache_file:
+            if self.test_path is not None:
+                test_path = self.test_path
+            else:
+                test_path = self.data_path / f"{self.challenge}_test"
+            data_paths = [
+                self.data_path / f"{self.challenge}_train",
+                self.data_path / f"{self.challenge}_val",
+                test_path,
+            ]
+            data_transforms = [
+                self.train_transform,
+                self.val_transform,
+                self.test_transform,
+            ]
+            for i, (data_path, data_transform) in enumerate(
+                zip(data_paths, data_transforms)
+            ):
+                sample_rate = self.sample_rate if i == 0 else 1.0
+                _ = SliceDataset(
+                    root=data_path,
+                    transform=data_transform,
+                    sample_rate=sample_rate,
+                    challenge=self.challenge,
+                    use_dataset_cache=self.use_dataset_cache_file,
+                )
 
     def train_dataloader(self):
         return self._create_data_loader(self.train_transform, data_partition="train")

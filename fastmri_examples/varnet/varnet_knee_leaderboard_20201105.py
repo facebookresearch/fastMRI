@@ -29,7 +29,7 @@ def cli_main(args):
     # use random masks for train transform, fixed masks for val transform
     train_transform = VarNetDataTransform(mask_func=mask, use_seed=False)
     val_transform = VarNetDataTransform(mask_func=mask)
-    test_transform = VarNetDataTransform(mask_func=mask)
+    test_transform = VarNetDataTransform()
     # ptl data module - this handles data loaders
     data_module = FastMriDataModule(
         data_path=args.data_path,
@@ -42,7 +42,7 @@ def cli_main(args):
         sample_rate=args.sample_rate,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
-        distributed_sampler=(args.accelerator in ("ddp", "ddp_cpu")),
+        distributed_sampler=(args.accelerator == "ddp"),
     )
 
     # ------------
@@ -82,12 +82,14 @@ def build_args():
     # basic args
     path_config = pathlib.Path("../../fastmri_dirs.yaml")
     backend = "ddp"
-    num_gpus = 2 if backend == "ddp" else 1
+    num_gpus = 32
     batch_size = 1
 
     # set defaults based on optional directory config
     data_path = fetch_dir("knee_path", path_config)
-    default_root_dir = fetch_dir("log_path", path_config) / "varnet" / "varnet_demo"
+    default_root_dir = (
+        fetch_dir("log_path", path_config) / "varnet" / "knee_leaderboard"
+    )
 
     # client arguments
     parser.add_argument(
@@ -109,14 +111,14 @@ def build_args():
     parser.add_argument(
         "--center_fractions",
         nargs="+",
-        default=[0.08],
+        default=[0.08, 0.04],
         type=float,
         help="Number of center lines to use in mask",
     )
     parser.add_argument(
         "--accelerations",
         nargs="+",
-        default=[4],
+        default=[4, 8],
         type=int,
         help="Acceleration rates to use for masks",
     )
@@ -125,21 +127,22 @@ def build_args():
     parser = FastMriDataModule.add_data_specific_args(parser)
     parser.set_defaults(
         data_path=data_path,  # path to fastMRI data
-        mask_type="equispaced",  # VarNet uses equispaced mask
+        mask_type="random",  # VarNet uses equispaced mask
         challenge="multicoil",  # only multicoil implemented for VarNet
         batch_size=batch_size,  # number of samples per batch
         test_path=None,  # path for test split, overwrites data_path
+        combine_test_val=True,  # combine test and val into one training set
     )
 
     # module config
     parser = VarNetModule.add_model_specific_args(parser)
     parser.set_defaults(
-        num_cascades=8,  # number of unrolled iterations
+        num_cascades=12,  # number of unrolled iterations
         pools=4,  # number of pooling layers for U-Net
         chans=18,  # number of top-level channels for U-Net
         sens_pools=4,  # number of pooling layers for sense est. U-Net
         sens_chans=8,  # number of top-level channels for sense est. U-Net
-        lr=0.001,  # Adam learning rate
+        lr=0.0003,  # Adam learning rate
         lr_step_size=40,  # epoch at which to decrease learning rate
         lr_gamma=0.1,  # extent to which to decrease learning rate
         weight_decay=0.0,  # weight regularization strength
@@ -166,10 +169,7 @@ def build_args():
 
     args.checkpoint_callback = pl.callbacks.ModelCheckpoint(
         filepath=args.default_root_dir / "checkpoints",
-        save_top_k=True,
         verbose=True,
-        monitor="val_loss",
-        mode="min",
         prefix="",
     )
 

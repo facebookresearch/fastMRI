@@ -90,7 +90,7 @@ class Unet(nn.Module):
             downsample_layer = stack.pop()
             output = transpose_conv(output)
 
-            # reflect pad on the right/botton if needed to handle odd input dimensions.
+            # reflect pad on the right/botton if needed to handle odd input dimensions
             padding = [0, 0, 0, 0]
             if output.shape[-1] != downsample_layer.shape[-1]:
                 padding[1] = 1  # padding right

@@ -195,7 +195,7 @@ class MriModule(pl.LightningModule):
             torch.tensor(len(losses), dtype=torch.float)
         )
 
-        self.log("val_loss", val_loss / tot_slice_examples, prog_bar=True)
+        self.log("validation_loss", val_loss / tot_slice_examples, prog_bar=True)
         for metric, value in metrics.items():
             self.log(f"val_metrics/{metric}", value / tot_examples)
 

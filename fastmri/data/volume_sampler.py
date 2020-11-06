@@ -5,10 +5,9 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import math
+from pathlib import Path
 from typing import List, Optional, Union
 
-import numpy as np
 import torch
 import torch.distributed as dist
 from fastmri.data.mri_data import CombinedSliceDataset, SliceDataset
@@ -62,30 +61,30 @@ class VolumeSampler(Sampler):
         self.shuffle = shuffle
         self.seed = seed
 
-        self.num_samples = int(math.ceil(len(self.dataset) * 1.0 / self.num_replicas))
-        self.total_size = self.num_samples * self.num_replicas
-
         # get all file names and split them based on number of processes
-        self.all_volume_names = np.array(
-            sorted([example[0] for example in self.dataset.examples])
-        )
-        self.all_volumes_split = np.array_split(
-            self.all_volume_names, self.num_replicas
-        )
+        self.all_volume_names = sorted(example[0] for example in self.dataset.examples)
+        self.all_volumes_split: List[List[Path]] = []
+        for rank in range(self.num_replicas):
+            self.all_volumes_split.append(
+                [
+                    self.all_volume_names[i]
+                    for i in range(rank, len(self.all_volume_names), self.num_replicas)
+                ]
+            )
 
         # get slice indices for each file name
-        indices: List[List[int]] = [[] for _ in range(self.num_replicas)]
-
+        rank_indices: List[List[int]] = [[]] * self.num_replicas
         for i, example in enumerate(self.dataset.examples):
             vname = example[0]
             for rank in range(self.num_replicas):
                 if vname in self.all_volumes_split[rank]:
-                    indices[rank].append(i)
+                    rank_indices[rank].append(i)
+                    break
 
         # need to send equal number of samples to each process - take the max
-        self.num_samples = max([len(len_ind) for len_ind in indices])
+        self.num_samples = max([len(indices) for indices in rank_indices])
         self.total_size = self.num_samples * self.num_replicas
-        self.indices = indices[self.rank]
+        self.indices = rank_indices[self.rank]
 
     def __iter__(self):
         if self.shuffle:
@@ -93,7 +92,7 @@ class VolumeSampler(Sampler):
             g = torch.Generator()
             g.manual_seed(self.seed + self.epoch)
             ordering = torch.randperm(len(self.indices), generator=g).tolist()
-            indices = list(np.array(self.indices)[ordering])
+            indices = [self.indices[i] for i in ordering]
         else:
             indices = self.indices
 

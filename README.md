@@ -66,19 +66,19 @@ pip install -e .
 
 ## Directory Structure & Usage
 
-Since August 2020, the repository has been refactored to operate as a package centered around the `fastmri` module, while configurations and scripts for reproducibility are now hosted in `experimental`. Other folders are in the process of being adapted to the new structure and then deprecated.
+Since August 2020, the repository has been refactored to operate as a package centered around the `fastmri` module, while configurations and scripts for reproducibility are now hosted in `fastmri_examples`. Other folders are in the process of being adapted to the new structure and then deprecated.
 
 `fastmri`: Contains a number of basic tools for complex number math, coil combinations, etc.
 
 * `fastmri/data`: Contains data utility functions from original `data` folder that can be used to create sampling masks and submission files.
 * `fastmri/models`: Contains baseline models, including the U-Net and the End-to-end Variational Network.
 
-`experimental`: Folders intended to aid reproducibility of baselines and papers.
+`fastmri_examples`: Folders intended to aid reproducibility of baselines and papers.
 
-* `experimental/zero_filled`: Examples for saving images for leaderboard submission, zero-filled baselines from [fastMRI: An open dataset and benchmarks for accelerated MRI (Zbontar, J. et al., 2018)](https://arxiv.org/abs/1811.08839).
-* `experimental/cs`: Compressed sensing baselines from [fastMRI: An open dataset and benchmarks for accelerated MRI (Zbontar, J. et al., 2018)](https://arxiv.org/abs/1811.08839).
-* `experimental/unet`: U-Net baselines from [fastMRI: An open dataset and benchmarks for accelerated MRI (Zbontar, J. et al., 2018)](https://arxiv.org/abs/1811.08839).
-* `experimental/varnet`: Code for reproducing [End-to-End Variational Networks for Accelerated MRI Reconstruction (Sriram, A. et al. 2020)](https://arxiv.org/abs/2004.06688).
+* `fastmri_examples/zero_filled`: Examples for saving images for leaderboard submission, zero-filled baselines from [fastMRI: An open dataset and benchmarks for accelerated MRI (Zbontar, J. et al., 2018)](https://arxiv.org/abs/1811.08839).
+* `fastmri_examples/cs`: Compressed sensing baselines from [fastMRI: An open dataset and benchmarks for accelerated MRI (Zbontar, J. et al., 2018)](https://arxiv.org/abs/1811.08839).
+* `fastmri_examples/unet`: U-Net baselines from [fastMRI: An open dataset and benchmarks for accelerated MRI (Zbontar, J. et al., 2018)](https://arxiv.org/abs/1811.08839).
+* `fastmri_examples/varnet`: Code for reproducing [End-to-End Variational Networks for Accelerated MRI Reconstruction (Sriram, A. et al. 2020)](https://arxiv.org/abs/2004.06688).
 
 Code for other papers can be found in:
 
@@ -93,7 +93,7 @@ Run `python -m pytest tests`.
 
 The [data README](https://github.com/facebookresearch/fastMRI/tree/master/fastmri/data/README.md) has a bare-bones example for how to load data and incorporate data transforms. This [jupyter notebook](https://github.com/facebookresearch/fastMRI/blob/master/fastMRI_tutorial.ipynb) contains a simple tutorial explaining how to get started working with the data.
 
-Please look at [this U-Net demo script](https://github.com/facebookresearch/fastMRI/blob/master/experimental/unet/train_unet_demo.py) for an example of how to train a model using the PyTorch Lightning framework included with the package.
+Please look at [this U-Net demo script](https://github.com/facebookresearch/fastMRI/blob/master/fastmri_examples/unet/train_unet_demo.py) for an example of how to train a model using the PyTorch Lightning framework included with the package.
 
 ## Submitting to the Leaderboard
 

@@ -250,7 +250,7 @@ class UnetDataTransform:
     def __call__(
         self,
         kspace: np.ndarray,
-        mask: torch.Tensor,
+        mask: np.ndarray,
         target: np.ndarray,
         attrs: Dict,
         fname: str,
@@ -258,8 +258,8 @@ class UnetDataTransform:
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, str, int, float]:
         """
         Args:
-            kspace: Input k-space of shape (num_coils, rows, cols, 2) for
-                multi-coil data or (rows, cols, 2) for single coil data.
+            kspace: Input k-space of shape (num_coils, rows, cols) for
+                multi-coil data or (rows, cols) for single coil data.
             mask: Mask from the test dataset.
             target: Target image.
             attrs: Acquisition related information stored in the HDF5 object.
@@ -345,15 +345,15 @@ class VarNetDataTransform:
     def __call__(
         self,
         kspace: np.ndarray,
-        mask: torch.Tensor,
-        target: torch.Tensor,
+        mask: np.ndarray,
+        target: np.ndarray,
         attrs: Dict,
         fname: str,
         slice_num: int,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, str, int, float, torch.Tensor]:
         """
         Args:
-            kspace: Input k-space of shape (num_coils, rows, cols, 2) for
+            kspace: Input k-space of shape (num_coils, rows, cols) for
                 multi-coil data.
             mask: Mask from the test dataset.
             target: Target image.
@@ -396,6 +396,7 @@ class VarNetDataTransform:
             shape[:-3] = 1
             mask_shape = [1] * len(shape)
             mask_shape[-2] = num_cols
+            mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
             mask = mask.reshape(*mask_shape)
             mask[:, :, :acq_start] = 0
             mask[:, :, acq_end:] = 0

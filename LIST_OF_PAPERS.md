@@ -199,7 +199,7 @@ Deep learning approaches have recently shown great promise in accelerating magne
 
 *MICCAI 2020*
 
-[arXiv](https://arxiv.org/abs/2004.06688) [Code](https://github.com/facebookresearch/fastMRI/tree/master/experimental/varnet)
+[arXiv](https://arxiv.org/abs/2004.06688) [Code](https://github.com/facebookresearch/fastMRI/tree/master/fastmri_examples/varnet)
 
 The slow acquisition speed of magnetic resonance imaging (MRI) has led to the development of two complementary methods: acquiring multiple views of the anatomy simultaneously (parallel imaging) and acquiring fewer samples than necessary for traditional signal processing methods (compressed sensing). While the combination of these methods has the potential to allow much faster scan times, reconstruction from such undersampled multi-coil data has remained an open problem. In this paper, we present a new approach to this problem that extends previously proposed variational methods by learning fully end-to-end. Our method obtains new state-of-the-art results on the fastMRI dataset for both brain and knee MRIs.
 

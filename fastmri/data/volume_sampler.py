@@ -62,27 +62,31 @@ class VolumeSampler(Sampler):
         self.seed = seed
 
         # get all file names and split them based on number of processes
-        self.all_volume_names = sorted(example[0] for example in self.dataset.examples)
-        self.all_volumes_split: List[List[Path]] = []
-        for rank in range(self.num_replicas):
+        self.all_volume_names = sorted(
+            set(str(example[0]) for example in self.dataset.examples)
+        )
+        self.all_volumes_split: List[List[str]] = []
+        for rank_num in range(self.num_replicas):
             self.all_volumes_split.append(
                 [
                     self.all_volume_names[i]
-                    for i in range(rank, len(self.all_volume_names), self.num_replicas)
+                    for i in range(
+                        rank_num, len(self.all_volume_names), self.num_replicas
+                    )
                 ]
             )
 
         # get slice indices for each file name
-        rank_indices: List[List[int]] = [[]] * self.num_replicas
+        rank_indices: List[List[int]] = [[], []]
         for i, example in enumerate(self.dataset.examples):
-            vname = example[0]
-            for rank in range(self.num_replicas):
-                if vname in self.all_volumes_split[rank]:
-                    rank_indices[rank].append(i)
+            vname = str(example[0])
+            for rank_num in range(self.num_replicas):
+                if vname in self.all_volumes_split[rank_num]:
+                    rank_indices[rank_num].append(i)
                     break
 
         # need to send equal number of samples to each process - take the max
-        self.num_samples = max([len(indices) for indices in rank_indices])
+        self.num_samples = max(len(indices) for indices in rank_indices)
         self.total_size = self.num_samples * self.num_replicas
         self.indices = rank_indices[self.rank]
 

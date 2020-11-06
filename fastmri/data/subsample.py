@@ -53,7 +53,7 @@ class MaskFunc:
 
         self.center_fractions = center_fractions
         self.accelerations = accelerations
-        self.rng = np.random
+        self.rng = np.random.RandomState()
 
     def __call__(
         self, shape: Sequence[int], seed: Optional[Union[int, Tuple[int, ...]]] = None

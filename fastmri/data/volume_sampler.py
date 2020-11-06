@@ -76,7 +76,7 @@ class VolumeSampler(Sampler):
             )
 
         # get slice indices for each file name
-        rank_indices: List[List[int]] = [[], []]
+        rank_indices: List[List[int]] = [[] for _ in range(self.num_replicas)]
         for i, example in enumerate(self.dataset.examples):
             vname = str(example[0])
             for rank_num in range(self.num_replicas):

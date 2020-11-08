@@ -15,6 +15,21 @@ import torch
 from fastmri.data import CombinedSliceDataset, SliceDataset
 
 
+def worker_init_fn(worker_id):
+    """Handle random seeding for all mask_func."""
+    worker_info = torch.utils.data.get_worker_info()
+    data: Union[
+        SliceDataset, CombinedSliceDataset
+    ] = worker_info.dataset  # pylint: disable=no-member
+    seed = worker_info.seed % (2 ** 32 - 1)  # pylint: disable=no-member
+
+    if isinstance(data, CombinedSliceDataset):
+        for i, dataset in enumerate(data.datasets):
+            dataset.transform.mask_func.rng.seed((seed + i) % (2 ** 32 - 1))
+    else:
+        data.transform.mask_func.rng.seed(seed)
+
+
 class FastMriDataModule(pl.LightningDataModule):
     """
     Data module class for fastMRI data sets.
@@ -135,20 +150,6 @@ class FastMriDataModule(pl.LightningDataModule):
                 sampler = torch.utils.data.DistributedSampler(dataset)
             else:
                 sampler = fastmri.data.VolumeSampler(dataset)
-
-        # handle random seeding for all mask_func
-        def worker_init_fn(worker_id):
-            worker_info = torch.utils.data.get_worker_info()
-            data: Union[
-                SliceDataset, CombinedSliceDataset
-            ] = worker_info.dataset  # pylint: disable=no-member
-            seed = worker_info.seed % (2 ** 32 - 1)  # pylint: disable=no-member
-
-            if isinstance(data, CombinedSliceDataset):
-                for dataset in data.datasets:
-                    dataset.transform.mask_func.rng.seed(seed)
-            else:
-                data.transform.mask_func.rng.seed(seed)
 
         dataloader = torch.utils.data.DataLoader(
             dataset=dataset,

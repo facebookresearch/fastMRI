@@ -16,3 +16,4 @@ add_header.py
 fastmri_dirs.yaml
 dataset_cache.pkl
 .mypy_cache/
+lightning_logs/

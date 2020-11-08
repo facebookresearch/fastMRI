@@ -21,6 +21,7 @@ def worker_init_fn(worker_id):
     data: Union[
         SliceDataset, CombinedSliceDataset
     ] = worker_info.dataset  # pylint: disable=no-member
+    # for NumPy random seed we need it to be in this range
     seed = worker_info.seed % (2 ** 32 - 1)  # pylint: disable=no-member
 
     if isinstance(data, CombinedSliceDataset):

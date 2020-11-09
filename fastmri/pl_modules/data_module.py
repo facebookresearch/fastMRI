@@ -26,8 +26,9 @@ def worker_init_fn(worker_id):
 
     if isinstance(data, CombinedSliceDataset):
         for i, dataset in enumerate(data.datasets):
-            dataset.transform.mask_func.rng.seed((seed + i) % (2 ** 32 - 1))
-    else:
+            if dataset.transform.mask_func is not None:
+                dataset.transform.mask_func.rng.seed((seed + i) % (2 ** 32 - 1))
+    elif data.transform.mask_func is not None:
         data.transform.mask_func.rng.seed(seed)
 
 

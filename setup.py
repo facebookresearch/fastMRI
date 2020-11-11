@@ -24,7 +24,14 @@ setup(
     author_email="fastmri@fb.com",
     version="0.1",
     packages=find_packages(
-        exclude=["tests", "experimental", "data", "common", "banding_removal", "models"]
+        exclude=[
+            "tests",
+            "fastmri_examples",
+            "data",
+            "common",
+            "banding_removal",
+            "models",
+        ]
     ),
     setup_requires=["wheel"],
     install_requires=install_requires,

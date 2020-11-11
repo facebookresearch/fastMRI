@@ -231,7 +231,7 @@ class SliceDataset(torch.utils.data.Dataset):
                     (fname, slice_ind, metadata) for slice_ind in range(num_slices)
                 ]
 
-            if use_dataset_cache:
+            if dataset_cache.get(root) is None and use_dataset_cache:
                 dataset_cache[root] = self.examples
                 logging.info(f"Saving dataset cache to {self.dataset_cache_file}.")
                 with open(self.dataset_cache_file, "wb") as f:
@@ -241,7 +241,7 @@ class SliceDataset(torch.utils.data.Dataset):
             self.examples = dataset_cache[root]
 
         # subsample if desired
-        if sample_rate < 1:
+        if sample_rate < 1.0:
             random.shuffle(self.examples)
             num_examples = round(len(self.examples) * sample_rate)
             self.examples = self.examples[:num_examples]

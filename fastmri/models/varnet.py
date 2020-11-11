@@ -6,7 +6,7 @@ LICENSE file in the root directory of this source tree.
 """
 
 import math
-from typing import Tuple
+from typing import List, Tuple
 
 import fastmri
 import torch
@@ -82,12 +82,16 @@ class NormUnet(nn.Module):
 
     def pad(
         self, x: torch.Tensor
-    ) -> Tuple[torch.Tensor, Tuple[Tuple[int, int], Tuple[int, int], int, int]]:
+    ) -> Tuple[torch.Tensor, Tuple[List[int], List[int], int, int]]:
         _, _, h, w = x.shape
         w_mult = ((w - 1) | 15) + 1
         h_mult = ((h - 1) | 15) + 1
-        w_pad = (math.floor((w_mult - w) / 2), math.ceil((w_mult - w) / 2))
-        h_pad = (math.floor((h_mult - h) / 2), math.ceil((h_mult - h) / 2))
+        w_pad = [math.floor((w_mult - w) / 2), math.ceil((w_mult - w) / 2)]
+        h_pad = [math.floor((h_mult - h) / 2), math.ceil((h_mult - h) / 2)]
+        # TODO: fix this type when PyTorch fixes theirs
+        # the documentation lies - this actually takes a list
+        # https://github.com/pytorch/pytorch/blob/master/torch/nn/functional.py#L3457
+        # https://github.com/pytorch/pytorch/pull/16949
         x = F.pad(x, w_pad + h_pad)
 
         return x, (h_pad, w_pad, h_mult, w_mult)
@@ -95,8 +99,8 @@ class NormUnet(nn.Module):
     def unpad(
         self,
         x: torch.Tensor,
-        h_pad: Tuple[int, int],
-        w_pad: Tuple[int, int],
+        h_pad: List[int],
+        w_pad: List[int],
         h_mult: int,
         w_mult: int,
     ) -> torch.Tensor:

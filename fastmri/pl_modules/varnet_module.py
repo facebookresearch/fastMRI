@@ -93,7 +93,7 @@ class VarNetModule(MriModule):
         target, output = transforms.center_crop_to_smallest(target, output)
         loss = self.loss(output.unsqueeze(1), target.unsqueeze(1), data_range=max_value)
 
-        self.log("train_loss", loss.item())
+        self.log("train_loss", loss)
 
         return loss
 

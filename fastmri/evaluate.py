@@ -33,7 +33,9 @@ def psnr(gt: np.ndarray, pred: np.ndarray) -> np.ndarray:
     return peak_signal_noise_ratio(gt, pred, data_range=gt.max())
 
 
-def ssim(gt: np.ndarray, pred: np.ndarray, maxval: Optional[float]) -> np.ndarray:
+def ssim(
+    gt: np.ndarray, pred: np.ndarray, maxval: Optional[float] = None
+) -> np.ndarray:
     """Compute Structural Similarity Index Metric (SSIM)"""
     maxval = gt.max() if maxval is None else maxval
 

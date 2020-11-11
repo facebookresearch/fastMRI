@@ -17,7 +17,7 @@ from .math import (
     complex_mul,
     tensor_to_complex_np,
 )
-from .utils import save_reconstructions
+from .utils import convert_fnames_to_v2, save_reconstructions
 
 if version.parse(torch.__version__) >= version.parse("1.7.0"):
     from .fftc import fft2c_new as fft2c

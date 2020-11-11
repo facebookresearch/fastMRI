@@ -166,7 +166,7 @@ def test_unet_trainer(fastmri_mock_dataset, backend, tmp_path, monkeypatch):
         params.challenge, mask_func=mask, use_seed=False
     )
     val_transform = UnetDataTransform(params.challenge, mask_func=mask)
-    test_transform = UnetDataTransform(params.challenge, mask_func=mask)
+    test_transform = UnetDataTransform(params.challenge)
     data_module = FastMriDataModule(
         data_path=params.data_path,
         challenge=params.challenge,
@@ -216,7 +216,7 @@ def test_varnet_trainer(fastmri_mock_dataset, backend, tmp_path, monkeypatch):
     )
     train_transform = VarNetDataTransform(mask_func=mask, use_seed=False)
     val_transform = VarNetDataTransform(mask_func=mask)
-    test_transform = VarNetDataTransform(mask_func=mask)
+    test_transform = VarNetDataTransform()
     data_module = FastMriDataModule(
         data_path=params.data_path,
         challenge=params.challenge,

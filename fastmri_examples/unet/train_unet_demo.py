@@ -162,7 +162,7 @@ def build_args():
         filepath=args.default_root_dir / "checkpoints",
         save_top_k=True,
         verbose=True,
-        monitor="val_loss",
+        monitor="validation_loss",
         mode="min",
         prefix="",
     )

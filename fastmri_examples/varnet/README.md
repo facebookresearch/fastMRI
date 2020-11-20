@@ -3,7 +3,7 @@
 This directory contains a PyTorch implementation and code for running
 pretrained models for reproducing the paper:
 
-[End-to-End Variational Networks for Accelerated MRI Reconstruction ({A. Sriram*, J. Zbontar*} et al., 2020)][e2evarnet].
+[End-to-End Variational Networks for Accelerated MRI Reconstruction ({A. Sriram*, J. Zbontar*} et al., 2020)][e2evarnet]
 
 The following files
 

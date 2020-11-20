@@ -3,7 +3,11 @@
 This directory contains code for compressed sensing baselines. The baselines
 are based on the following paper:
 
-[ESPIRiT—an eigenvalue approach to autocalibrating parallel MRI: Where SENSE meets GRAPPA](https://doi.org/10.1002/mrm.24751)
+[ESPIRiT—an eigenvalue approach to autocalibrating parallel MRI: Where SENSE meets GRAPPA (M. Uecker et al., 2013)](https://doi.org/10.1002/mrm.24751)
+
+which was used as a baseline model in
+
+[fastMRI: An Open Dataset and Benchmarks for Accelerated MRI ({J. Zbontar*, F. Knoll*, A. Sriram*} et al., 2018)](https://arxiv.org/abs/1811.08839)
 
 The implementation uses the BART toolkit. To install BART, please follow the
 [installation instructions][bartlink].

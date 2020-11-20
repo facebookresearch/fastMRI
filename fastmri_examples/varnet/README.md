@@ -46,10 +46,12 @@ script is a stripped-down version of model creation, `state_dict` downloading
 and loading, and model inference. To run the script, type
 
 ```bash
-python run_pretrained_varnet_inference.py --data-path DATA_PATH --output-path OUTPUT_PATH
+python run_pretrained_varnet_inference.py --data-path DATA_PATH --output-path OUTPUT_PATH --challenge CHALLENGE
 ```
 
-And it will download the model and run on your GPU.
+where in this case CHALLENGE is `varnet_knee_mc` for the multi-coil knee
+VarNet or `varnet_brain_mc` for the multi-coil brain VarNet. The script will
+download the model and run on your GPU.
 
 ## Citing
 

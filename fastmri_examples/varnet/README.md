@@ -22,8 +22,10 @@ python train_varnet_demo.py
 You can also pass options at the command line:
 
 ```bash
-python train_unet_demo.py --challenge CHALLENGE --data_path DATA
---mask_type MASK_TYPE
+python train_unet_demo.py \
+    --challenge CHALLENGE \
+    --data_path DATA \
+    --mask_type MASK_TYPE
 ```
 
 where `CHALLENGE` is either `singlecoil` or `multicoil` and `MASK_TYPE` is
@@ -33,8 +35,12 @@ checkpoints are saved in the current working directory by default.
 To run the model on test data:
 
 ```bash
-python models/unet/train_unet.py --mode test --test_split TESTSPLIT
---challenge CHALLENGE --data-path DATA --resume_from_checkpoint MODEL
+python models/unet/train_unet.py \
+    --mode test \
+    --test_split TESTSPLIT \
+    --challenge CHALLENGE \
+    --data-path DATA \
+    --resume_from_checkpoint MODEL
 ```
 
 where `MODEL` is the path to the model checkpoint. `TESTSPLIT` should specify
@@ -51,8 +57,7 @@ script is a stripped-down version of model creation, `state_dict` downloading
 and loading, and model inference. To run the script, type
 
 ```bash
-python run_pretrained_varnet_inference.py --data-path DATA_PATH
---output-path OUTPUT_PATH --challenge CHALLENGE
+python run_pretrained_varnet_inference.py --data-path DATA_PATH --output-path OUTPUT_PATH --challenge CHALLENGE
 ```
 
 where in this case `CHALLENGE` is `varnet_knee_mc` for the multi-coil knee

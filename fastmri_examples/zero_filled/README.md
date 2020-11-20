@@ -7,8 +7,10 @@ create a submission.
 To generate the zero-filled submissions, run:
 
 ```bash
-python run_zero_filled.py --challenge CHALLENGE --data_path DATA
---out_path RECONS
+python run_zero_filled.py \
+    --challenge CHALLENGE \
+    --data_path DATA \
+    --out_path RECONS
 ```
 
 where `CHALLENGE` is either `singlecoil` or `multicoil`.

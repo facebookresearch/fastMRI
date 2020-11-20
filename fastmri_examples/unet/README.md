@@ -60,8 +60,8 @@ and loading, and model inference. To run the script, type
 
 ```bash
 python run_pretrained_unet_inference.py \
-    --data-path DATA_PATH \
-    --output-path OUTPUT_PATH \
+    --data_path DATA \
+    --output_path OUTPUTS \
     --challenge CHALLENGE
 ```
 

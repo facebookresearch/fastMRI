@@ -140,13 +140,13 @@ if __name__ == "__main__":
         help="Path to saved state_dict (will download if not provided)",
     )
     parser.add_argument(
-        "--data-path",
+        "--data_path",
         type=Path,
         required=True,
         help="Path to subsampled data",
     )
     parser.add_argument(
-        "--output-path",
+        "--output_path",
         type=Path,
         required=True,
         help="Path for saving reconstructions",

@@ -5,13 +5,13 @@ The following is a short list of fastMRI publications. Clicking on the title wil
 1. Zbontar, J., Knoll, F., Sriram, A., Muckley, M. J., Bruno, M., Defazio, A., ... & Zhang, Z. (2018). [fastMRI: An open dataset and benchmarks for accelerated MRI](#fastmri-an-open-dataset-and-benchmarks-for-accelerated-MRI). *arXiv preprint arXiv:1811.08839*.
 2. Zhang, Z., Romero, A., Muckley, M. J., Vincent, P., Yang, L., & Drozdzal, M. (2019). [Reducing uncertainty in undersampled MRI reconstruction with active acquisition](#reducing-uncertainty-in-undersampled-mri-reconstruction-with-active-acquisition). In *Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition* (pp. 2049-2058).
 3. Defazio, A. (2019). [Offset Sampling Improves Deep Learning based Accelerated MRI Reconstructions by Exploiting Symmetry](#offset-sampling-improves-deep-learning-based-accelerated-mri-reconstructions-by-exploiting-symmetry). *arXiv preprint, arXiv:1912.01101*.
-4. Defazio, A., Murrell, T., & Recht, M. P. (2020). [MRI Banding Removal via Adversarial Training](#mri-banding-removal-via-adversarial-training). *arXiv preprint arXiv:2001.08699*.
-5. Knoll, F., Zbontar, J., Sriram, A., Muckley, M. J., Bruno, M., Defazio, A., ... & Zhang, Z. (2020). [fastMRI: A Publicly Available Raw k-Space and DICOM Dataset of Knee Images for Accelerated MR Image Reconstruction Using Machine Learning](#fastmri-a-publicly-available-raw-k-space-and-dicom-dataset-of-knee-images-for-accelerated-mr-image-reconstruction-using-machine-learning). *Radiology: Artificial Intelligence*, 2(1), e190007.
-6. Knoll, F., Murrell, T., Sriram, A., Yakubova, N., Zbontar, J., Rabbat, M., ... & Recht, M. P. (2020). [Advancing machine learning for MR image reconstruction with an open competition: Overview of the 2019 fastMRI challenge](#advancing-machine-learning-for-mr-image-reconstruction-with-an-open-competition-overview-of-the-2019-fastmri-challenge). *Magnetic Resonance in Medicine*.
-7. Sriram, A., Zbontar, J., Murrell, T., Zitnick, C. L., Defazio, A., & Sodickson, D. K. (2020). [GrappaNet: Combining parallel imaging with deep learning for multi-coil MRI reconstruction](#grappanet-combining-parallel-imaging-with-deep-learning-for-multi-coil-mri-reconstruction). In *Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition* (pp. 14315-14322).
-8. Recht, M. P., Zbontar, J., Sodickson, D. K., Knoll, F., Yakubova, N., Sriram, A., ... & Kline, M. (2020). [Using Deep Learning to Accelerate Knee MRI at 3T: Results of an Interchangeability Study](#using-deep-learning-to-accelerate-knee-mri-at-3t-results-of-an-interchangeability-study). *American Journal of Roentgenology*.
-9. Pineda, L., Basu, S., Romero, A., Calandra, R., & Drozdzal, M. (2020). [Active MR k-space Sampling with Reinforcement Learning](#active-mr-k-space-sampling-with-reinforcement-learning). In *International Conference on Medical Image Computing and Computer-Assisted Intervention*.
-10. Sriram, A., Zbontar, J., Murrell, T., Defazio, A., Zitnick, C. L., Yakubova, N., ... & Johnson, P. (2020). [End-to-End Variational Networks for Accelerated MRI Reconstruction](#end-to-end-variational-networks-for-accelerated-mri-reconstruction). In *International Conference on Medical Image Computing and Computer-Assisted Intervention*.
+4. Knoll, F., Zbontar, J., Sriram, A., Muckley, M. J., Bruno, M., Defazio, A., ... & Zhang, Z. (2020). [fastMRI: A Publicly Available Raw k-Space and DICOM Dataset of Knee Images for Accelerated MR Image Reconstruction Using Machine Learning](#fastmri-a-publicly-available-raw-k-space-and-dicom-dataset-of-knee-images-for-accelerated-mr-image-reconstruction-using-machine-learning). *Radiology: Artificial Intelligence*, 2(1), e190007.
+5. Knoll, F., Murrell, T., Sriram, A., Yakubova, N., Zbontar, J., Rabbat, M., ... & Recht, M. P. (2020). [Advancing machine learning for MR image reconstruction with an open competition: Overview of the 2019 fastMRI challenge](#advancing-machine-learning-for-mr-image-reconstruction-with-an-open-competition-overview-of-the-2019-fastmri-challenge). *Magnetic Resonance in Medicine*.
+6. Sriram, A., Zbontar, J., Murrell, T., Zitnick, C. L., Defazio, A., & Sodickson, D. K. (2020). [GrappaNet: Combining parallel imaging with deep learning for multi-coil MRI reconstruction](#grappanet-combining-parallel-imaging-with-deep-learning-for-multi-coil-mri-reconstruction). In *Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition* (pp. 14315-14322).
+7. Recht, M. P., Zbontar, J., Sodickson, D. K., Knoll, F., Yakubova, N., Sriram, A., ... & Kline, M. (2020). [Using Deep Learning to Accelerate Knee MRI at 3T: Results of an Interchangeability Study](#using-deep-learning-to-accelerate-knee-mri-at-3t-results-of-an-interchangeability-study). *American Journal of Roentgenology*.
+8. Pineda, L., Basu, S., Romero, A., Calandra, R., & Drozdzal, M. (2020). [Active MR k-space Sampling with Reinforcement Learning](#active-mr-k-space-sampling-with-reinforcement-learning). In *International Conference on Medical Image Computing and Computer-Assisted Intervention*.
+9. Sriram, A., Zbontar, J., Murrell, T., Defazio, A., Zitnick, C. L., Yakubova, N., ... & Johnson, P. (2020). [End-to-End Variational Networks for Accelerated MRI Reconstruction](#end-to-end-variational-networks-for-accelerated-mri-reconstruction). In *International Conference on Medical Image Computing and Computer-Assisted Intervention*.
+10. Defazio, A., Murrell, T., & Recht, M. P. (2020). [MRI Banding Removal via Adversarial Training](#mri-banding-removal-via-adversarial-training). In *Advances in Neural Information Processing Systems*.
 
 ## fastMRI: An open dataset and benchmarks for accelerated MRI
 
@@ -62,21 +62,6 @@ Deep learning approaches to accelerated MRI take a matrix of sampled Fourier-spa
     eprint={1912.01101},
     archivePrefix={arXiv},
     primaryClass={eess.IV}
-}
-```
-
-## MRI Banding Removal via Adversarial Training
-
-[arXiv](https://arxiv.org/abs/2001.08699) [Code](https://github.com/facebookresearch/fastMRI/tree/master/banding_removal)
-
-MRI images reconstructed from sub-sampled Cartesian data using deep learning techniques often show a characteristic banding (sometimes described as streaking), which is particularly strong in low signal-to-noise regions of the reconstructed image. In this work, we propose the use of an adversarial loss that penalizes banding structures without requiring any human annotation. Our technique greatly reduces the appearance of banding, without requiring any additional computation or post-processing at reconstruction time. We report the results of a blind comparison against a strong baseline by a group of expert evaluators (board-certified radiologists), where our approach is ranked superior at banding removal with no statistically significant loss of detail.
-
-```BibTeX
-@misc{defazio2020mri,
-    title={MRI Banding Removal via Adversarial Training},
-    author={Aaron Defazio and Tullie Murrell and Michael P. Recht}, year={2020},
-    eprint={2001.08699},
-    archivePrefix={arXiv}, primaryClass={eess.IV}
 }
 ```
 
@@ -180,7 +165,7 @@ An optimized DL model allowed for acceleration of knee images which performed in
 
 *MICCAI 2020*
 
-[arXiv](https://arxiv.org/abs/2007.10469) [Code](https://github.com/facebookresearch/active-mri-acquisition)
+[arXiv](https://arxiv.org/abs/2007.10469) [publication](https://doi.org/10.1007/978-3-030-59713-9_3) [Code](https://github.com/facebookresearch/active-mri-acquisition)
 
 Deep learning approaches have recently shown great promise in accelerating magnetic resonance image (MRI) acquisition. The majority of existing work have focused on designing better reconstruction models given a pre-determined acquisition trajectory, ignoring the question of trajectory optimization. In this paper, we focus on learning acquisition trajectories given a fixed image reconstruction model. We formulate the problem as a sequential decision process and propose the use of reinforcement learning to solve it. Experiments on a large scale public MRI dataset of knees show that our proposed models significantly outperform the state-of-the-art in active MRI acquisition, over a large range of acceleration factors.
 
@@ -199,7 +184,7 @@ Deep learning approaches have recently shown great promise in accelerating magne
 
 *MICCAI 2020*
 
-[arXiv](https://arxiv.org/abs/2004.06688) [Code](https://github.com/facebookresearch/fastMRI/tree/master/fastmri_examples/varnet)
+[arXiv](https://arxiv.org/abs/2004.06688) [publication](https://doi.org/10.1007/978-3-030-59713-9_7) [Code](https://github.com/facebookresearch/fastMRI/tree/master/fastmri_examples/varnet)
 
 The slow acquisition speed of magnetic resonance imaging (MRI) has led to the development of two complementary methods: acquiring multiple views of the anatomy simultaneously (parallel imaging) and acquiring fewer samples than necessary for traditional signal processing methods (compressed sensing). While the combination of these methods has the potential to allow much faster scan times, reconstruction from such undersampled multi-coil data has remained an open problem. In this paper, we present a new approach to this problem that extends previously proposed variational methods by learning fully end-to-end. Our method obtains new state-of-the-art results on the fastMRI dataset for both brain and knee MRIs.
 
@@ -211,5 +196,20 @@ The slow acquisition speed of magnetic resonance imaging (MRI) has led to the de
     eprint={2004.06688},
     archivePrefix={arXiv},
     primaryClass={eess.IV}
+}
+```
+
+## MRI Banding Removal via Adversarial Training
+
+[arXiv](https://arxiv.org/abs/2001.08699) [publication](https://papers.nips.cc/paper/2020/hash/567b8f5f423af15818a068235807edc0-Abstract.html) [Code](https://github.com/facebookresearch/fastMRI/tree/master/banding_removal)
+
+MRI images reconstructed from sub-sampled Cartesian data using deep learning techniques often show a characteristic banding (sometimes described as streaking), which is particularly strong in low signal-to-noise regions of the reconstructed image. In this work, we propose the use of an adversarial loss that penalizes banding structures without requiring any human annotation. Our technique greatly reduces the appearance of banding, without requiring any additional computation or post-processing at reconstruction time. We report the results of a blind comparison against a strong baseline by a group of expert evaluators (board-certified radiologists), where our approach is ranked superior at banding removal with no statistically significant loss of detail.
+
+```BibTeX
+@misc{defazio2020mri,
+    title={MRI Banding Removal via Adversarial Training},
+    author={Aaron Defazio and Tullie Murrell and Michael P. Recht}, year={2020},
+    eprint={2001.08699},
+    archivePrefix={arXiv}, primaryClass={eess.IV}
 }
 ```

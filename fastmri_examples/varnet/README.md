@@ -105,4 +105,4 @@ due to the number of areas in the code base that would have go be tweaked and
 tested to get them working.
 
 [leadlink]: https://fastmri.org/leaderboards/
-[e2evarnet]: https://arxiv.org/abs/2004.06688
+[e2evarnet]: https://doi.org/10.1007/978-3-030-59713-9_7

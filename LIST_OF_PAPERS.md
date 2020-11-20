@@ -155,7 +155,7 @@ An optimized DL model allowed for acceleration of knee images which performed in
 ```BibTeX
 @article{fastmri2020,
     Author = {Recht, Michael P. and Zbontar, Jure and Sodickson, Daniel K. and Knoll, Florian and Yakubova, Nafissa and Sriram, Anuroop and Murrell, Tullie and Defazio, Aaron and Rabbat, Michael and Rybak, Leon and Kline, Mitchell and Ciavarra, Gina and Alaia, Erin F. and Samim, Mohammad and Walter, William R. and Lin, Dana and Lui, Yvonne W. and Muckley, Matthew and Huang, Zhengnan and Johnson, Patricia and Stern, Ruben and Zitnick, C. Lawrence}, Journal = {American Journal of Roentgenology}, 
-    Month = {2020/07/09}, 
+    Month = {2020/07/09},
     Title = {Using Deep Learning to Accelerate Knee MRI at 3T: Results of an Interchangeability Study}, 
     Year = {2020}
 }

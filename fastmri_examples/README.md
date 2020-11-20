@@ -5,7 +5,12 @@ follows with links to README files. We also have code for downloading
 pretrained models for the U-Net and VarNet models. See the respective READMEs
 and folders for further details.
 
-* [Zero-filled examples for saving images for leaderboard submission](zero_filled/README.md)
-* [ESPIRiT—an eigenvalue approach to autocalibrating parallel MRI: where SENSE meets GRAPPA (M. Uecker et al., 2013)](cs/README.md)
-* [U-Net: Convolutional networks for biomedical image segmentation (O. Ronneberger et al., 2015)](unet/README.md)
-* [End-to-End Variational Networks for Accelerated MRI Reconstruction ({A. Sriram*, J. Zbontar*} et al., 2020)](varnet/README.md)
+* **Baseline Models** from [fastMRI: An Open Dataset and Benchmarks for Accelerated MRI ({J. Zbontar*, F. Knoll*, A. Sriram*} et al., 2018)](https://arxiv.org/abs/1811.08839)
+
+  * [Zero-filled examples for saving images for leaderboard submission](zero_filled/README.md)
+  * [ESPIRiT—an eigenvalue approach to autocalibrating parallel MRI: where SENSE meets GRAPPA (M. Uecker et al., 2013)](cs/README.md)
+  * [U-Net: Convolutional networks for biomedical image segmentation (O. Ronneberger et al., 2015)](unet/README.md)
+
+* **fastMRI Models**
+
+  * [End-to-End Variational Networks for Accelerated MRI Reconstruction ({A. Sriram*, J. Zbontar*} et al., 2020)](varnet/README.md)

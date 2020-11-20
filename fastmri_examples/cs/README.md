@@ -17,7 +17,7 @@ export PYTHONPATH=${TOOLBOX_PATH}/python:${PYTHONPATH}
 To run the reconstruction algorithm on the validation data, run:
 
 ```bash
-python models/cs/run_bart.py \
+python run_bart.py \
     --challenge CHALLENGE \
     --data_path DATA \
     --output_path reconstructions_val \
@@ -31,7 +31,7 @@ either `random` (for knee) or `equispaced` (for brain). The outputs are saved
 in a directory called `reconstructions_val`. To evaluate the results, run:
 
 ```bash
-python common/evaluate.py \
+python fastmri/evaluate.py \
     --target-path TARGET_DATA \
     --predictions-path reconstructions_val \
     --challenge CHALLENGE
@@ -40,7 +40,7 @@ python common/evaluate.py \
 To apply the reconstruction algorithm to the test data, run:
 
 ```bash
-python models/cs/run_bart.py \
+python run_bart.py \
     --challenge CHALLENGE \
     --data_path DATA \
     --output_path reconstructions_test \

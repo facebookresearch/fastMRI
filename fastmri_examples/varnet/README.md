@@ -19,10 +19,12 @@ To start training demo the model, run:
 python train_varnet_demo.py
 ```
 
-You can also pass options at the command line:
+If you run with no arguments, the script will create a `fastmri_dirs.yaml` file
+in the root directory that you can use to store paths for your system. You can
+also pass options at the command line:
 
 ```bash
-python train_unet_demo.py \
+python train_varnet_demo.py \
     --challenge CHALLENGE \
     --data_path DATA \
     --mask_type MASK_TYPE
@@ -35,11 +37,11 @@ checkpoints are saved in the current working directory by default.
 To run the model on test data:
 
 ```bash
-python models/unet/train_unet.py \
+python train_varnet_demo.py \
     --mode test \
     --test_split TESTSPLIT \
     --challenge CHALLENGE \
-    --data-path DATA \
+    --data_path DATA \
     --resume_from_checkpoint MODEL
 ```
 

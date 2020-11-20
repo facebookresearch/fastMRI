@@ -1,7 +1,7 @@
 # U-Net Model for MRI Reconstruction
 
 This directory contains a PyTorch implementation and code for running
-pretrained models for reproducing the paper:
+pretrained models based on the paper:
 
 [U-Net: Convolutional networks for biomedical image segmentation (O. Ronneberger et al., 2015)](https://doi.org/10.1007/978-3-319-24574-4_28)
 

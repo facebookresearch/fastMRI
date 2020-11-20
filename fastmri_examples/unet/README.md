@@ -47,7 +47,7 @@ python train_unet_demo.py \
     --mode test \
     --test_split TESTSPLIT \
     --challenge CHALLENGE \
-    --data-path DATA \
+    --data_path DATA \
     --resume_from_checkpoint MODEL
 ```
 

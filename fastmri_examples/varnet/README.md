@@ -91,7 +91,7 @@ The leaderboard model was trained where the `train` split included both the
 `train` and `val` splits from the public data.
 
 There are a few differences between this implementation and the
-[paper](https://arxiv.org/abs/2004.06688).
+[paper][e2evarnet].
 
 - The paper model used a fixed number of center lines, whereas this model uses
 the `center_fractions` variable that might change depending on image size.

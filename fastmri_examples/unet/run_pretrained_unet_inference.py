@@ -30,7 +30,7 @@ MODEL_FNAMES = {
 def download_model(url, fname):
     response = requests.get(url, timeout=10, stream=True)
 
-    chunk_size = 8 * 1024 * 1024  # 8 MB chunks
+    chunk_size = 1 * 1024 * 1024  # 1 MB chunks
     total_size_in_bytes = int(response.headers.get("content-length", 0))
     progress_bar = tqdm(
         desc="Downloading state_dict",
@@ -43,6 +43,8 @@ def download_model(url, fname):
         for chunk in response.iter_content(chunk_size):
             progress_bar.update(len(chunk))
             fh.write(chunk)
+
+    progress_bar.close()
 
 
 def run_unet_model(batch, model, device):

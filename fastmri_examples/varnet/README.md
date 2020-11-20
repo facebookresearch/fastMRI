@@ -1,12 +1,15 @@
 # End-to-End Variational Networks for Accelerated MRI Reconstruction Model
 
 This directory contains a PyTorch implementation for the method described in
-[End-to-End Variational Networks for Accelerated MRI Reconstruction Model](https://arxiv.org/abs/2004.06688).
+[End-to-End Variational Networks for Accelerated MRI Reconstruction Model](e2evarnet).
 
-The files `varnet_knee_leaderboard_20201111.py` and
-`varnet_brain_leaderboard_20201111.py` contain code and hyperparameters that
-were used to train the "fastMRI Repo End-to-End VarNet" model on the
-[fastMRI leaderboards](https://fastmri.org/leaderboards/).
+The following files
+
+- `varnet_knee_leaderboard_20201111.py`
+- `varnet_brain_leaderboard_20201111.py`
+
+contain code and hyperparameters that were used to train the "fastMRI Repo
+End-to-End VarNet" model on the [fastMRI leaderboards][leadlink].
 `train_varnet_demo.py` contains a basic demo designed for lower memory
 consumption.
 
@@ -19,7 +22,8 @@ python train_varnet_demo.py
 You can also pass options at the command line:
 
 ```bash
-python train_unet_demo.py --challenge CHALLENGE --data_path DATA --mask_type MASK_TYPE
+python train_unet_demo.py --challenge CHALLENGE --data_path DATA
+--mask_type MASK_TYPE
 ```
 
 where `CHALLENGE` is either `singlecoil` or `multicoil` and `MASK_TYPE` is
@@ -29,7 +33,8 @@ checkpoints are saved in the current working directory by default.
 To run the model on test data:
 
 ```bash
-python models/unet/train_unet.py --mode test --test_split TESTSPLIT --challenge CHALLENGE --data-path DATA --resume_from_checkpoint MODEL
+python models/unet/train_unet.py --mode test --test_split TESTSPLIT
+--challenge CHALLENGE --data-path DATA --resume_from_checkpoint MODEL
 ```
 
 where `MODEL` is the path to the model checkpoint. `TESTSPLIT` should specify
@@ -46,7 +51,8 @@ script is a stripped-down version of model creation, `state_dict` downloading
 and loading, and model inference. To run the script, type
 
 ```bash
-python run_pretrained_varnet_inference.py --data-path DATA_PATH --output-path OUTPUT_PATH --challenge CHALLENGE
+python run_pretrained_varnet_inference.py --data-path DATA_PATH
+--output-path OUTPUT_PATH --challenge CHALLENGE
 ```
 
 where in this case `CHALLENGE` is `varnet_knee_mc` for the multi-coil knee
@@ -85,3 +91,6 @@ trains on both of them together.
 These differences have been left partly for backwards compatibility and partly
 due to the number of areas in the code base that would have go be tweaked and
 tested to get them working.
+
+[leadlink]: https://fastmri.org/leaderboards/
+[e2evarnet]: https://arxiv.org/abs/2004.06688

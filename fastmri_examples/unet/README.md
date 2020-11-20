@@ -50,7 +50,7 @@ and loading, and model inference. To run the script, type
 python run_pretrained_unet_inference.py --data-path DATA_PATH --output-path OUTPUT_PATH --challenge CHALLENGE
 ```
 
-where in this case CHALLENGE is `unet_knee_sc` for the single-coil knee U-Net,
+where in this case `CHALLENGE` is `unet_knee_sc` for the single-coil knee U-Net,
 `unet_knee_mc` for the multi-coil knee U-Net, or `unet_brain_mc` for the multi-
 coil brain U-Net. The script will download the model and run on your GPU.
 

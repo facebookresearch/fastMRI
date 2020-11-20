@@ -5,7 +5,7 @@ follows with links to README files. We also have code for downloading
 pretrained models for the U-Net and VarNet models. See the respective READMEs
 and folders for further details.
 
-* **Baseline Models** from [fastMRI: An Open Dataset and Benchmarks for Accelerated MRI ({J. Zbontar*, F. Knoll*, A. Sriram*} et al., 2018)](https://arxiv.org/abs/1811.08839)
+* **Baseline Models**
 
   * [Zero-filled examples for saving images for leaderboard submission](zero_filled/README.md)
   * [ESPIRiT—an eigenvalue approach to autocalibrating parallel MRI: where SENSE meets GRAPPA (M. Uecker et al., 2013)](cs/README.md)

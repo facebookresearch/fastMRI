@@ -87,7 +87,7 @@ Code for other papers can be found in:
 
 ## Testing
 
-Run `python -m pytest tests`.
+Run `pytest tests`. Be sure you've install with `pip` as outlined above to make sure that the `PYTHONPATH` is correct.
 
 ## Training a model
 

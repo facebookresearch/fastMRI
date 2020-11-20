@@ -1,7 +1,7 @@
 # End-to-End Variational Networks for Accelerated MRI Reconstruction Model
 
 This directory contains a PyTorch implementation for the method described in
-[End-to-End Variational Networks for Accelerated MRI Reconstruction Model](e2evarnet).
+[End-to-End Variational Networks for Accelerated MRI Reconstruction Model][e2evarnet].
 
 The following files
 

@@ -50,6 +50,10 @@ def run_varnet_model(batch, model, device):
 
     output = model(masked_kspace.to(device), mask.to(device)).cpu()
 
+    # detect FLAIR 203
+    if output.shape[-1] < crop_size[1]:
+        crop_size = (output.shape[-1], output.shape[-1])
+
     output = T.center_crop(output, crop_size)[0]
 
     return output, int(slice_num[0]), fname[0]

@@ -96,7 +96,7 @@ which is hosted in another repository.
 
   * [Offset Sampling Improves Deep Learning based Accelerated MRI Reconstructions by Exploiting Symmetry (A. Defazio, 2019)](banding_removal/fastmri/common/subsample.py#L126-L198)
   * [End-to-End Variational Networks for Accelerated MRI Reconstruction ({A. Sriram*, J. Zbontar*} et al., 2020)](fastmri_examples/varnet/README.md)
-  * [MRI Banding Removal via Adversarial Training (A. Defazio, et al., 2020)](banding_removal/README.md)
+  * [MRI Banding Removal via Adversarial Training (A. Defazio, et al., 2020)](banding_removal)
 
 * **Active Acquisition** (external repository)
   * [Reducing uncertainty in undersampled MRI reconstruction with active acquisition (Z. Zhang et al., 2019)](https://github.com/facebookresearch/active-mri-acquisition/tree/master/activemri/experimental/cvpr19_models)

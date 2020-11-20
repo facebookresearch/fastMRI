@@ -65,7 +65,8 @@ run most of the code in the repository.
 The repository is centered around the `fastmri` module. The following breaks
 down the basic structure:
 
-`fastmri`: Contains a number of basic tools for complex number math, coil combinations, etc.
+`fastmri`: Contains a number of basic tools for complex number math, coil
+combinations, etc.
 
 * `fastmri.data`: Contains data utility functions from original `data` folder
 that can be used to create sampling masks and submission files.
@@ -81,9 +82,9 @@ reproducibility. The baseline models were used in the arXiv paper:
 
 [fastMRI: An Open Dataset and Benchmarks for Accelerated MRI ({J. Zbontar*, F. Knoll*, A. Sriram*} et al., 2018)](https://arxiv.org/abs/1811.08839)
 
-A brief summary of implemented papers with links to READMEs and/or code follows.
-For completeness we also mention work on active acquisition, which is hosted in
-another repository.
+A brief summary of implementions based on papers with links to READMEs and/or
+code follows. For completeness we also mention work on active acquisition,
+which is hosted in another repository.
 
 * **Baseline Models**
 

@@ -21,9 +21,6 @@ from tqdm import tqdm
 
 VARNET_FOLDER = "https://dl.fbaipublicfiles.com/fastMRI/trained_models/varnet/"
 MODEL_FNAMES = {
-    "unet_knee_sc": "knee_sc_leaderboard_state_dict.pt",
-    "unet_knee_mc": "knee_mc_leaderboard_state_dict.pt",
-    "unet_brain_mc": "brain_leaderboard_state_dict.pt",
     "varnet_knee_mc": "knee_leaderboard_state_dict.pt",
     "varnet_brain_mc": "brain_leaderboard_state_dict.pt",
 }

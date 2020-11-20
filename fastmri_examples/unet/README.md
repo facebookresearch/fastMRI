@@ -22,7 +22,10 @@ python train_unet_demo.py
 You can also pass options at the command line:
 
 ```bash
-python train_unet_demo.py --challenge CHALLENGE --data_path DATA --mask_type MASK_TYPE
+python train_unet_demo.py \
+    --challenge CHALLENGE \
+    --data_path DATA \
+    --mask_type MASK_TYPE
 ```
 
 where `CHALLENGE` is either `singlecoil` or `multicoil` and `MASK_TYPE` is

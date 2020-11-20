@@ -57,7 +57,10 @@ script is a stripped-down version of model creation, `state_dict` downloading
 and loading, and model inference. To run the script, type
 
 ```bash
-python run_pretrained_varnet_inference.py --data-path DATA_PATH --output-path OUTPUT_PATH --challenge CHALLENGE
+python run_pretrained_varnet_inference.py \
+    --data-path DATA_PATH \
+    --output-path OUTPUT_PATH \
+    --challenge CHALLENGE
 ```
 
 where in this case `CHALLENGE` is `varnet_knee_mc` for the multi-coil knee

@@ -106,11 +106,11 @@ which is hosted in another repository.
 
 Run `pytest tests`. By default integration tests that use the fastMRI data are
 skipped. If you would like to run these tests, set `SKIP_INTEGRATIONS` to
-`False` in [tests/conftest.py](tests/conftest.py).
+`False` in the [conftest](tests/conftest.py).
 
 ## Training a model
 
-The [data README](data/README.md) has a bare-bones example for how to load data
+The [data README](fastmri/data/README.md) has a bare-bones example for how to load data
 and incorporate data transforms. This
 [jupyter notebook](fastMRI_tutorial.ipynb) contains a simple tutorial
 explaining how to get started working with the data.

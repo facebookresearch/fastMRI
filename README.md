@@ -110,8 +110,8 @@ skipped. If you would like to run these tests, set `SKIP_INTEGRATIONS` to
 
 ## Training a model
 
-The [data README](fastmri/data/README.md) has a bare-bones example for how to load data
-and incorporate data transforms. This
+The [data README](fastmri/data/README.md) has a bare-bones example for how to
+load data and incorporate data transforms. This
 [jupyter notebook](fastMRI_tutorial.ipynb) contains a simple tutorial
 explaining how to get started working with the data.
 

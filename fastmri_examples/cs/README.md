@@ -1,10 +1,12 @@
 # Compressed Sensing with Total Variation Minimization
 
-This directory contains code to apply the ESPIRiT algorithm for coil
-sensitivity estimation and Total Variation minimization based reconstruction
-using the BART toolkit.
+This directory contains code for compressed sensing baselines. The baselines
+are based on the following paper:
 
-To install BART, please follow the [installation instructions][bartlink].
+[ESPIRiT—an eigenvalue approach to autocalibrating parallel MRI: Where SENSE meets GRAPPA](https://doi.org/10.1002/mrm.24751)
+
+The implementation uses the BART toolkit. To install BART, please follow the
+[installation instructions][bartlink].
 
 Once BART is installed, set the `TOOLBOX_PATH` environment variable and point
 `PYTHONPATH` to the python wrapper for BART:

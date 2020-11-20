@@ -136,8 +136,8 @@ fastMRI is MIT licensed, as found in the [LICENSE file](LICENSE.md).
 
 ## Cite
 
-If you use the fastMRI data or code in your project, please consider citing the
-arXiv paper:
+If you use the fastMRI data or code in your project, please cite the arXiv
+paper:
 
 ```BibTeX
 @inproceedings{zbontar2018fastMRI,

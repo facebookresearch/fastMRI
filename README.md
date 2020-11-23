@@ -82,20 +82,20 @@ reproducibility. The baseline models were used in the arXiv paper:
 
 [fastMRI: An Open Dataset and Benchmarks for Accelerated MRI ({J. Zbontar*, F. Knoll*, A. Sriram*} et al., 2018)](https://arxiv.org/abs/1811.08839)
 
-A brief summary of implementions based on papers with links to READMEs and/or
-code follows. For completeness we also mention work on active acquisition,
-which is hosted in another repository.
+A brief summary of implementions based on papers with links to code follows.
+For completeness we also mention work on active acquisition, which is hosted
+in another repository.
 
 * **Baseline Models**
 
-  * [Zero-filled examples for saving images for leaderboard submission](fastmri_examples/zero_filled/README.md)
-  * [ESPIRiT—an eigenvalue approach to autocalibrating parallel MRI: where SENSE meets GRAPPA (M. Uecker et al., 2013)](fastmri_examples/cs/README.md)
-  * [U-Net: Convolutional networks for biomedical image segmentation (O. Ronneberger et al., 2015)](fastmri_examples/unet/README.md)
+  * [Zero-filled examples for saving images for leaderboard submission](fastmri_examples/zero_filled/)
+  * [ESPIRiT—an eigenvalue approach to autocalibrating parallel MRI: where SENSE meets GRAPPA (M. Uecker et al., 2013)](fastmri_examples/cs/)
+  * [U-Net: Convolutional networks for biomedical image segmentation (O. Ronneberger et al., 2015)](fastmri_examples/unet/)
 
 * **Sampling, Reconstruction and Artifact Correction**
 
   * [Offset Sampling Improves Deep Learning based Accelerated MRI Reconstructions by Exploiting Symmetry (A. Defazio, 2019)](banding_removal/fastmri/common/subsample.py#L126-L198)
-  * [End-to-End Variational Networks for Accelerated MRI Reconstruction ({A. Sriram*, J. Zbontar*} et al., 2020)](fastmri_examples/varnet/README.md)
+  * [End-to-End Variational Networks for Accelerated MRI Reconstruction ({A. Sriram*, J. Zbontar*} et al., 2020)](fastmri_examples/varnet/)
   * [MRI Banding Removal via Adversarial Training (A. Defazio, et al., 2020)](banding_removal)
 
 * **Active Acquisition** (external repository)

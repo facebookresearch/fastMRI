@@ -1,9 +1,14 @@
 # fastMRI
 
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebookresearch/fastMRI/blob/master/LICENSE.md)
+[![TERMS](https://img.shields.io/badge/-terms-gray)](https://opensource.facebook.com/legal/terms)
+[![PRIVACY](https://img.shields.io/badge/-privacy-gray)](https://opensource.facebook.com/legal/privacy/)
 [![CircleCI](https://circleci.com/gh/facebookresearch/fastMRI.svg?style=svg)](https://app.circleci.com/pipelines/github/facebookresearch/fastMRI)
 
-[Website and Leaderboards](https://fastMRI.org) | [Dataset](https://fastmri.med.nyu.edu/) | [GitHub](https://github.com/facebookresearch/fastMRI) | [Publications](#list-of-papers)
+[Website and Leaderboards](https://fastMRI.org) |
+[Dataset](https://fastmri.med.nyu.edu/) |
+[GitHub](https://github.com/facebookresearch/fastMRI) |
+[Publications](#list-of-papers)
 
 Accelerating Magnetic Resonance Imaging (MRI) by acquiring fewer measurements
 has the potential to reduce medical costs, minimize stress to patients and make

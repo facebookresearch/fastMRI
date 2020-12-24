@@ -2,7 +2,7 @@
 
 The following is a short list of fastMRI publications. Clicking on the title will take you further down in this page where other links to the paper manuscript, preprints, code, etc. will be present.
 
-1. Zbontar, J., Knoll, F., Sriram, A., Muckley, M. J., Bruno, M., Defazio, A., ... & Lui, Y. W. (2018). [fastMRI: An open dataset and benchmarks for accelerated MRI](#fastmri-an-open-dataset-and-benchmarks-for-accelerated-MRI). *arXiv preprint arXiv:1811.08839*.
+1. Zbontar, J., Knoll, F., Sriram, A., Murrell, T., Huang, Z., Muckley, M. J., ... & Lui, Y. W. (2018). [fastMRI: An open dataset and benchmarks for accelerated MRI](#fastmri-an-open-dataset-and-benchmarks-for-accelerated-MRI). *arXiv preprint arXiv:1811.08839*.
 2. Zhang, Z., Romero, A., Muckley, M. J., Vincent, P., Yang, L., & Drozdzal, M. (2019). [Reducing uncertainty in undersampled MRI reconstruction with active acquisition](#reducing-uncertainty-in-undersampled-mri-reconstruction-with-active-acquisition). In *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition*, pages 2049-2058.
 3. Defazio, A. (2019). [Offset Sampling Improves Deep Learning based Accelerated MRI Reconstructions by Exploiting Symmetry](#offset-sampling-improves-deep-learning-based-accelerated-mri-reconstructions-by-exploiting-symmetry). *arXiv preprint, arXiv:1912.01101*.
 4. Knoll, F., Zbontar, J., Sriram, A., Muckley, M. J., Bruno, M., Defazio, A., ... & Lui, Y. W. (2020). [fastMRI: A Publicly Available Raw k-Space and DICOM Dataset of Knee Images for Accelerated MR Image Reconstruction Using Machine Learning](#fastmri-a-publicly-available-raw-k-space-and-dicom-dataset-of-knee-images-for-accelerated-mr-image-reconstruction-using-machine-learning). *Radiology: Artificial Intelligence*, 2(1), e190007.
@@ -23,7 +23,7 @@ Accelerating Magnetic Resonance Imaging (MRI) by taking fewer measurements has t
 ```BibTeX
 @inproceedings{zbontar2018fastMRI,
     title={{fastMRI}: An Open Dataset and Benchmarks for Accelerated {MRI}},
-    author={Jure Zbontar and Florian Knoll and Anuroop Sriram and Matthew J. Muckley and Mary Bruno and Aaron Defazio and Marc Parente and Krzysztof J. Geras and Joe Katsnelson and Hersh Chandarana and Zizhao Zhang and Michal Drozdzal and Adriana Romero and Michael Rabbat and Pascal Vincent and James Pinkerton and Duo Wang and Nafissa Yakubova and Erich Owens and C. Lawrence Zitnick and Michael P. Recht and Daniel K. Sodickson and Yvonne W. Lui},
+    author={Jure Zbontar and Florian Knoll and Anuroop Sriram and Tullie Murrell and Zhengnan Huang and Matthew J. Muckley and Aaron Defazio and Ruben Stern and Patricia Johnson and Mary Bruno and Marc Parente and Krzysztof J. Geras and Joe Katsnelson and Hersh Chandarana and Zizhao Zhang and Michal Drozdzal and Adriana Romero and Michael Rabbat and Pascal Vincent and Nafissa Yakubova and James Pinkerton and Duo Wang and Erich Owens and C. Lawrence Zitnick and Michael P. Recht and Daniel K. Sodickson and Yvonne W. Lui},
     journal = {ArXiv e-prints},
     archivePrefix = "arXiv",
     eprint = {1811.08839},

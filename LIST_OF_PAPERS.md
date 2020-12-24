@@ -212,6 +212,8 @@ The slow acquisition speed of magnetic resonance imaging (MRI) has led to the de
 
 ## MRI Banding Removal via Adversarial Training
 
+*NeurIPS 2020*
+
 [arXiv](https://arxiv.org/abs/2001.08699) [publication](https://papers.nips.cc/paper/2020/hash/567b8f5f423af15818a068235807edc0-Abstract.html) [Code](https://github.com/facebookresearch/fastMRI/tree/master/banding_removal)
 
 MRI images reconstructed from sub-sampled Cartesian data using deep learning techniques often show a characteristic banding (sometimes described as streaking), which is particularly strong in low signal-to-noise regions of the reconstructed image. In this work, we propose the use of an adversarial loss that penalizes banding structures without requiring any human annotation. Our technique greatly reduces the appearance of banding, without requiring any additional computation or post-processing at reconstruction time. We report the results of a blind comparison against a strong baseline by a group of expert evaluators (board-certified radiologists), where our approach is ranked superior at banding removal with no statistically significant loss of detail.

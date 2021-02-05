@@ -100,6 +100,8 @@ class VolumeSampler(Sampler):
             indices = self.indices
 
         # add extra samples to match num_samples
+        repeat_times = self.num_samples // len(indices)
+        indices = indices * repeat_times
         indices = indices + indices[: self.num_samples - len(indices)]
         assert len(indices) == self.num_samples
 

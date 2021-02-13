@@ -56,7 +56,8 @@ class FastMriDataModule(pl.LightningDataModule):
         combine_train_val: bool = False,
         test_split: str = "test",
         test_path: Optional[Path] = None,
-        sample_rate: float = 1.0,
+        sample_rate: Optional[float] = None,
+        volume_sample_rate: Optional[float] = None,
         use_dataset_cache_file: bool = True,
         batch_size: int = 1,
         num_workers: int = 4,
@@ -76,8 +77,14 @@ class FastMriDataModule(pl.LightningDataModule):
             test_split: Name of test split from ("test", "challenge").
             test_path: An optional test path. Passing this overwrites data_path
                 and test_split.
-            sample_rate: Fraction of of the training data split to use. Can be
-                set to less than 1.0 for rapid prototyping.
+            sample_rate: Fraction of slices of the training data split to use. Can be
+                set to less than 1.0 for rapid prototyping. If not set, it defaults to 1.0.
+                To subsample the dataset either set sample_rate (sample by slice) or
+                volume_sample_rate (sample by volume), but not both.
+            volume_sample_rate: Fraction of volumes of the training data split to use. Can be
+                set to less than 1.0 for rapid prototyping. If not set, it defaults to 1.0.
+                To subsample the dataset either set sample_rate (sample by slice) or
+                volume_sample_rate (sample by volume), but not both.
             use_dataset_cache_file: Whether to cache dataset metadata. This is
                 very useful for large datasets like the brain data.
             batch_size: Batch size.
@@ -96,6 +103,7 @@ class FastMriDataModule(pl.LightningDataModule):
         self.test_split = test_split
         self.test_path = test_path
         self.sample_rate = sample_rate
+        self.volume_sample_rate = volume_sample_rate
         self.use_dataset_cache_file = use_dataset_cache_file
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -106,13 +114,20 @@ class FastMriDataModule(pl.LightningDataModule):
         data_transform: Callable,
         data_partition: str,
         sample_rate: Optional[float] = None,
+        volume_sample_rate: Optional[float] = None,
     ) -> torch.utils.data.DataLoader:
         if data_partition == "train":
             is_train = True
             sample_rate = self.sample_rate if sample_rate is None else sample_rate
+            volume_sample_rate = (
+                self.volume_sample_rate
+                if volume_sample_rate is None
+                else volume_sample_rate
+            )
         else:
             is_train = False
             sample_rate = 1.0
+            volume_sample_rate = None  # default case, no subsampling
 
         # if desired, combine train and val together for the train split
         dataset: Union[SliceDataset, CombinedSliceDataset]
@@ -123,12 +138,17 @@ class FastMriDataModule(pl.LightningDataModule):
             ]
             data_transforms = [data_transform, data_transform]
             challenges = [self.challenge, self.challenge]
-            sample_rates = [sample_rate, sample_rate]
+            sample_rates, volume_sample_rates = None, None  # default: no subsampling
+            if sample_rate is not None:
+                sample_rates = [sample_rate, sample_rate]
+            if volume_sample_rate is not None:
+                volume_sample_rates = [volume_sample_rate, volume_sample_rate]
             dataset = CombinedSliceDataset(
                 roots=data_paths,
                 transforms=data_transforms,
                 challenges=challenges,
                 sample_rates=sample_rates,
+                volume_sample_rates=volume_sample_rates,
                 use_dataset_cache=self.use_dataset_cache_file,
             )
         else:
@@ -141,6 +161,7 @@ class FastMriDataModule(pl.LightningDataModule):
                 root=data_path,
                 transform=data_transform,
                 sample_rate=sample_rate,
+                volume_sample_rate=volume_sample_rate,
                 challenge=self.challenge,
                 use_dataset_cache=self.use_dataset_cache_file,
             )
@@ -185,10 +206,12 @@ class FastMriDataModule(pl.LightningDataModule):
                 zip(data_paths, data_transforms)
             ):
                 sample_rate = self.sample_rate if i == 0 else 1.0
+                volume_sample_rate = self.volume_sample_rate if i == 0 else None
                 _ = SliceDataset(
                     root=data_path,
                     transform=data_transform,
                     sample_rate=sample_rate,
+                    volume_sample_rate=volume_sample_rate,
                     challenge=self.challenge,
                     use_dataset_cache=self.use_dataset_cache_file,
                 )
@@ -244,9 +267,15 @@ class FastMriDataModule(pl.LightningDataModule):
         )
         parser.add_argument(
             "--sample_rate",
-            default=1.0,
+            default=None,
             type=float,
-            help="Fraction of data set to use (train split only)",
+            help="Fraction of slices in the dataset to use (train split only). If not given all will be used. Cannot set together with volume_sample_rate.",
+        )
+        parser.add_argument(
+            "--volume_sample_rate",
+            default=None,
+            type=float,
+            help="Fraction of volumes of the dataset to use (train split only). If not given all will be used. Cannot set together with sample_rate.",
         )
         parser.add_argument(
             "--use_dataset_cache_file",

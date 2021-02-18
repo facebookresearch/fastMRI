@@ -108,7 +108,8 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
         roots: Sequence[Path],
         challenges: Sequence[str],
         transforms: Optional[Sequence[Optional[Callable]]] = None,
-        sample_rates: Optional[Sequence[float]] = None,
+        sample_rates: Optional[Sequence[Optional[float]]] = None,
+        volume_sample_rates: Optional[Sequence[Optional[float]]] = None,
         use_dataset_cache: bool = False,
         dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
         num_cols: Optional[Tuple[int]] = None,
@@ -123,8 +124,16 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
                 function should take 'kspace', 'target', 'attributes',
                 'filename', and 'slice' as inputs. 'target' may be null for
                 test data.
-            sample_rates: A float between 0 and 1. This controls what fraction
-                of the volumes should be loaded.
+            sample_rates: Optional; A sequence of floats between 0 and 1.
+                This controls what fraction of the slices should be loaded.
+                When creating subsampled datasets either set sample_rates
+                (sample by slices) or volume_sample_rates (sample by volumes)
+                but not both.
+            volume_sample_rates: Optional; A sequence of floats between 0 and 1.
+                This controls what fraction of the volumes should be loaded.
+                When creating subsampled datasets either set sample_rates
+                (sample by slices) or volume_sample_rates (sample by volumes)
+                but not both.
             use_dataset_cache: Whether to cache dataset metadata. This is very
                 useful for large datasets like the brain data.
             dataset_cache_file: Optional; A file in which to cache dataset
@@ -132,11 +141,23 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
             num_cols: Optional; If provided, only slices with the desired
                 number of columns will be considered.
         """
+        if sample_rates is not None and volume_sample_rates is not None:
+            raise ValueError(
+                "either set sample_rates (sample by slices) or volume_sample_rates (sample by volumes) but not both"
+            )
         if transforms is None:
             transforms = [None] * len(roots)
         if sample_rates is None:
-            sample_rates = [1.0] * len(roots)
-        if not (len(roots) == len(transforms) == len(challenges) == len(sample_rates)):
+            sample_rates = [None] * len(roots)
+        if volume_sample_rates is None:
+            volume_sample_rates = [None] * len(roots)
+        if not (
+            len(roots)
+            == len(transforms)
+            == len(challenges)
+            == len(sample_rates)
+            == len(volume_sample_rates)
+        ):
             raise ValueError(
                 "Lengths of roots, transforms, challenges, sample_rates do not match"
             )
@@ -150,6 +171,7 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
                     transform=transforms[i],
                     challenge=challenges[i],
                     sample_rate=sample_rates[i],
+                    volume_sample_rate=volume_sample_rates[i],
                     use_dataset_cache=use_dataset_cache,
                     dataset_cache_file=dataset_cache_file,
                     num_cols=num_cols,
@@ -179,8 +201,9 @@ class SliceDataset(torch.utils.data.Dataset):
         root: Union[str, Path, os.PathLike],
         challenge: str,
         transform: Optional[Callable] = None,
-        sample_rate: float = 1.0,
         use_dataset_cache: bool = False,
+        sample_rate: Optional[float] = None,
+        volume_sample_rate: Optional[float] = None,
         dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
         num_cols: Optional[Tuple[int]] = None,
     ):
@@ -193,10 +216,16 @@ class SliceDataset(torch.utils.data.Dataset):
                 data into appropriate form. The transform function should take
                 'kspace', 'target', 'attributes', 'filename', and 'slice' as
                 inputs. 'target' may be null for test data.
-            sample_rate: A float between 0 and 1. This controls what fraction
-                of the volumes should be loaded.
             use_dataset_cache: Whether to cache dataset metadata. This is very
                 useful for large datasets like the brain data.
+            sample_rate: Optional; A float between 0 and 1. This controls what fraction
+                of the slices should be loaded. Defaults to 1 if no value is given.
+                When creating a sampled dataset either set sample_rate (sample by slices)
+                or volume_sample_rate (sample by volumes) but not both.
+            volume_sample_rate: Optional; A float between 0 and 1. This controls what fraction
+                of the volumes should be loaded. Defaults to 1 if no value is given.
+                When creating a sampled dataset either set sample_rate (sample by slices)
+                or volume_sample_rate (sample by volumes) but not both.
             dataset_cache_file: Optional; A file in which to cache dataset
                 information for faster load times.
             num_cols: Optional; If provided, only slices with the desired
@@ -205,6 +234,11 @@ class SliceDataset(torch.utils.data.Dataset):
         if challenge not in ("singlecoil", "multicoil"):
             raise ValueError('challenge should be either "singlecoil" or "multicoil"')
 
+        if sample_rate is not None and volume_sample_rate is not None:
+            raise ValueError(
+                "either set sample_rate (sample by slices) or volume_sample_rate (sample by volumes) but not both"
+            )
+
         self.dataset_cache_file = Path(dataset_cache_file)
 
         self.transform = transform
@@ -212,6 +246,12 @@ class SliceDataset(torch.utils.data.Dataset):
             "reconstruction_esc" if challenge == "singlecoil" else "reconstruction_rss"
         )
         self.examples = []
+
+        # set default sampling mode if none given
+        if sample_rate is None:
+            sample_rate = 1.0
+        if volume_sample_rate is None:
+            volume_sample_rate = 1.0
 
         # load dataset cache if we have and user wants to use it
         if self.dataset_cache_file.exists() and use_dataset_cache:
@@ -241,10 +281,18 @@ class SliceDataset(torch.utils.data.Dataset):
             self.examples = dataset_cache[root]
 
         # subsample if desired
-        if sample_rate < 1.0:
+        if sample_rate < 1.0:  # sample by slice
             random.shuffle(self.examples)
             num_examples = round(len(self.examples) * sample_rate)
             self.examples = self.examples[:num_examples]
+        elif volume_sample_rate < 1.0:  # sample by volume
+            vol_names = sorted(list(set([f[0].stem for f in self.examples])))
+            random.shuffle(vol_names)
+            num_volumes = round(len(vol_names) * volume_sample_rate)
+            sampled_vols = vol_names[:num_volumes]
+            self.examples = [
+                example for example in self.examples if example[0].stem in sampled_vols
+            ]
 
         if num_cols:
             self.examples = [

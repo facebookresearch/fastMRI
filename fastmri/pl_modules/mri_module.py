@@ -136,7 +136,7 @@ class MriModule(pl.LightningModule):
                 evaluate.nmse(target, output)
             ).view(1)
             ssim_vals[fname][slice_num] = torch.tensor(
-                evaluate.ssim(target, output, maxval=maxval)
+                evaluate.ssim(target[None, ...], output[None, ...], maxval=maxval)
             ).view(1)
             psnr_vals[fname][slice_num] = torch.tensor(
                 evaluate.psnr(target, output)

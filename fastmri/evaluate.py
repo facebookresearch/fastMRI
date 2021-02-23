@@ -37,6 +37,11 @@ def ssim(
     gt: np.ndarray, pred: np.ndarray, maxval: Optional[float] = None
 ) -> np.ndarray:
     """Compute Structural Similarity Index Metric (SSIM)"""
+    if not gt.ndim == 3:
+        raise ValueError("Unexpected number of dimensions in ground truth.")
+    if not gt.ndim == pred.ndim:
+        raise ValueError("Ground truth dimensions does not match pred.")
+
     maxval = gt.max() if maxval is None else maxval
 
     ssim = 0

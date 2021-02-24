@@ -54,7 +54,7 @@ def run_unet_model(batch, model, device):
 
     mean = mean.unsqueeze(1).unsqueeze(2)
     std = std.unsqueeze(1).unsqueeze(2)
-    (output * std + mean).cpu()
+    output = (output * std + mean).cpu()
 
     return output, int(slice_num[0]), fname[0]
 

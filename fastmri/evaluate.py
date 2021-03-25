@@ -28,7 +28,9 @@ def nmse(gt: np.ndarray, pred: np.ndarray) -> np.ndarray:
     return np.linalg.norm(gt - pred) ** 2 / np.linalg.norm(gt) ** 2
 
 
-def psnr(gt: np.ndarray, pred: np.ndarray, maxval: Optional[float] = None) -> np.ndarray:
+def psnr(
+    gt: np.ndarray, pred: np.ndarray, maxval: Optional[float] = None
+) -> np.ndarray:
     """Compute Peak Signal to Noise Ratio metric (PSNR)"""
     if maxval is None:
         maxval = gt.max()

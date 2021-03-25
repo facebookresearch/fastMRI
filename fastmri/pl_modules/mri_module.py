@@ -193,11 +193,16 @@ class MriModule(pl.LightningModule):
                 torch.cat([v.view(-1) for _, v in target_norms[fname].items()])
             )
             metrics["nmse"] = metrics["nmse"] + mse_val / target_norm
-            metrics["psnr"] = metrics["psnr"] + 20 * torch.log10(
-                torch.tensor(
-                    max_vals[fname], dtype=mse_val.dtype, device=mse_val.device
+            metrics["psnr"] = (
+                metrics["psnr"]
+                + 20
+                * torch.log10(
+                    torch.tensor(
+                        max_vals[fname], dtype=mse_val.dtype, device=mse_val.device
+                    )
                 )
-            ) - 10 * torch.log10(mse_val)
+                - 10 * torch.log10(mse_val)
+            )
             metrics["ssim"] = metrics["ssim"] + torch.mean(
                 torch.cat([v.view(-1) for _, v in ssim_vals[fname].items()])
             )

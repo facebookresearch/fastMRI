@@ -9,10 +9,11 @@ import pathlib
 from argparse import ArgumentParser
 from collections import defaultdict
 
-import fastmri
 import numpy as np
 import pytorch_lightning as pl
 import torch
+
+import fastmri
 from fastmri import evaluate
 
 
@@ -112,15 +113,9 @@ class MriModule(pl.LightningModule):
                 output = output / output.max()
                 target = target / target.max()
                 error = error / error.max()
-                self.logger.experiment.add_image(
-                    f"{key}/target", target, global_step=self.global_step
-                )
-                self.logger.experiment.add_image(
-                    f"{key}/reconstruction", output, global_step=self.global_step
-                )
-                self.logger.experiment.add_image(
-                    f"{key}/error", error, global_step=self.global_step
-                )
+                self.log_image(f"{key}/target", target)
+                self.log_image(f"{key}/reconstruction", output)
+                self.log_image(f"{key}/error", error)
 
         # compute evaluation metrics
         mse_vals = defaultdict(dict)
@@ -151,6 +146,9 @@ class MriModule(pl.LightningModule):
             "ssim_vals": ssim_vals,
             "max_vals": max_vals,
         }
+
+    def log_image(self, name, image):
+        self.logger.experiment.add_image(name, image, global_step=self.global_step)
 
     def validation_epoch_end(self, val_logs):
         # aggregate losses

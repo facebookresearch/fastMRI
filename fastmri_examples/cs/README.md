@@ -27,7 +27,7 @@ To run the reconstruction algorithm on the validation data, run:
 python run_bart.py \
     --challenge CHALLENGE \
     --data_path DATA \
-    --out_path reconstructions_val \
+    --output_path reconstructions_val \
     --reg_wt 0.01 \
     --mask_type MASK_TYPE \
     --split val
@@ -50,7 +50,7 @@ To apply the reconstruction algorithm to the test data, run:
 python run_bart.py \
     --challenge CHALLENGE \
     --data_path DATA \
-    --out_path reconstructions_test \
+    --output_path reconstructions_test \
     --split test
 ```
 

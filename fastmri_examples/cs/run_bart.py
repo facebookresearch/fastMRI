@@ -191,7 +191,7 @@ def run_bart(args):
             time_taken = time.perf_counter() - start_time
 
     logging.info(f"Run Time = {time_taken:} s")
-    save_outputs(outputs, args.out_path)
+    save_outputs(outputs, args.output_path)
 
 
 def create_arg_parser():
@@ -204,7 +204,7 @@ def create_arg_parser():
         help="Path to the data",
     )
     parser.add_argument(
-        "--out_path",
+        "--output_path",
         type=pathlib.Path,
         required=True,
         help="Path to save the reconstructions to",

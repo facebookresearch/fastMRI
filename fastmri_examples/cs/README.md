@@ -12,13 +12,14 @@ which was used as a baseline model in
 The implementation uses the BART toolkit. To install BART, please follow the
 [installation instructions][bartlink].
 
-Once BART is installed, set the `TOOLBOX_PATH` environment variable and point
-`PYTHONPATH` to the python wrapper for BART:
+Once BART is installed, set the `TOOLBOX_PATH` environment variable to point to the location where the repo was cloned and `PYTHONPATH` to the python wrapper for BART:
 
 ```bash
 export TOOLBOX_PATH=/path/to/bart
 export PYTHONPATH=${TOOLBOX_PATH}/python:${PYTHONPATH}
 ```
+
+where `/path/to/bart` is the path to the cloned BART repository, not your OS installed BART program.
 
 To run the reconstruction algorithm on the validation data, run:
 

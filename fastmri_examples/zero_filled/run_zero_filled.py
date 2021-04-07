@@ -63,7 +63,7 @@ def create_arg_parser():
         help="Path to the data",
     )
     parser.add_argument(
-        "--out_path",
+        "--output_path",
         type=Path,
         required=True,
         help="Path to save the reconstructions to",
@@ -80,4 +80,4 @@ def create_arg_parser():
 
 if __name__ == "__main__":
     args = create_arg_parser().parse_args()
-    save_zero_filled(args.data_path, args.out_path, args.challenge)
+    save_zero_filled(args.data_path, args.output_path, args.challenge)

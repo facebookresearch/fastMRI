@@ -12,7 +12,7 @@ The following is a short list of fastMRI publications. Clicking on the title wil
 8. Pineda, L., Basu, S., Romero, A., Calandra, R., & Drozdzal, M. (2020). [Active MR k-space Sampling with Reinforcement Learning](#active-mr-k-space-sampling-with-reinforcement-learning). In *International Conference on Medical Image Computing and Computer-Assisted Intervention*, pages 23-33.
 9. Sriram, A., Zbontar, J., Murrell, T., Defazio, A., Zitnick, C. L., Yakubova, N., ... & Johnson, P. (2020). [End-to-End Variational Networks for Accelerated MRI Reconstruction](#end-to-end-variational-networks-for-accelerated-mri-reconstruction). In *International Conference on Medical Image Computing and Computer-Assisted Intervention*, pages 64-73.
 10. Defazio, A., Murrell, T., & Recht, M. P. (2020). [MRI Banding Removal via Adversarial Training](#mri-banding-removal-via-adversarial-training). In *Advances in Neural Information Processing Systems*.
-11. Muckley, M. J., Riemenschneider, B., Radmanesh, A., Kim, S., Jeong, G., Ko, J., ... & Knoll, F. (2020). [Results of the 2020 fastMRI Challenge for Machine Learning MR Image Reconstruction](#state-of-the-art-machine-learning-mri-reconstruction-in-2020-results-of-the-second-fastmri-challenge). *IEEE Transactions on Medical Imaging*. To appear.
+11. Muckley, M. J., Riemenschneider, B., Radmanesh, A., Kim, S., Jeong, G., Ko, J., ... & Knoll, F. (2020). [Results of the 2020 fastMRI Challenge for Machine Learning MR Image Reconstruction](#results-of-the-2020-fastmri-challenge-for-machine-learning-mr-image-reconstruction). *IEEE Transactions on Medical Imaging*. To appear.
 
 ## fastMRI: An open dataset and benchmarks for accelerated MRI
 

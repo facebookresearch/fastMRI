@@ -12,7 +12,7 @@ The following is a short list of fastMRI publications. Clicking on the title wil
 8. Pineda, L., Basu, S., Romero, A., Calandra, R., & Drozdzal, M. (2020). [Active MR k-space Sampling with Reinforcement Learning](#active-mr-k-space-sampling-with-reinforcement-learning). In *International Conference on Medical Image Computing and Computer-Assisted Intervention*, pages 23-33.
 9. Sriram, A., Zbontar, J., Murrell, T., Defazio, A., Zitnick, C. L., Yakubova, N., ... & Johnson, P. (2020). [End-to-End Variational Networks for Accelerated MRI Reconstruction](#end-to-end-variational-networks-for-accelerated-mri-reconstruction). In *International Conference on Medical Image Computing and Computer-Assisted Intervention*, pages 64-73.
 10. Defazio, A., Murrell, T., & Recht, M. P. (2020). [MRI Banding Removal via Adversarial Training](#mri-banding-removal-via-adversarial-training). In *Advances in Neural Information Processing Systems*.
-11. Muckley, M. J., Riemenschneider, B., Radmanesh, A., Kim, S., Jeong, G., Ko, J., ... & Knoll, F. (2020). [State-of-the-art Machine Learning MRI Reconstruction in 2020: Results of the Second fastMRI Challenge](#state-of-the-art-machine-learning-mri-reconstruction-in-2020-results-of-the-second-fastmri-challenge). *arXiv preprint arXiv:2012.06318*.
+11. Muckley, M. J., Riemenschneider, B., Radmanesh, A., Kim, S., Jeong, G., Ko, J., ... & Knoll, F. (2020). [Results of the 2020 fastMRI Challenge for Machine Learning MR Image Reconstruction](#state-of-the-art-machine-learning-mri-reconstruction-in-2020-results-of-the-second-fastmri-challenge). *IEEE Transactions on Medical Imaging*. To appear.
 
 ## fastMRI: An open dataset and benchmarks for accelerated MRI
 
@@ -227,17 +227,22 @@ MRI images reconstructed from sub-sampled Cartesian data using deep learning tec
 }
 ```
 
-## State-of-the-art Machine Learning MRI Reconstruction in 2020: Results of the Second fastMRI Challenge
+## Results of the 2020 fastMRI Challenge for Machine Learning MR Image Reconstruction
 
 [arXiv](https://arxiv.org/abs/2012.06318)
+[publication](https://doi.org/10.1109/TMI.2021.3075856)
 
 Accelerating MRI scans is one of the principal outstanding problems in the MRI research community. Towards this goal, we hosted the second fastMRI competition targeted towards reconstructing MR images with subsampled k-space data. We provided participants with data from 7,299 clinical brain scans (de-identified via a HIPAA-compliant procedure by NYU Langone Health), holding back the fully-sampled data from 894 of these scans for challenge evaluation purposes. In contrast to the 2019 challenge, we focused our radiologist evaluations on pathological assessment in brain images. We also debuted a new Transfer track that required participants to submit models evaluated on MRI scanners from outside the training set. We received 19 submissions from eight different groups. Results showed one team scoring best in both SSIM scores and qualitative radiologist evaluations. We also performed analysis on alternative metrics to mitigate the effects of background noise and collected feedback from the participants to inform future challenges. Lastly, we identify common failure modes across the submissions, highlighting areas of need for future research in the MRI reconstruction community.
 
 ```BibTeX
-@article{muckley2020state,
-  title={State-of-the-art Machine Learning MRI Reconstruction in 2020: Results of the Second fastMRI Challenge},
-  author={Muckley, Matthew J and Riemenschneider, Bruno and Radmanesh, Alireza and Kim, Sunwoo and Jeong, Geunu and Ko, Jingyu and Jun, Yohan and Shin, Hyungseob and Hwang, Dosik and Mostapha, Mahmoud and others},
-  journal={arXiv preprint arXiv:2012.06318},
-  year={2020}
+@article{muckley2021results,
+    author={Muckley, Matthew J. and Riemenschneider, Bruno and Radmanesh, Alireza and Kim, Sunwoo and Jeong, Geunu and Ko, Jingyu and Jun, Yohan and Shin, Hyungseob and Hwang, Dosik and Mostapha, Mahmoud and Arberet, Simon and Nickel, Dominik and Ramzi, Zaccharie and Ciuciu, Philippe and Starck, Jean-Luc and Teuwen, Jonas and Karkalousos, Dimitrios and Zhang, Chaoping and Sriram, Anuroop and Huang, Zhengnan and Yakubova, Nafissa and Lui, Yvonne W. and Knoll, Florian},
+    journal={IEEE Transactions on Medical Imaging}, 
+    title={Results of the 2020 fastMRI Challenge for Machine Learning MR Image Reconstruction}, 
+    year={2021},
+    volume={},
+    number={},
+    pages={1-1},
+    doi={10.1109/TMI.2021.3075856}
 }
 ```

@@ -30,7 +30,7 @@ install_requires = [
     "runstats>=1.8.0",
     "pytorch_lightning>=1.0.6",
     "h5py>=2.10.0",
-    "PyYAML>=5.4",
+    "PyYAML>=5.3.1",
 ]
 
 setup(

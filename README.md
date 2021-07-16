@@ -52,16 +52,23 @@ We have tested this code using:
 
 First install PyTorch according to the directions at the
 [PyTorch Website](https://pytorch.org/get-started/) for your operating system
-and CUDA setup.
-
-Then, navigate to the `fastmri` root directory and run
+and CUDA setup. Then, run
 
 ```bash
-pip install -e .
+pip install fastmri
 ```
 
 `pip` will handle all package dependencies. After this you should be able to
 run most of the code in the repository.
+
+### Installing Directly from Source
+
+If you want to install directly from the GitHub source, clone the repository,
+navigate to the `fastmri` root directory and run
+
+```bash
+pip install -e .
+```
 
 ## Package Structure & Usage
 

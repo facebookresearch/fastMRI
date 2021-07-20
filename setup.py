@@ -50,7 +50,7 @@ setup(
     packages=find_packages(
         exclude=[
             "tests",
-            "fastmri_examples",
+            "fastmri_examples*",
             "banding_removal",
         ]
     ),

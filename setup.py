@@ -31,6 +31,7 @@ install_requires = [
     "pytorch_lightning>=1.0.6,<1.1",
     "h5py>=2.10.0",
     "PyYAML>=5.3.1",
+    "packaging>=21.0",
 ]
 
 setup(

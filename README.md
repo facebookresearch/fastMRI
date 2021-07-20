@@ -98,15 +98,15 @@ in another repository.
 
 * **Baseline Models**
 
-  * [Zero-filled examples for saving images for leaderboard submission](fastmri_examples/zero_filled/)
-  * [ESPIRiT—an eigenvalue approach to autocalibrating parallel MRI: where SENSE meets GRAPPA (M. Uecker et al., 2013)](fastmri_examples/cs/)
-  * [U-Net: Convolutional networks for biomedical image segmentation (O. Ronneberger et al., 2015)](fastmri_examples/unet/)
+  * [Zero-filled examples for saving images for leaderboard submission](https://github.com/facebookresearch/fastMRI/tree/master/fastmri_examples/zero_filled/)
+  * [ESPIRiT—an eigenvalue approach to autocalibrating parallel MRI: where SENSE meets GRAPPA (M. Uecker et al., 2013)](https://github.com/facebookresearch/fastMRI/tree/master/fastmri_examples/cs/)
+  * [U-Net: Convolutional networks for biomedical image segmentation (O. Ronneberger et al., 2015)](https://github.com/facebookresearch/fastMRI/tree/master/fastmri_examples/unet/)
 
 * **Sampling, Reconstruction and Artifact Correction**
 
-  * [Offset Sampling Improves Deep Learning based Accelerated MRI Reconstructions by Exploiting Symmetry (A. Defazio, 2019)](banding_removal/fastmri/common/subsample.py#L126-L198)
+  * [Offset Sampling Improves Deep Learning based Accelerated MRI Reconstructions by Exploiting Symmetry (A. Defazio, 2019)](https://github.com/facebookresearch/fastMRI/tree/master/banding_removal/fastmri/common/subsample.py#L126-L198)
   * [End-to-End Variational Networks for Accelerated MRI Reconstruction ({A. Sriram*, J. Zbontar*} et al., 2020)](fastmri_examples/varnet/)
-  * [MRI Banding Removal via Adversarial Training (A. Defazio, et al., 2020)](banding_removal)
+  * [MRI Banding Removal via Adversarial Training (A. Defazio, et al., 2020)](https://github.com/facebookresearch/fastMRI/tree/master/banding_removal)
 
 * **Active Acquisition** (external repository)
   * [Reducing uncertainty in undersampled MRI reconstruction with active acquisition (Z. Zhang et al., 2019)](https://github.com/facebookresearch/active-mri-acquisition/tree/master/activemri/experimental/cvpr19_models)
@@ -116,17 +116,17 @@ in another repository.
 
 Run `pytest tests`. By default integration tests that use the fastMRI data are
 skipped. If you would like to run these tests, set `SKIP_INTEGRATIONS` to
-`False` in the [conftest](tests/conftest.py).
+`False` in the [conftest](https://github.com/facebookresearch/fastMRI/tree/master/tests/conftest.py).
 
 ## Training a model
 
-The [data README](fastmri/data/README.md) has a bare-bones example for how to
+The [data README](https://github.com/facebookresearch/fastMRI/tree/master/fastmri/data/README.md) has a bare-bones example for how to
 load data and incorporate data transforms. This
-[jupyter notebook](fastMRI_tutorial.ipynb) contains a simple tutorial
+[jupyter notebook](https://github.com/facebookresearch/fastMRI/tree/master/fastMRI_tutorial.ipynb) contains a simple tutorial
 explaining how to get started working with the data.
 
 Please look at
-[this U-Net demo script](fastmri_examples/unet/train_unet_demo.py) for an
+[this U-Net demo script](https://github.com/facebookresearch/fastMRI/tree/master/fastmri_examples/unet/train_unet_demo.py) for an
 example of how to train a model using the PyTorch Lightning framework.
 
 ## Submitting to the Leaderboard
@@ -142,7 +142,7 @@ account before submitting.
 
 ## License
 
-fastMRI is MIT licensed, as found in the [LICENSE file](LICENSE.md).
+fastMRI is MIT licensed, as found in the [LICENSE file](https://github.com/facebookresearch/fastMRI/tree/master/LICENSE.md).
 
 ## Cite
 
@@ -164,7 +164,7 @@ paper:
 
 The following lists titles of papers from the fastMRI project. The
 corresponding abstracts, as well as links to preprints and code can be found
-[here](LIST_OF_PAPERS.md).
+[here](https://github.com/facebookresearch/fastMRI/tree/master/LIST_OF_PAPERS.md).
 
 1. Zbontar, J.\*, Knoll, F.\*, Sriram, A.\*, Murrell, T., Huang, Z., Muckley, M. J., ... & Lui, Y. W. (2018). [fastMRI: An Open Dataset and Benchmarks for Accelerated MRI](https://arxiv.org/abs/1811.08839). *arXiv preprint arXiv:1811.08839*.
 2. Zhang, Z., Romero, A., Muckley, M. J., Vincent, P., Yang, L., & Drozdzal, M. (2019). [Reducing uncertainty in undersampled MRI reconstruction with active acquisition](https://openaccess.thecvf.com/content_CVPR_2019/html/Zhang_Reducing_Uncertainty_in_Undersampled_MRI_Reconstruction_With_Active_Acquisition_CVPR_2019_paper.html). In *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition*, pages 2049-2058.

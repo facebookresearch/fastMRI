@@ -201,7 +201,7 @@ class VarNet(nn.Module):
     A full variational network model.
 
     This model applies a combination of soft data consistency with a U-Net
-    regularizer. To use non-U-Net regularizers, use VarNetBock.
+    regularizer. To use non-U-Net regularizers, use VarNetBlock.
     """
 
     def __init__(

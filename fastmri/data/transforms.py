@@ -115,12 +115,20 @@ def batched_mask_center(
     Returns:
         A mask with the center filled.
     """
-    if (not x.shape[0] == mask_from.shape[0]) or (not x.shape[0] == mask_to.shape[0]):
-        raise ValueError("mask_from and mask_to must have batch_size length.")
+    if not mask_from.shape[0] == mask_to.shape[0]:
+        raise ValueError("mask_from and mask_to must match shapes.")
+    if not mask_from.shape[0] == 1:
+        if (not x.shape[0] == mask_from.shape[0]) or (
+            not x.shape[0] == mask_to.shape[0]
+        ):
+            raise ValueError("mask_from and mask_to must have batch_size length.")
 
-    mask = torch.zeros_like(x)
-    for i, (start, end) in enumerate(zip(mask_from, mask_to)):
-        mask[i, :, :, start:end] = x[i, :, :, start:end]
+    if mask_from.shape[0] == 1:
+        mask = mask_center(x, int(mask_from), int(mask_to))
+    else:
+        mask = torch.zeros_like(x)
+        for i, (start, end) in enumerate(zip(mask_from, mask_to)):
+            mask[i, :, :, start:end] = x[i, :, :, start:end]
 
     return mask
 

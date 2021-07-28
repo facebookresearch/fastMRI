@@ -47,7 +47,14 @@ def test_unet(shape, out_chans, chans):
 def test_varnet(shape, out_chans, chans, center_fractions, accelerations):
     mask_func = RandomMaskFunc(center_fractions, accelerations)
     x = create_input(shape)
-    output, mask = transforms.apply_mask(x, mask_func, seed=123)
+    outputs, masks = [], []
+    for i in range(x.shape[0]):
+        output, mask = transforms.apply_mask(x[i : i + 1], mask_func, seed=123)
+        outputs.append(output)
+        masks.append(mask)
+
+    output = torch.cat(outputs)
+    mask = torch.cat(masks)
 
     varnet = VarNet(num_cascades=2, sens_chans=4, sens_pools=2, chans=4, pools=2)
 

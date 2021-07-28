@@ -180,13 +180,11 @@ class SensitivityModel(nn.Module):
         cent = squeezed_mask.shape[1] // 2
         left = cent - torch.min(torch.argmin(squeezed_mask[:, :cent].flip(1), dim=1))
         right = cent + torch.min(torch.argmin(squeezed_mask[:, cent:], dim=1))
-        num_low_freqs = right - left
-        pad = (mask.shape[-2] - num_low_freqs + 1) // 2
 
-        if not torch.all(squeezed_mask[:, pad : pad + num_low_freqs] == 1):
+        if not torch.all(squeezed_mask[:, left:right] == 1):  # type: ignore
             raise RuntimeError("Extracting k-space center failed.")
 
-        x = transforms.mask_center(masked_kspace, pad, pad + num_low_freqs)
+        x = transforms.mask_center(masked_kspace, left, right)  # type: ignore
 
         # convert to image space
         x = fastmri.ifft2c(x)

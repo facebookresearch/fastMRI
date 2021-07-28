@@ -176,11 +176,15 @@ class SensitivityModel(nn.Module):
 
     def forward(self, masked_kspace: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         # get low frequency line locations and mask them out
-        cent = mask.shape[-2] // 2
-        left = torch.nonzero(mask.squeeze()[:cent] == 0)[-1]
-        right = torch.nonzero(mask.squeeze()[cent:] == 0)[0] + cent
+        squeezed_mask = mask[:, 0, 0, :, 0]
+        cent = squeezed_mask.shape[1] // 2
+        left = cent - torch.min(torch.argmin(squeezed_mask[:, :cent].flip(1), dim=1))
+        right = cent + torch.min(torch.argmin(squeezed_mask[:, cent:], dim=1))
         num_low_freqs = right - left
         pad = (mask.shape[-2] - num_low_freqs + 1) // 2
+
+        if not torch.all(squeezed_mask[:, pad : pad + num_low_freqs] == 1):
+            raise RuntimeError("Extracting k-space center failed.")
 
         x = transforms.mask_center(masked_kspace, pad, pad + num_low_freqs)
 

@@ -179,13 +179,12 @@ class SensitivityModel(nn.Module):
         squeezed_mask = mask[:, 0, 0, :, 0]
         cent = squeezed_mask.shape[1] // 2
         # running argmin returns the first non-zero
-        left = cent - torch.min(torch.argmin(squeezed_mask[:, :cent].flip(1), dim=1))
-        right = cent + torch.min(torch.argmin(squeezed_mask[:, cent:], dim=1))
+        left = torch.argmin(squeezed_mask[:, :cent].flip(1), dim=1)
+        right = torch.argmin(squeezed_mask[:, cent:], dim=1)
+        num_low_freqs = 2 * torch.min(left, right)  # force a symmetric center
+        pad = (mask.shape[-2] - num_low_freqs + 1) // 2
 
-        if not torch.all(squeezed_mask[:, left:right] == 1):  # type: ignore
-            raise RuntimeError("Extracting k-space center failed.")
-
-        x = transforms.mask_center(masked_kspace, left, right)  # type: ignore
+        x = transforms.batched_mask_center(masked_kspace, pad, pad + num_low_freqs)
 
         # convert to image space
         x = fastmri.ifft2c(x)

@@ -201,7 +201,7 @@ class FastMriDataModule(pl.LightningDataModule):
             if is_train:
                 sampler = torch.utils.data.DistributedSampler(dataset)
             else:
-                sampler = fastmri.data.VolumeSampler(dataset)
+                sampler = fastmri.data.VolumeSampler(dataset, shuffle=False)
 
         dataloader = torch.utils.data.DataLoader(
             dataset=dataset,
@@ -209,6 +209,7 @@ class FastMriDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             worker_init_fn=worker_init_fn,
             sampler=sampler,
+            shuffle=is_train if sampler is None else False,
         )
 
         return dataloader

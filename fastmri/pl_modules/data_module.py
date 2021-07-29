@@ -209,7 +209,7 @@ class FastMriDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             worker_init_fn=worker_init_fn,
             sampler=sampler,
-            shuffle=is_train,
+            shuffle=is_train if sampler is None else False,
         )
 
         return dataloader

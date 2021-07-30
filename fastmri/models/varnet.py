@@ -181,9 +181,9 @@ class SensitivityModel(nn.Module):
         # running argmin returns the first non-zero
         left = torch.argmin(squeezed_mask[:, :cent].flip(1), dim=1)
         right = torch.argmin(squeezed_mask[:, cent:], dim=1)
-        num_low_freqs = 2 * torch.max(
-            torch.min(left, right), torch.ones_like(left)
-        )  # force a symmetric center
+        num_low_freqs = torch.max(
+            2 * torch.min(left, right), torch.ones_like(left)
+        )  # force a symmetric center unless 1
         pad = (mask.shape[-2] - num_low_freqs + 1) // 2
 
         x = transforms.batched_mask_center(masked_kspace, pad, pad + num_low_freqs)

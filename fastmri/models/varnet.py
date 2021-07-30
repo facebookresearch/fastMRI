@@ -176,13 +176,17 @@ class SensitivityModel(nn.Module):
 
     def forward(self, masked_kspace: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         # get low frequency line locations and mask them out
-        cent = mask.shape[-2] // 2
-        left = torch.nonzero(mask.squeeze()[:cent] == 0)[-1]
-        right = torch.nonzero(mask.squeeze()[cent:] == 0)[0] + cent
-        num_low_freqs = right - left
+        squeezed_mask = mask[:, 0, 0, :, 0]
+        cent = squeezed_mask.shape[1] // 2
+        # running argmin returns the first non-zero
+        left = torch.argmin(squeezed_mask[:, :cent].flip(1), dim=1)
+        right = torch.argmin(squeezed_mask[:, cent:], dim=1)
+        num_low_freqs = torch.max(
+            2 * torch.min(left, right), torch.ones_like(left)
+        )  # force a symmetric center unless 1
         pad = (mask.shape[-2] - num_low_freqs + 1) // 2
 
-        x = transforms.mask_center(masked_kspace, pad, pad + num_low_freqs)
+        x = transforms.batched_mask_center(masked_kspace, pad, pad + num_low_freqs)
 
         # convert to image space
         x = fastmri.ifft2c(x)

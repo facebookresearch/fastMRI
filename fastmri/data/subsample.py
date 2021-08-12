@@ -183,6 +183,7 @@ class EquispacedMaskFunc(MaskFunc):
                 for all masks with a given (acceleration, center_fraction) setting.
                 This argument has no effect when `skip_low_freqs` is `False`.
         """
+
         super().__init__(center_fractions, accelerations)
         self.skip_low_freqs = skip_low_freqs
         self.skip_around_low_freqs = skip_around_low_freqs

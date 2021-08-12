@@ -172,6 +172,40 @@ class EquispacedMaskFunc(MaskFunc):
                 length as center_fractions. If multiple values are provided,
                 then one of these is chosen uniformly each time.
             skip_low_freqs: Whether to skip already sampled low-frequency lines
+                            for the purposes of determining where equispaced lines
+                            should be. Set this `True` to guarantee the same number
+                            of sampled lines for all masks with a given (acceleration,
+                            center_fraction) setting.
+            skip_around_low_freqs: Whether to also skip the two k-space lines right
+                                   next to the already sampled low-frequency region.
+                                   Used to guarantee that equispaced sampling doesn't
+                                   extend the low-frequency region. This is mostly useful
+                                   for VarNet, since it guarantees the same number of low-
+                                   frequency lines are used for the sensitivity map calculation
+                                   for all masks with a given (acceleration, center_fraction)
+                                   setting. This argument has no effect when `skip_low_freqs`
+                                   is `False`.
+        """
+        super().__init__(center_fractions, accelerations)
+        self.skip_low_freqs = skip_low_freqs
+        self.skip_around_low_freqs = skip_around_low_freqs
+
+    def __init__(
+        self,
+        center_fractions: Sequence[float],
+        accelerations: Sequence[int],
+        skip_low_freqs: Optional[bool] = False,
+        skip_around_low_freqs: Optional[bool] = False,
+    ):
+        """
+        Args:
+            center_fractions: Fraction of low-frequency columns to be retained.
+                If multiple values are provided, then one of these numbers is
+                chosen uniformly each time.
+            accelerations: Amount of under-sampling. This should have the same
+                length as center_fractions. If multiple values are provided,
+                then one of these is chosen uniformly each time.
+            skip_low_freqs: Whether to skip already sampled low-frequency lines
                 for the purposes of determining where equispaced lines should be.
                 Set this `True` to guarantee the same number of sampled lines for
                 all masks with a given (acceleration, center_fraction) setting.
@@ -217,7 +251,7 @@ class EquispacedMaskFunc(MaskFunc):
             mask[pad : pad + num_low_freqs] = True
 
             # If everything has been sampled in the center: we don't need to sample anything else.
-            if num_low_freqs * acceleration <= num_cols:
+            if num_low_freqs * acceleration != num_cols:
                 if self.skip_low_freqs:
                     buffer = 0
                     if self.skip_around_low_freqs:

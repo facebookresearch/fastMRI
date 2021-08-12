@@ -6,7 +6,7 @@ LICENSE file in the root directory of this source tree.
 """
 
 import math
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import fastmri
 import torch
@@ -141,6 +141,7 @@ class SensitivityModel(nn.Module):
         in_chans: int = 2,
         out_chans: int = 2,
         drop_prob: float = 0.0,
+        num_sens_lines: Optional[int] = None,
     ):
         """
         Args:
@@ -149,9 +150,18 @@ class SensitivityModel(nn.Module):
             in_chans: Number of channels in the input to the U-Net model.
             out_chans: Number of channels in the output to the U-Net model.
             drop_prob: Dropout probability.
+            num_sens_lines: Number of low-frequency lines to use for sensitivity map
+                computation, must be even or `None`. Default `None` will automatically
+                compute the number from masks. Default behaviour may cause some slices to
+                use more low-frequency lines than others, when used in conjunction with
+                e.g. the EquispacedMaskFunc defaults. To prevent this, either set
+                `num_sens_lines`, or set `skip_low_freqs` and `skip_around_low_freqs`
+                to `True` in the EquispacedMaskFunc. Note that setting this value may
+                lead to undesired behaviour when training on multiple accelerations
+                simultaneously.
         """
         super().__init__()
-
+        self.num_sens_lines = num_sens_lines
         self.norm_unet = NormUnet(
             chans,
             num_pools,
@@ -174,7 +184,9 @@ class SensitivityModel(nn.Module):
     def divide_root_sum_of_squares(self, x: torch.Tensor) -> torch.Tensor:
         return x / fastmri.rss_complex(x, dim=1).unsqueeze(-1).unsqueeze(1)
 
-    def forward(self, masked_kspace: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    def get_pad_and_num_low_freqs(
+        self, mask: torch.Tensor, num_sens_lines: Optional[int] = None
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         # get low frequency line locations and mask them out
         squeezed_mask = mask[:, 0, 0, :, 0]
         cent = squeezed_mask.shape[1] // 2
@@ -184,8 +196,21 @@ class SensitivityModel(nn.Module):
         num_low_freqs = torch.max(
             2 * torch.min(left, right), torch.ones_like(left)
         )  # force a symmetric center unless 1
-        pad = (mask.shape[-2] - num_low_freqs + 1) // 2
 
+        if isinstance(self.num_sens_lines, int):  # Use prespecified number instead
+            assert (num_low_freqs >= num_sens_lines).all(), (
+                "`num_sens_lines` cannot be greater than the actual number of low-frequency "
+                "lines in the mask: {}".format(num_low_freqs)
+            )
+            num_low_freqs = num_sens_lines * torch.ones(
+                mask.shape[0], dtype=mask.dtype, device=mask.device
+            )
+
+        pad = (mask.shape[-2] - num_low_freqs + 1) // 2
+        return pad, num_low_freqs
+
+    def forward(self, masked_kspace: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        pad, num_low_freqs = self.get_pad_and_num_low_freqs(mask, self.num_sens_lines)
         x = transforms.batched_mask_center(masked_kspace, pad, pad + num_low_freqs)
 
         # convert to image space
@@ -215,6 +240,7 @@ class VarNet(nn.Module):
         sens_pools: int = 4,
         chans: int = 18,
         pools: int = 4,
+        num_sens_lines: Optional[int] = None,
     ):
         """
         Args:
@@ -226,10 +252,21 @@ class VarNet(nn.Module):
             chans: Number of channels for cascade U-Net.
             pools: Number of downsampling and upsampling layers for cascade
                 U-Net.
+            num_sens_lines: Number of low-frequency lines to use for sensitivity map
+                computation, must be even or `None`. Default `None` will automatically
+                compute the number from masks. Default behaviour may cause some slices to
+                use more low-frequency lines than others, when used in conjunction with
+                e.g. the EquispacedMaskFunc defaults. To prevent this, either set
+                `num_sens_lines`, or set `skip_low_freqs` and `skip_around_low_freqs`
+                to `True` in the EquispacedMaskFunc. Note that setting this value may
+                lead to undesired behaviour when training on multiple accelerations
+                simultaneously.
         """
         super().__init__()
 
-        self.sens_net = SensitivityModel(sens_chans, sens_pools)
+        self.sens_net = SensitivityModel(
+            sens_chans, sens_pools, num_sens_lines=num_sens_lines
+        )
         self.cascades = nn.ModuleList(
             [VarNetBlock(NormUnet(chans, pools)) for _ in range(num_cascades)]
         )

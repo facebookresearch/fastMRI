@@ -155,6 +155,7 @@ class EquispacedMaskFunc(MaskFunc):
     modifications to standard GRAPPA approaches. Nonetheless, this aspect of
     the function has been preserved to match the public multicoil data.
     """
+
     def __init__(
             self, 
             center_fractions: Sequence[float], 

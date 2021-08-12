@@ -5,6 +5,7 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+from typing import Optional
 from argparse import ArgumentParser
 
 import fastmri
@@ -42,6 +43,7 @@ class VarNetModule(MriModule):
         lr_step_size: int = 40,
         lr_gamma: float = 0.1,
         weight_decay: float = 0.0,
+        num_sens_lines: Optional[int] = None,
         **kwargs,
     ):
         """
@@ -58,6 +60,15 @@ class VarNetModule(MriModule):
             lr_step_size: Learning rate step size.
             lr_gamma: Learning rate gamma decay.
             weight_decay: Parameter for penalizing weights norm.
+            num_sens_lines: Number of low-frequency lines to use for sensitivity map
+                computation, must be even or `None`. Default `None` will automatically
+                compute the number from masks. Default behaviour may cause some slices to
+                use more low-frequency lines than others, when used in conjunction with
+                e.g. the EquispacedMaskFunc defaults. To prevent this, either set
+                `num_sens_lines`, or set `skip_low_freqs` and `skip_around_low_freqs`
+                to `True` in the EquispacedMaskFunc. Note that setting this value may
+                lead to undesired behaviour when training on multiple accelerations
+                simultaneously.
         """
         super().__init__(**kwargs)
         self.save_hyperparameters()
@@ -71,6 +82,7 @@ class VarNetModule(MriModule):
         self.lr_step_size = lr_step_size
         self.lr_gamma = lr_gamma
         self.weight_decay = weight_decay
+        self.num_sens_lines = num_sens_lines
 
         self.varnet = VarNet(
             num_cascades=self.num_cascades,
@@ -78,6 +90,7 @@ class VarNetModule(MriModule):
             sens_pools=self.sens_pools,
             chans=self.chans,
             pools=self.pools,
+            num_sens_lines=self.num_sens_lines,
         )
 
         self.loss = fastmri.SSIMLoss()

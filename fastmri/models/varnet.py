@@ -186,7 +186,7 @@ class SensitivityModel(nn.Module):
 
     def get_pad_and_num_low_freqs(
         self, mask: torch.Tensor, num_sens_lines: Optional[int] = None
-    ) -> torch.Tensor:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         # get low frequency line locations and mask them out
         squeezed_mask = mask[:, 0, 0, :, 0]
         cent = squeezed_mask.shape[1] // 2

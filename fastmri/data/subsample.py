@@ -217,7 +217,7 @@ class EquispacedMaskFunc(MaskFunc):
             mask[pad : pad + num_low_freqs] = True
 
             # If everything has been sampled in the center: we don't need to sample anything else.
-            if num_low_freqs * acceleration >= num_cols:
+            if num_low_freqs * acceleration <= num_cols:
                 if self.skip_low_freqs:
                     buffer = 0
                     if self.skip_around_low_freqs:

@@ -171,19 +171,16 @@ class EquispacedMaskFunc(MaskFunc):
                 length as center_fractions. If multiple values are provided,
                 then one of these is chosen uniformly each time.
             skip_low_freqs: Whether to skip already sampled low-frequency lines
-                            for the purposes of determining where equispaced lines
-                            should be. Set this `True` to guarantee the same number
-                            of sampled lines for all masks with a given (acceleration,
-                            center_fraction) setting.
+                for the purposes of determining where equispaced lines should be. 
+                Set this `True` to guarantee the same number of sampled lines for 
+                all masks with a given (acceleration, center_fraction) setting.
             skip_around_low_freqs: Whether to also skip the two k-space lines right
-                                   next to the already sampled low-frequency region.
-                                   Used to guarantee that equispaced sampling doesn't 
-                                   extend the low-frequency region. This is mostly useful
-                                   for VarNet, since it guarantees the same number of low-
-                                   frequency lines are used for the sensitivity map calculation
-                                   for all masks with a given (acceleration, center_fraction) 
-                                   setting. This argument has no effect when `skip_low_freqs`
-                                   is `False`. 
+                next to the already sampled low-frequency region. Used to guarantee 
+                that equispaced sampling doesn't extend the low-frequency region. 
+                This is mostly useful for VarNet, since it guarantees the same number 
+                of low-frequency lines are used for the sensitivity map calculation
+                for all masks with a given (acceleration, center_fraction) setting. 
+                This argument has no effect when `skip_low_freqs` is `False`. 
         """
         super().__init__(center_fractions, accelerations)
         self.skip_low_freqs = skip_low_freqs

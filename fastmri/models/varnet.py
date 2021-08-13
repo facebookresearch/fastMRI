@@ -104,7 +104,7 @@ class NormUnet(nn.Module):
             #  so we need to shape x to [B, 2, C // 2 * H * W] before unnormalisation,
             #  and then reshape back to [B, C, H, W].
             b, c, h, w = x.shape
-            x = x.view(b, 2, c // 2 * h * w)
+            x = x.reshape(b, 2, c // 2 * h * w)
             unnorm_x = x * std + mean
             return unnorm_x.reshape(b, c, h, w)
 

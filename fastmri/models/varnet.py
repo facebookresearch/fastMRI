@@ -71,7 +71,10 @@ class NormUnet(nn.Module):
     def norm(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # group norm
         b, c, h, w = x.shape
-        assert c % 2 == 0
+        if c % 2 != 0:
+            raise RuntimeError(
+                f"Channel dimension should be a multiple of 2: (real, imaginary), not {c}"
+            )
         # setting `norm_per_coil` does nothing when c == 2.
         if self.norm_per_coil:
             # Normalise per coil, assumes coils are in channel dimension

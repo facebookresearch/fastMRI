@@ -44,6 +44,7 @@ class VarNetModule(MriModule):
         lr_gamma: float = 0.1,
         weight_decay: float = 0.0,
         num_sense_lines: Optional[int] = None,
+        norm_per_coil: Optional[bool] = False,
         **kwargs,
     ):
         """
@@ -69,7 +70,11 @@ class VarNetModule(MriModule):
                 to `True` in the EquispacedMaskFunc. Note that setting this value may
                 lead to undesired behaviour when training on multiple accelerations
                 simultaneously.
+            norm_per_coil: Whether to do U-Net normalisation per coil or over all coils.
+                           This makes a difference only when coils are treated as channel
+                           dimensions in VarNet.
         """
+
         super().__init__(**kwargs)
         self.save_hyperparameters()
 
@@ -83,6 +88,7 @@ class VarNetModule(MriModule):
         self.lr_gamma = lr_gamma
         self.weight_decay = weight_decay
         self.num_sense_lines = num_sense_lines
+        self.norm_per_coil = norm_per_coil
 
         self.varnet = VarNet(
             num_cascades=self.num_cascades,
@@ -91,6 +97,7 @@ class VarNetModule(MriModule):
             chans=self.chans,
             pools=self.pools,
             num_sense_lines=self.num_sense_lines,
+            norm_per_coil=self.norm_per_coil,
         )
 
         self.loss = fastmri.SSIMLoss()

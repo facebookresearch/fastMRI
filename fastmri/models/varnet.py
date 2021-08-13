@@ -33,6 +33,7 @@ class NormUnet(nn.Module):
         in_chans: int = 2,
         out_chans: int = 2,
         drop_prob: float = 0.0,
+        norm_per_coil: Optional[bool] = False,
     ):
         """
         Args:
@@ -41,9 +42,13 @@ class NormUnet(nn.Module):
             in_chans: Number of channels in the input to the U-Net model.
             out_chans: Number of channels in the output to the U-Net model.
             drop_prob: Dropout probability.
+            norm_per_coil: Whether to do normalisation per coil or over all coils.
+                Only has effect if coils are in the channel dimension. Assumes
+                channels also contain real-imaginary pairs.
         """
         super().__init__()
 
+        self.norm_per_coil = norm_per_coil
         self.unet = Unet(
             in_chans=in_chans,
             out_chans=out_chans,
@@ -66,19 +71,39 @@ class NormUnet(nn.Module):
     def norm(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # group norm
         b, c, h, w = x.shape
-        x = x.view(b, 2, c // 2 * h * w)
-
-        mean = x.mean(dim=2).view(b, c, 1, 1)
-        std = x.std(dim=2).view(b, c, 1, 1)
-
-        x = x.view(b, c, h, w)
-
-        return (x - mean) / std, mean, std
+        assert c % 2 == 0
+        # setting `norm_per_coil` does nothing when c == 2.
+        if self.norm_per_coil:
+            # Normalise per coil, assumes coils are in channel dimension
+            #  as [coil1_real, coil1_imag, coil2_real, coil2_imag, ...]
+            x = x.view(b, c, h * w)
+            mean = x.mean(dim=2).view(b, c, 1, 1)
+            std = x.std(dim=2).view(b, c, 1, 1)
+            x = x.reshape(b, c, h, w)
+            norm_x = (x - mean) / std
+        else:
+            # Normalise over all coils, assumes coils are in channel dimension
+            #  as [coil1_real, coil1_imag, coil2_real, coil2_imag, ...]
+            x = x.view(b, 2, c // 2 * h * w)
+            mean = x.mean(dim=2).view(b, 2, 1)
+            std = x.std(dim=2).view(b, 2, 1)
+            norm_x = (x - mean) / std
+            norm_x = norm_x.reshape(b, c, h, w)
+        return norm_x, mean, std
 
     def unnorm(
         self, x: torch.Tensor, mean: torch.Tensor, std: torch.Tensor
     ) -> torch.Tensor:
-        return x * std + mean
+        if self.norm_per_coil:
+            return x * std + mean
+        else:
+            # x has shape [B, C, H, W], mean and std have shape [B, 2, 1],
+            #  so we need to shape x to [B, 2, C // 2 * H * W] before unnormalisation,
+            #  and then reshape back to [B, C, H, W].
+            b, c, h, w = x.shape
+            x = x.view(b, 2, c // 2 * h * w)
+            unnorm_x = x * std + mean
+            return unnorm_x.reshape(b, c, h, w)
 
     def pad(
         self, x: torch.Tensor
@@ -242,6 +267,7 @@ class VarNet(nn.Module):
         chans: int = 18,
         pools: int = 4,
         num_sense_lines: Optional[int] = None,
+        norm_per_coil: Optional[bool] = False,
     ):
         """
         Args:
@@ -262,14 +288,24 @@ class VarNet(nn.Module):
                 to `True` in the EquispacedMaskFunc. Note that setting this value may
                 lead to undesired behaviour when training on multiple accelerations
                 simultaneously.
+            norm_per_coil: Whether to do normalisation per coil or over all coils.
+                Only has effect if coils are in the channel dimension. Assumes
+                channels also contain real-imaginary pairs.
         """
         super().__init__()
 
+        self.norm_per_coil = norm_per_coil
+
+        # We don't have to specificy `norm_per_coil` for the SensitivityModel, since
+        #  it treats coils as batch dimensions in its NormUnet.
         self.sens_net = SensitivityModel(
             sens_chans, sens_pools, num_sense_lines=num_sense_lines
         )
         self.cascades = nn.ModuleList(
-            [VarNetBlock(NormUnet(chans, pools)) for _ in range(num_cascades)]
+            [
+                VarNetBlock(NormUnet(chans, pools, norm_per_coil=norm_per_coil))
+                for _ in range(num_cascades)
+            ]
         )
 
     def forward(self, masked_kspace: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:

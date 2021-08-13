@@ -44,7 +44,7 @@ class VarNetModule(MriModule):
         lr_gamma: float = 0.1,
         weight_decay: float = 0.0,
         num_sense_lines: Optional[int] = None,
-        norm_per_coil: Optional[bool] = False,
+        norm_per_coil: bool = False,
         **kwargs,
     ):
         """

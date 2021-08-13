@@ -69,7 +69,9 @@ def test_varnet(shape, out_chans, chans, center_fractions, accelerations):
         ([1, 3, 16, 64, 2], 2, 1, [0.08], [4]),
     ],
 )
-def test_varnet_num_sense_lines(shape, out_chans, chans, center_fractions, accelerations):
+def test_varnet_num_sense_lines(
+    shape, out_chans, chans, center_fractions, accelerations
+):
     mask_func = RandomMaskFunc(center_fractions, accelerations)
     x = create_input(shape)
     outputs, masks = [], []

@@ -270,7 +270,7 @@ class VarNet(nn.Module):
         chans: int = 18,
         pools: int = 4,
         num_sense_lines: Optional[int] = None,
-        norm_per_coil: Optional[bool] = False,
+        norm_per_coil: bool = False,
     ):
         """
         Args:

@@ -33,7 +33,7 @@ class NormUnet(nn.Module):
         in_chans: int = 2,
         out_chans: int = 2,
         drop_prob: float = 0.0,
-        norm_per_coil: Optional[bool] = False,
+        norm_per_coil: bool = False,
     ):
         """
         Args:

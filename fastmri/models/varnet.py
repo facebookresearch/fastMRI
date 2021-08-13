@@ -68,8 +68,8 @@ class NormUnet(nn.Module):
         b, c, h, w = x.shape
         x = x.view(b, 2, c // 2 * h * w)
 
-        mean = x.mean(dim=2).view(b, c, 1, 1)
-        std = x.std(dim=2).view(b, c, 1, 1)
+        mean = x.mean(dim=2).view(b, 2, 1, 1)
+        std = x.std(dim=2).view(b, 2, 1, 1)
 
         x = x.view(b, c, h, w)
 

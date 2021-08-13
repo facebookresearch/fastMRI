@@ -92,6 +92,34 @@ def test_varnet_num_sense_lines(
     assert y.shape[1:] == x.shape[2:4]
 
 
+# TODO" Write test with multicoil normunet input?
+@pytest.mark.parametrize(
+    "shape, out_chans, chans, center_fractions, accelerations",
+    [
+        ([1, 3, 16, 64, 2], 2, 1, [0.08], [4]),
+    ],
+)
+def test_varnet_coilnorm(shape, out_chans, chans, center_fractions, accelerations):
+    mask_func = RandomMaskFunc(center_fractions, accelerations)
+    x = create_input(shape)
+    outputs, masks = [], []
+    for i in range(x.shape[0]):
+        output, mask = transforms.apply_mask(x[i : i + 1], mask_func, seed=123)
+        outputs.append(output)
+        masks.append(mask)
+
+    output = torch.cat(outputs)
+    mask = torch.cat(masks)
+
+    varnet = VarNet(
+        num_cascades=2, sens_chans=4, sens_pools=2, chans=4, pools=2, norm_per_coil=True
+    )
+
+    y = varnet(output, mask.byte())
+
+    assert y.shape[1:] == x.shape[2:4]
+
+
 def test_unet_scripting():
     model = Unet(
         in_chans=1,

@@ -71,8 +71,8 @@ class VarNetModule(MriModule):
                 lead to undesired behaviour when training on multiple accelerations
                 simultaneously.
             norm_per_coil: Whether to do U-Net normalisation per coil or over all coils.
-                           This makes a difference only when coils are treated as channel
-                           dimensions in VarNet.
+                This makes a difference only when coils are treated as channel
+                dimensions in VarNet.
         """
 
         super().__init__(**kwargs)

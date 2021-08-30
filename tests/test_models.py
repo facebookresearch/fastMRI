@@ -36,15 +36,16 @@ def test_unet(shape, out_chans, chans):
 
 
 @pytest.mark.parametrize(
-    "shape, out_chans, chans, center_fractions, accelerations",
+    "shape, chans, center_fractions, accelerations, mask_center",
     [
-        ([1, 3, 32, 16, 2], 2, 1, [0.08], [4]),
-        ([5, 5, 15, 12, 2], 2, 32, [0.04], [8]),
-        ([3, 8, 13, 18, 2], 2, 16, [0.08], [4]),
-        ([1, 2, 17, 19, 2], 2, 8, [0.08], [4]),
+        ([1, 3, 32, 16, 2], 1, [0.08], [4], True),
+        ([5, 5, 15, 12, 2], 32, [0.04], [8], True),
+        ([3, 8, 13, 18, 2], 16, [0.08], [4], True),
+        ([1, 2, 17, 19, 2], 8, [0.08], [4], True),
+        ([1, 2, 17, 19, 2], 8, [0.08], [4], False),
     ],
 )
-def test_varnet(shape, out_chans, chans, center_fractions, accelerations):
+def test_varnet(shape, chans, center_fractions, accelerations, mask_center):
     mask_func = RandomMaskFunc(center_fractions, accelerations)
     x = create_input(shape)
     outputs, masks = [], []
@@ -56,7 +57,14 @@ def test_varnet(shape, out_chans, chans, center_fractions, accelerations):
     output = torch.cat(outputs)
     mask = torch.cat(masks)
 
-    varnet = VarNet(num_cascades=2, sens_chans=4, sens_pools=2, chans=4, pools=2)
+    varnet = VarNet(
+        num_cascades=2,
+        sens_chans=4,
+        sens_pools=2,
+        chans=chans,
+        pools=2,
+        mask_center=mask_center,
+    )
 
     y = varnet(output, mask.byte())
 
@@ -64,13 +72,14 @@ def test_varnet(shape, out_chans, chans, center_fractions, accelerations):
 
 
 @pytest.mark.parametrize(
-    "shape, out_chans, chans, center_fractions, accelerations",
+    "shape, chans, center_fractions, accelerations, mask_center",
     [
-        ([1, 3, 16, 64, 2], 2, 1, [0.08], [4]),
+        ([1, 3, 16, 64, 2], 1, [0.08], [4], True),
+        ([1, 3, 16, 64, 2], 1, [0.08], [4], False),
     ],
 )
 def test_varnet_num_sense_lines(
-    shape, out_chans, chans, center_fractions, accelerations
+    shape, chans, center_fractions, accelerations, mask_center
 ):
     mask_func = RandomMaskFunc(center_fractions, accelerations)
     x = create_input(shape)
@@ -84,7 +93,13 @@ def test_varnet_num_sense_lines(
     mask = torch.cat(masks)
 
     varnet = VarNet(
-        num_cascades=2, sens_chans=4, sens_pools=2, chans=4, pools=2, num_sense_lines=4
+        num_cascades=2,
+        sens_chans=4,
+        sens_pools=2,
+        chans=chans,
+        pools=2,
+        num_sense_lines=4,
+        mask_center=mask_center,
     )
 
     y = varnet(output, mask.byte())

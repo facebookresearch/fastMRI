@@ -141,6 +141,7 @@ class SensitivityModel(nn.Module):
         in_chans: int = 2,
         out_chans: int = 2,
         drop_prob: float = 0.0,
+        mask_center: bool = True,
         num_sense_lines: Optional[int] = None,
     ):
         """
@@ -150,18 +151,23 @@ class SensitivityModel(nn.Module):
             in_chans: Number of channels in the input to the U-Net model.
             out_chans: Number of channels in the output to the U-Net model.
             drop_prob: Dropout probability.
-            num_sense_lines: Number of low-frequency lines to use for sensitivity map
-                computation, must be even or `None`. Default `None` will automatically
-                compute the number from masks. Default behaviour may cause some slices to
-                use more low-frequency lines than others, when used in conjunction with
-                e.g. the EquispacedMaskFunc defaults. To prevent this, either set
-                `num_sense_lines`, or set `skip_low_freqs` and `skip_around_low_freqs`
-                to `True` in the EquispacedMaskFunc. Note that setting this value may
-                lead to undesired behaviour when training on multiple accelerations
+            mask_center: Whether to mask center of k-space for sensitivity map
+                calculation.
+            num_sense_lines: Number of low-frequency lines to use for
+                sensitivity map computation, must be even or ``None``. Default
+                ``None`` will automatically compute the number from masks.
+                Default behaviour may cause some slices to use more
+                low-frequency lines than others, when used in conjunction with,
+                e.g., the ``EquispacedMaskFunc`` defaults. To prevent this,
+                either set ``num_sense_lines``, or set ``skip_low_freqs`` and
+                ``skip_around_low_freqs`` to ``True`` in the
+                ``EquispacedMaskFunc``. Note that setting this value may lead
+                to undesired behaviour when training on multiple accelerations
                 simultaneously.
         """
         super().__init__()
         self.num_sense_lines = num_sense_lines
+        self.mask_center = mask_center
         self.norm_unet = NormUnet(
             chans,
             num_pools,
@@ -211,19 +217,21 @@ class SensitivityModel(nn.Module):
         return pad, num_low_freqs
 
     def forward(self, masked_kspace: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        pad, num_low_freqs = self.get_pad_and_num_low_freqs(mask, self.num_sense_lines)
-        x = transforms.batched_mask_center(masked_kspace, pad, pad + num_low_freqs)
+        if self.mask_center:
+            pad, num_low_freqs = self.get_pad_and_num_low_freqs(
+                mask, self.num_sense_lines
+            )
+            masked_kspace = transforms.batched_mask_center(
+                masked_kspace, pad, pad + num_low_freqs
+            )
 
         # convert to image space
-        x = fastmri.ifft2c(x)
-        x, b = self.chans_to_batch_dim(x)
+        images, batches = self.chans_to_batch_dim(fastmri.ifft2c(masked_kspace))
 
         # estimate sensitivities
-        x = self.norm_unet(x)
-        x = self.batch_chans_to_chan_dim(x, b)
-        x = self.divide_root_sum_of_squares(x)
-
-        return x
+        return self.divide_root_sum_of_squares(
+            self.batch_chans_to_chan_dim(self.norm_unet(images), batches)
+        )
 
 
 class VarNet(nn.Module):
@@ -241,6 +249,7 @@ class VarNet(nn.Module):
         sens_pools: int = 4,
         chans: int = 18,
         pools: int = 4,
+        mask_center: bool = True,
         num_sense_lines: Optional[int] = None,
     ):
         """
@@ -253,20 +262,27 @@ class VarNet(nn.Module):
             chans: Number of channels for cascade U-Net.
             pools: Number of downsampling and upsampling layers for cascade
                 U-Net.
-            num_sense_lines: Number of low-frequency lines to use for sensitivity map
-                computation, must be even or `None`. Default `None` will automatically
-                compute the number from masks. Default behaviour may cause some slices to
-                use more low-frequency lines than others, when used in conjunction with
-                e.g. the EquispacedMaskFunc defaults. To prevent this, either set
-                `num_sense_lines`, or set `skip_low_freqs` and `skip_around_low_freqs`
-                to `True` in the EquispacedMaskFunc. Note that setting this value may
-                lead to undesired behaviour when training on multiple accelerations
+            mask_center: Whether to mask center of k-space for sensitivity map
+                calculation.
+            num_sense_lines: Number of low-frequency lines to use for
+                sensitivity map computation, must be even or ``None``. Default
+                ``None`` will automatically compute the number from masks.
+                Default behaviour may cause some slices to use more
+                low-frequency lines than others, when used in conjunction with,
+                e.g., the ``EquispacedMaskFunc`` defaults. To prevent this,
+                either set ``num_sense_lines``, or set ``skip_low_freqs`` and
+                ``skip_around_low_freqs`` to ``True`` in the
+                ``EquispacedMaskFunc``. Note that setting this value may lead
+                to undesired behaviour when training on multiple accelerations
                 simultaneously.
         """
         super().__init__()
 
         self.sens_net = SensitivityModel(
-            sens_chans, sens_pools, num_sense_lines=num_sense_lines
+            chans=sens_chans,
+            num_pools=sens_pools,
+            mask_center=mask_center,
+            num_sense_lines=num_sense_lines,
         )
         self.cascades = nn.ModuleList(
             [VarNetBlock(NormUnet(chans, pools)) for _ in range(num_cascades)]

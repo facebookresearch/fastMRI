@@ -1,6 +1,6 @@
 -r requirements.txt
 wheel
-pytest==5.4.3
-mypy==0.800
+pytest==6.2.4
+mypy==0.910
 black==20.8b1
-flake8==3.8.3
+flake8==3.9.0

@@ -43,9 +43,7 @@ def tensor_to_complex_np(data: torch.Tensor) -> np.ndarray:
     Returns:
         Complex numpy version of data.
     """
-    data = data.numpy()
-
-    return data[..., 0] + 1j * data[..., 1]
+    return torch.view_as_complex(data).numpy()
 
 
 def apply_mask(
@@ -71,8 +69,7 @@ def apply_mask(
             masked data: Subsampled k-space data
             mask: The generated mask
     """
-    shape = np.array(data.shape)
-    shape[:-3] = 1
+    shape = (1,) * len(data.shape[:-3]) + tuple(data.shape[-3:])
     mask = mask_func(shape, seed)
     if padding is not None:
         mask[:, :, : padding[0]] = 0
@@ -310,7 +307,7 @@ class UnetDataTransform:
                 fname: File name.
                 slice_num: Serial number of the slice.
         """
-        kspace = to_tensor(kspace)
+        kspace_torch = to_tensor(kspace)
 
         # check for max value
         max_value = attrs["max"] if "max" in attrs.keys() else 0.0
@@ -318,9 +315,9 @@ class UnetDataTransform:
         # apply mask
         if self.mask_func:
             seed = None if not self.use_seed else tuple(map(ord, fname))
-            masked_kspace, mask = apply_mask(kspace, self.mask_func, seed)
+            masked_kspace, _ = apply_mask(kspace_torch, self.mask_func, seed)
         else:
-            masked_kspace = kspace
+            masked_kspace = kspace_torch
 
         # inverse Fourier transform to get zero filled solution
         image = fastmri.ifft2c(masked_kspace)
@@ -350,14 +347,14 @@ class UnetDataTransform:
 
         # normalize target
         if target is not None:
-            target = to_tensor(target)
-            target = center_crop(target, crop_size)
-            target = normalize(target, mean, std, eps=1e-11)
-            target = target.clamp(-6, 6)
+            target_torch = to_tensor(target)
+            target_torch = center_crop(target_torch, crop_size)
+            target_torch = normalize(target_torch, mean, std, eps=1e-11)
+            target_torch = target_torch.clamp(-6, 6)
         else:
-            target = torch.Tensor([0])
+            target_torch = torch.Tensor([0])
 
-        return image, target, mean, std, fname, slice_num, max_value
+        return image, target_torch, mean, std, fname, slice_num, max_value
 
 
 class VarNetDataTransform:
@@ -407,13 +404,13 @@ class VarNetDataTransform:
                 crop_size: The size to crop the final image.
         """
         if target is not None:
-            target = to_tensor(target)
+            target_torch = to_tensor(target)
             max_value = attrs["max"]
         else:
-            target = torch.tensor(0)
+            target_torch = torch.tensor(0)
             max_value = 0.0
 
-        kspace = to_tensor(kspace)
+        kspace_torch = to_tensor(kspace)
         seed = None if not self.use_seed else tuple(map(ord, fname))
         acq_start = attrs["padding_left"]
         acq_end = attrs["padding_right"]
@@ -421,25 +418,25 @@ class VarNetDataTransform:
         crop_size = torch.tensor([attrs["recon_size"][0], attrs["recon_size"][1]])
 
         if self.mask_func:
-            masked_kspace, mask = apply_mask(
-                kspace, self.mask_func, seed, (acq_start, acq_end)
+            masked_kspace, mask_torch = apply_mask(
+                kspace_torch, self.mask_func, seed, (acq_start, acq_end)
             )
         else:
-            masked_kspace = kspace
-            shape = np.array(kspace.shape)
+            masked_kspace = kspace_torch
+            shape = np.array(kspace_torch.shape)
             num_cols = shape[-2]
             shape[:-3] = 1
             mask_shape = [1] * len(shape)
             mask_shape[-2] = num_cols
-            mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
-            mask = mask.reshape(*mask_shape)
-            mask[:, :, :acq_start] = 0
-            mask[:, :, acq_end:] = 0
+            mask_torch = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
+            mask_torch = mask_torch.reshape(*mask_shape)
+            mask_torch[:, :, :acq_start] = 0
+            mask_torch[:, :, acq_end:] = 0
 
         return (
             masked_kspace,
-            mask.byte(),
-            target,
+            mask_torch.byte(),
+            target_torch,
             fname,
             slice_num,
             max_value,

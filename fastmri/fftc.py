@@ -8,65 +8,7 @@ LICENSE file in the root directory of this source tree.
 from typing import List, Optional
 
 import torch
-from packaging import version
-
-if version.parse(torch.__version__) >= version.parse("1.7.0"):
-    import torch.fft  # type: ignore
-
-
-def fft2c_old(data: torch.Tensor, norm: str = "ortho") -> torch.Tensor:
-    """
-    Apply centered 2 dimensional Fast Fourier Transform.
-
-    Args:
-        data: Complex valued input data containing at least 3 dimensions:
-            dimensions -3 & -2 are spatial dimensions and dimension -1 has size
-            2. All other dimensions are assumed to be batch dimensions.
-        norm: Whether to include normalization. Must be one of ``"backward"``
-            or ``"ortho"``. See ``torch.fft.fft`` on PyTorch 1.9.0 for details.
-
-    Returns:
-        The FFT of the input.
-    """
-    if not data.shape[-1] == 2:
-        raise ValueError("Tensor does not have separate complex dim.")
-    if norm not in ("ortho", "backward"):
-        raise ValueError("norm must be 'ortho' or 'backward'.")
-    normalized = True if norm == "ortho" else False
-
-    data = ifftshift(data, dim=[-3, -2])
-    data = torch.fft(data, 2, normalized=normalized)
-    data = fftshift(data, dim=[-3, -2])
-
-    return data
-
-
-def ifft2c_old(data: torch.Tensor, norm: str = "ortho") -> torch.Tensor:
-    """
-    Apply centered 2-dimensional Inverse Fast Fourier Transform.
-
-    Args:
-        data: Complex valued input data containing at least 3 dimensions:
-            dimensions -3 & -2 are spatial dimensions and dimension -1 has size
-            2. All other dimensions are assumed to be batch dimensions.
-        norm: Whether to include normalization. Must be one of ``"backward"``
-            or ``"ortho"``. See ``torch.fft.ifft`` on PyTorch 1.9.0 for
-            details.
-
-    Returns:
-        The IFFT of the input.
-    """
-    if not data.shape[-1] == 2:
-        raise ValueError("Tensor does not have separate complex dim.")
-    if norm not in ("ortho", "backward"):
-        raise ValueError("norm must be 'ortho' or 'backward'.")
-    normalized = True if norm == "ortho" else False
-
-    data = ifftshift(data, dim=[-3, -2])
-    data = torch.ifft(data, 2, normalized=normalized)
-    data = fftshift(data, dim=[-3, -2])
-
-    return data
+import torch.fft
 
 
 def fft2c_new(data: torch.Tensor, norm: str = "ortho") -> torch.Tensor:

@@ -13,7 +13,7 @@ import torch
 
 
 @contextlib.contextmanager
-def temp_seed(rng: np.random, seed: Optional[Union[int, Tuple[int, ...]]]):
+def temp_seed(rng: np.random.Generator, seed: Optional[Union[int, Tuple[int, ...]]]):
     if seed is None:
         try:
             yield
@@ -257,9 +257,9 @@ class EquispacedMaskFunc(MaskFunc):
             # reshape the mask
             mask_shape = [1 for _ in shape]
             mask_shape[-2] = num_cols
-            mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
+            mask_np = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
 
-        return mask
+        return mask_np
 
 
 def create_mask_for_mask_type(

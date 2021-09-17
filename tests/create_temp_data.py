@@ -70,7 +70,7 @@ def create_temp_data(path):
                         np.dtype("<f4")
                     )
                 else:
-                    mask = rg.integers(0, 2, size=recon_size[-1]).astype(np.bool)
+                    mask = rg.integers(0, 2, size=recon_size[-1]).astype(bool)
 
                 with h5py.File(fname, "w") as hf:
                     hf.create_dataset("kspace", data=data.astype(np.complex64))

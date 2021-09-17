@@ -43,12 +43,9 @@ help(SliceDataset)
 
 ## Dependencies and Installation
 
-We have tested this code using:
-
-* Ubuntu 18.04
-* Python 3.8
-* CUDA 10.1
-* CUDNN 7.6.5
+**Note:** Contributions to the code are continuously tested via GitHub actions.
+If you encounter an issue, the best first thing to do is to try to match the
+test environments in `requirements.txt` and `dev-requirements.txt`.
 
 First install PyTorch according to the directions at the
 [PyTorch Website](https://pytorch.org/get-started/) for your operating system

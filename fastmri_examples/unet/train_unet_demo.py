@@ -158,14 +158,15 @@ def build_args():
     if not checkpoint_dir.exists():
         checkpoint_dir.mkdir(parents=True)
 
-    args.checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        filepath=args.default_root_dir / "checkpoints",
-        save_top_k=True,
-        verbose=True,
-        monitor="validation_loss",
-        mode="min",
-        prefix="",
-    )
+    args.callbacks = [
+        pl.callbacks.ModelCheckpoint(
+            dirpath=args.default_root_dir / "checkpoints",
+            save_top_k=True,
+            verbose=True,
+            monitor="validation_loss",
+            mode="min",
+        )
+    ]
 
     # set default checkpoint if one exists in our checkpoint directory
     if args.resume_from_checkpoint is None:

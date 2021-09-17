@@ -108,24 +108,12 @@ def test_varnet_num_sense_lines(
 
 
 def test_unet_scripting():
-    model = Unet(
-        in_chans=1,
-        out_chans=1,
-        chans=8,
-        num_pool_layers=2,
-        drop_prob=0.0,
-    )
+    model = Unet(in_chans=1, out_chans=1, chans=8, num_pool_layers=2, drop_prob=0.0)
     scr = torch.jit.script(model)
     assert scr is not None
 
 
 def test_varnet_scripting():
-    model = VarNet(
-        num_cascades=4,
-        pools=2,
-        chans=8,
-        sens_pools=2,
-        sens_chans=4,
-    )
+    model = VarNet(num_cascades=4, pools=2, chans=8, sens_pools=2, sens_chans=4)
     scr = torch.jit.script(model)
     assert scr is not None

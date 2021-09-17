@@ -9,15 +9,15 @@ import pathlib
 from argparse import ArgumentParser
 from collections import defaultdict
 
+import fastmri
 import numpy as np
 import pytorch_lightning as pl
 import torch
-
-import fastmri
 from fastmri import evaluate
+from torchmetrics.metric import Metric
 
 
-class DistributedMetricSum(pl.metrics.Metric):
+class DistributedMetricSum(Metric):
     def __init__(self, dist_sync_on_step=True):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
 
@@ -141,9 +141,9 @@ class MriModule(pl.LightningModule):
 
         return {
             "val_loss": val_logs["val_loss"],
-            "mse_vals": mse_vals,
-            "target_norms": target_norms,
-            "ssim_vals": ssim_vals,
+            "mse_vals": dict(mse_vals),
+            "target_norms": dict(target_norms),
+            "ssim_vals": dict(ssim_vals),
             "max_vals": max_vals,
         }
 

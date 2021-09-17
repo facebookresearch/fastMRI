@@ -5,7 +5,7 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-from typing import Dict, Optional, Sequence, Tuple, Union
+from typing import Dict, NamedTuple, Optional, Sequence, Tuple, Union
 
 import fastmri
 import numpy as np
@@ -49,9 +49,10 @@ def tensor_to_complex_np(data: torch.Tensor) -> np.ndarray:
 def apply_mask(
     data: torch.Tensor,
     mask_func: MaskFunc,
+    offset: Optional[int] = None,
     seed: Optional[Union[int, Tuple[int, ...]]] = None,
     padding: Optional[Sequence[int]] = None,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor, int]:
     """
     Subsample given k-space by multiplying with a mask.
 
@@ -66,18 +67,20 @@ def apply_mask(
 
     Returns:
         tuple containing:
-            masked data: Subsampled k-space data
-            mask: The generated mask
+            masked data: Subsampled k-space data.
+            mask: The generated mask.
+            num_low_frequencies: The number of low-resolution frequency samples
+                in the mask.
     """
     shape = (1,) * len(data.shape[:-3]) + tuple(data.shape[-3:])
-    mask = mask_func(shape, seed)
+    mask, num_low_frequencies = mask_func(shape, offset, seed)
     if padding is not None:
         mask[:, :, : padding[0]] = 0
         mask[:, :, padding[1] :] = 0  # padding value inclusive on right of zeros
 
     masked_data = data * mask + 0.0  # the + 0.0 removes the sign of the zeros
 
-    return masked_data, mask
+    return masked_data, mask, num_low_frequencies
 
 
 def mask_center(x: torch.Tensor, mask_from: int, mask_to: int) -> torch.Tensor:
@@ -252,6 +255,29 @@ def normalize_instance(
     return normalize(data, mean, std, eps), mean, std
 
 
+class UnetSample(NamedTuple):
+    """
+    A subsampled image for U-Net reconstruction.
+
+    Args:
+        image: Subsampled image after inverse FFT.
+        target: The target image (if applicable).
+        mean: Per-channel mean values used for normalization.
+        std: Per-channel standard deviations used for normalization.
+        fname: File name.
+        slice_num: The slice index.
+        max_value: Maximum image value.
+    """
+
+    image: torch.Tensor
+    target: torch.Tensor
+    mean: torch.Tensor
+    std: torch.Tensor
+    fname: str
+    slice_num: int
+    max_value: float
+
+
 class UnetDataTransform:
     """
     Data Transformer for training U-Net models.
@@ -299,13 +325,9 @@ class UnetDataTransform:
             slice_num: Serial number of the slice.
 
         Returns:
-            tuple containing:
-                image: Zero-filled input image.
-                target: Target image converted to a torch.Tensor.
-                mean: Mean value used for normalization.
-                std: Standard deviation value used for normalization.
-                fname: File name.
-                slice_num: Serial number of the slice.
+            A tuple containing, zero-filled input image, the reconstruction
+            target, the mean used for normalization, the standard deviations
+            used for normalization, the filename, and the slice number.
         """
         kspace_torch = to_tensor(kspace)
 
@@ -315,7 +337,8 @@ class UnetDataTransform:
         # apply mask
         if self.mask_func:
             seed = None if not self.use_seed else tuple(map(ord, fname))
-            masked_kspace, _ = apply_mask(kspace_torch, self.mask_func, seed)
+            # we only need first element, which is k-space after masking
+            masked_kspace = apply_mask(kspace_torch, self.mask_func, seed=seed)[0]
         else:
             masked_kspace = kspace_torch
 
@@ -354,7 +377,41 @@ class UnetDataTransform:
         else:
             target_torch = torch.Tensor([0])
 
-        return image, target_torch, mean, std, fname, slice_num, max_value
+        return UnetSample(
+            image=image,
+            target=target_torch,
+            mean=mean,
+            std=std,
+            fname=fname,
+            slice_num=slice_num,
+            max_value=max_value,
+        )
+
+
+class VarNetSample(NamedTuple):
+    """
+    A sample of masked k-space for variational network reconstruction.
+
+    Args:
+        masked_kspace: k-space after applying sampling mask.
+        mask: The applied sampling mask.
+        num_low_frequencies: The number of samples for the densely-sampled
+            center.
+        target: The target image (if applicable).
+        fname: File name.
+        slice_num: The slice index.
+        max_value: Maximum image value.
+        crop_size: The size to crop the final image.
+    """
+
+    masked_kspace: torch.Tensor
+    mask: torch.Tensor
+    num_low_frequencies: Optional[int]
+    target: torch.Tensor
+    fname: str
+    slice_num: int
+    max_value: float
+    crop_size: Tuple[int, int]
 
 
 class VarNetDataTransform:
@@ -378,11 +435,11 @@ class VarNetDataTransform:
         self,
         kspace: np.ndarray,
         mask: np.ndarray,
-        target: np.ndarray,
+        target: Optional[np.ndarray],
         attrs: Dict,
         fname: str,
         slice_num: int,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, str, int, float, torch.Tensor]:
+    ) -> VarNetSample:
         """
         Args:
             kspace: Input k-space of shape (num_coils, rows, cols) for
@@ -394,14 +451,10 @@ class VarNetDataTransform:
             slice_num: Serial number of the slice.
 
         Returns:
-            tuple containing:
-                masked_kspace: k-space after applying sampling mask.
-                mask: The applied sampling mask
-                target: The target image (if applicable).
-                fname: File name.
-                slice_num: The slice index.
-                max_value: Maximum image value.
-                crop_size: The size to crop the final image.
+            A VarNetSample with the masked k-space, sampling mask, target
+            image, the filename, the slice number, the maximum image value
+            (from target), the target crop size, and the number of low
+            frequency lines sampled.
         """
         if target is not None:
             target_torch = to_tensor(target)
@@ -415,11 +468,22 @@ class VarNetDataTransform:
         acq_start = attrs["padding_left"]
         acq_end = attrs["padding_right"]
 
-        crop_size = torch.tensor([attrs["recon_size"][0], attrs["recon_size"][1]])
+        crop_size = (attrs["recon_size"][0], attrs["recon_size"][1])
 
-        if self.mask_func:
-            masked_kspace, mask_torch = apply_mask(
-                kspace_torch, self.mask_func, seed, (acq_start, acq_end)
+        if self.mask_func is not None:
+            masked_kspace, mask_torch, num_low_frequencies = apply_mask(
+                kspace_torch, self.mask_func, seed=seed, padding=(acq_start, acq_end)
+            )
+
+            sample = VarNetSample(
+                masked_kspace=masked_kspace,
+                mask=mask_torch.to(torch.bool),
+                num_low_frequencies=num_low_frequencies,
+                target=target_torch,
+                fname=fname,
+                slice_num=slice_num,
+                max_value=max_value,
+                crop_size=crop_size,
             )
         else:
             masked_kspace = kspace_torch
@@ -433,12 +497,15 @@ class VarNetDataTransform:
             mask_torch[:, :, :acq_start] = 0
             mask_torch[:, :, acq_end:] = 0
 
-        return (
-            masked_kspace,
-            mask_torch.byte(),
-            target_torch,
-            fname,
-            slice_num,
-            max_value,
-            crop_size,
-        )
+            sample = VarNetSample(
+                masked_kspace=masked_kspace,
+                mask=mask_torch.to(torch.bool),
+                num_low_frequencies=None,
+                target=target_torch,
+                fname=fname,
+                slice_num=slice_num,
+                max_value=max_value,
+                crop_size=crop_size,
+            )
+
+        return sample

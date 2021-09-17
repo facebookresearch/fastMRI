@@ -101,7 +101,7 @@ def build_args():
     # data transform params
     parser.add_argument(
         "--mask_type",
-        choices=("random", "equispaced"),
+        choices=("random", "equispaced_fraction"),
         default="random",
         type=str,
         help="Type of k-space mask",

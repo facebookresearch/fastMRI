@@ -101,8 +101,8 @@ def build_args():
     # data transform params
     parser.add_argument(
         "--mask_type",
-        choices=("random", "equispaced"),
-        default="equispaced",
+        choices=("random", "equispaced_fraction"),
+        default="equispaced_fraction",
         type=str,
         help="Type of k-space mask",
     )
@@ -125,7 +125,7 @@ def build_args():
     parser = FastMriDataModule.add_data_specific_args(parser)
     parser.set_defaults(
         data_path=data_path,  # path to fastMRI data
-        mask_type="equispaced",  # VarNet uses equispaced mask
+        mask_type="equispaced_fraction",  # VarNet uses equispaced mask
         challenge="multicoil",  # only multicoil implemented for VarNet
         batch_size=batch_size,  # number of samples per batch
         test_path=None,  # path for test split, overwrites data_path

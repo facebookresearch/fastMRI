@@ -14,6 +14,7 @@ import torch
 
 @contextlib.contextmanager
 def temp_seed(rng: np.random.Generator, seed: Optional[Union[int, Tuple[int, ...]]]):
+    """A context manager for temporarily adjusting the random seed."""
     if seed is None:
         try:
             yield
@@ -34,6 +35,17 @@ class MaskFunc:
 
     This crates a sampling mask that densely samples the center while
     subsampling outer k-space regions based on the undersampling factor.
+
+    When called, ``MaskFunc`` uses internal functions create mask by 1)
+    creating a mask for the k-space center, 2) create a mask outside of the
+    k-space center, and 3) combining them into a total mask. The internals are
+    handled by ``sample_mask``, which calls ``calculate_center_mask`` for (1)
+    and ``calculate_acceleration_mask`` for (2). The combination is executed
+    in the ``MaskFunc`` ``__call__`` function.
+
+    If you would like to implement a new mask, simply subclass ``MaskFunc``
+    and overwrite the ``sample_mask`` logic. See examples in ``RandomMaskFunc``
+    and ``EquispacedMaskFunc``.
     """
 
     def __init__(self, center_fractions: Sequence[float], accelerations: Sequence[int]):
@@ -53,16 +65,128 @@ class MaskFunc:
 
         self.center_fractions = center_fractions
         self.accelerations = accelerations
-        self.rng = np.random.RandomState()  # pylint: disable=no-member
+        self.rng = np.random.RandomState()
 
     def __call__(
-        self, shape: Sequence[int], seed: Optional[Union[int, Tuple[int, ...]]] = None
-    ) -> torch.Tensor:
+        self,
+        shape: Sequence[int],
+        offset: Optional[int] = None,
+        seed: Optional[Union[int, Tuple[int, ...]]] = None,
+    ) -> Tuple[torch.Tensor, int]:
+        """
+        Sample and return a k-space mask.
+
+        Args:
+            shape: Shape of k-space.
+            offset: Offset from 0 to begin mask (for equispaced masks). If no
+                offset is given, then one is selected randomly.
+            seed: Seed for random number generator for reproducibility.
+
+        Returns:
+            A 2-tuple containing 1) the k-space mask and 2) the number of
+            center frequency lines.
+        """
+        if len(shape) < 3:
+            raise ValueError("Shape should have 3 or more dimensions")
+
+        with temp_seed(self.rng, seed):
+            center_mask, accel_mask, num_low_frequencies = self.sample_mask(
+                shape, offset
+            )
+
+        # combine masks together
+        return torch.max(center_mask, accel_mask), num_low_frequencies
+
+    def sample_mask(
+        self,
+        shape: Sequence[int],
+        offset: Optional[int],
+    ) -> Tuple[torch.Tensor, torch.Tensor, int]:
+        """
+        Sample a new k-space mask.
+
+        This function samples and returns two components of a k-space mask: 1)
+        the center mask (e.g., for sensitivity map calculation) and 2) the
+        acceleration mask (for the edge of k-space). Both of these masks, as
+        well as the integer of low frequency samples, are returned.
+
+        Args:
+            shape: Shape of the k-space to subsample.
+            offset: Offset from 0 to begin mask (for equispaced masks).
+
+        Returns:
+            A 3-tuple contaiing 1) the mask for the center of k-space, 2) the
+            mask for the high frequencies of k-space, and 3) the integer count
+            of low frequency samples.
+        """
+        num_cols = shape[-2]
+        center_fraction, acceleration = self.choose_acceleration()
+        num_low_frequencies = round(num_cols * center_fraction)
+        center_mask = self.reshape_mask(
+            self.calculate_center_mask(shape, num_low_frequencies), shape
+        )
+        acceleration_mask = self.reshape_mask(
+            self.calculate_acceleration_mask(
+                num_cols, acceleration, offset, num_low_frequencies
+            ),
+            shape,
+        )
+
+        return center_mask, acceleration_mask, num_low_frequencies
+
+    def reshape_mask(self, mask: np.ndarray, shape: Sequence[int]) -> torch.Tensor:
+        """Reshape mask to desired output shape."""
+        num_cols = shape[-2]
+        mask_shape = [1 for _ in shape]
+        mask_shape[-2] = num_cols
+
+        return torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
+
+    def calculate_acceleration_mask(
+        self,
+        num_cols: int,
+        acceleration: int,
+        offset: Optional[int],
+        num_low_frequencies: int,
+    ) -> np.ndarray:
+        """
+        Produce mask for non-central acceleration lines.
+
+        Args:
+            num_cols: Number of columns of k-space (2D subsampling).
+            acceleration: Desired acceleration rate.
+            offset: Offset from 0 to begin masking (for equispaced masks).
+            num_low_frequencies: Integer count of low-frequency lines sampled.
+
+        Returns:
+            A mask for the high spatial frequencies of k-space.
+        """
         raise NotImplementedError
+
+    def calculate_center_mask(
+        self, shape: Sequence[int], num_low_freqs: int
+    ) -> np.ndarray:
+        """
+        Build center mask based on number of low frequencies.
+
+        Args:
+            shape: Shape of k-space to mask.
+            num_low_freqs: Number of low-frequency lines to sample.
+
+        Returns:
+            A mask for hte low spatial frequencies of k-space.
+        """
+        num_cols = shape[-2]
+        mask = np.zeros(num_cols, dtype=np.float32)
+        pad = (num_cols - num_low_freqs + 1) // 2
+        mask[pad : pad + num_low_freqs] = 1
+        assert mask.sum() == num_low_freqs
+
+        return mask
 
     def choose_acceleration(self):
         """Choose acceleration based on class parameters."""
-        choice = self.rng.randint(0, len(self.accelerations))
+        choice = self.rng.randint(0, high=len(self.accelerations))
         center_fraction = self.center_fractions[choice]
         acceleration = self.accelerations[choice]
 
@@ -71,7 +195,7 @@ class MaskFunc:
 
 class RandomMaskFunc(MaskFunc):
     """
-    RandomMaskFunc creates a sub-sampling mask of a given shape.
+    Creates a random sub-sampling mask of a given shape.
 
     The mask selects a subset of columns from the input k-space data. If the
     k-space data has N columns, the mask picks out:
@@ -84,7 +208,7 @@ class RandomMaskFunc(MaskFunc):
 
     It is possible to use multiple center_fractions and accelerations, in which
     case one possible (center_fraction, acceleration) is chosen uniformly at
-    random each time the RandomMaskFunc object is called.
+    random each time the ``RandomMaskFunc`` object is called.
 
     For example, if accelerations = [4, 8] and center_fractions = [0.08, 0.04],
     then there is a 50% probability that 4-fold acceleration with 8% center
@@ -92,50 +216,61 @@ class RandomMaskFunc(MaskFunc):
     center fraction is selected.
     """
 
-    def __call__(
-        self, shape: Sequence[int], seed: Optional[Union[int, Tuple[int, ...]]] = None
-    ) -> torch.Tensor:
+    def calculate_acceleration_mask(
+        self,
+        num_cols: int,
+        acceleration: int,
+        offset: Optional[int],
+        num_low_frequencies: int,
+    ) -> np.ndarray:
+        prob = (num_cols / acceleration - num_low_frequencies) / (
+            num_cols - num_low_frequencies
+        )
+
+        return self.rng.uniform(size=num_cols) < prob
+
+
+class EquiSpacedMaskFunc(MaskFunc):
+    """
+    Sample data with equally-spaced k-space lines.
+
+    The lines are spaced exactly evenly, as is done in standard GRAPPA-style
+    acquisitions. This means that with a densely-sampled center,
+    ``acceleration`` will be greater than the true acceleration rate.
+    """
+
+    def calculate_acceleration_mask(
+        self,
+        num_cols: int,
+        acceleration: int,
+        offset: Optional[int],
+        num_low_frequencies: int,
+    ) -> np.ndarray:
         """
-        Create the mask.
+        Produce mask for non-central acceleration lines.
 
         Args:
-            shape: The shape of the mask to be created. The shape should have
-                at least 3 dimensions. Samples are drawn along the second last
-                dimension.
-            seed: Seed for the random number generator. Setting the seed
-                ensures the same mask is generated each time for the same
-                shape. The random state is reset afterwards.
+            num_cols: Number of columns of k-space (2D subsampling).
+            acceleration: Desired acceleration rate.
+            offset: Offset from 0 to begin masking. If no offset is specified,
+                then one is selected randomly.
+            num_low_frequencies: Not used.
 
         Returns:
-            A mask of the specified shape.
+            A mask for the high spatial frequencies of k-space.
         """
-        if len(shape) < 3:
-            raise ValueError("Shape should have 3 or more dimensions")
+        if offset is None:
+            offset = self.rng.randint(0, high=round(acceleration))
 
-        with temp_seed(self.rng, seed):
-            num_cols = shape[-2]
-            center_fraction, acceleration = self.choose_acceleration()
-
-            # create the mask
-            num_low_freqs = int(round(num_cols * center_fraction))
-            prob = (num_cols / acceleration - num_low_freqs) / (
-                num_cols - num_low_freqs
-            )
-            mask = self.rng.uniform(size=num_cols) < prob
-            pad = (num_cols - num_low_freqs + 1) // 2
-            mask[pad : pad + num_low_freqs] = True
-
-            # reshape the mask
-            mask_shape = [1 for _ in shape]
-            mask_shape[-2] = num_cols
-            mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
+        mask = np.zeros(num_cols, dtype=np.float32)
+        mask[offset::acceleration] = 1
 
         return mask
 
 
-class EquispacedMaskFunc(MaskFunc):
+class EquispacedMaskFractionFunc(MaskFunc):
     """
-    EquispacedMaskFunc creates a sub-sampling mask of a given shape.
+    Equispaced mask with exact acceleration matching.
 
     The mask selects a subset of columns from the input k-space data. If the
     k-space data has N columns, the mask picks out:
@@ -156,118 +291,180 @@ class EquispacedMaskFunc(MaskFunc):
     the function has been preserved to match the public multicoil data.
     """
 
-    def __init__(
+    def calculate_acceleration_mask(
         self,
-        center_fractions: Sequence[float],
-        accelerations: Sequence[int],
-        skip_low_freqs: Optional[bool] = False,
-        skip_around_low_freqs: Optional[bool] = False,
-    ):
+        num_cols: int,
+        acceleration: int,
+        offset: Optional[int],
+        num_low_frequencies: int,
+    ) -> np.ndarray:
         """
-        Args:
-            center_fractions: Fraction of low-frequency columns to be retained.
-                If multiple values are provided, then one of these numbers is
-                chosen uniformly each time.
-            accelerations: Amount of under-sampling. This should have the same
-                length as center_fractions. If multiple values are provided,
-                then one of these is chosen uniformly each time.
-            skip_low_freqs: Whether to skip already sampled low-frequency lines
-                for the purposes of determining where equispaced lines should be.
-                Set this `True` to guarantee the same number of sampled lines for
-                all masks with a given (acceleration, center_fraction) setting.
-            skip_around_low_freqs: Whether to also skip the two k-space lines right
-                next to the already sampled low-frequency region. Used to guarantee
-                that equispaced sampling doesn't extend the low-frequency region.
-                This is mostly useful for VarNet, since it guarantees the same number
-                of low-frequency lines are used for the sensitivity map calculation
-                for all masks with a given (acceleration, center_fraction) setting.
-                This argument has no effect when `skip_low_freqs` is `False`.
-        """
+        Produce mask for non-central acceleration lines.
 
-        super().__init__(center_fractions, accelerations)
-        self.skip_low_freqs = skip_low_freqs
-        self.skip_around_low_freqs = skip_around_low_freqs
-
-    def __call__(
-        self, shape: Sequence[int], seed: Optional[Union[int, Tuple[int, ...]]] = None
-    ) -> torch.Tensor:
-        """
         Args:
-            shape: The shape of the mask to be created. The shape should have
-                at least 3 dimensions. Samples are drawn along the second last
-                dimension.
-            seed: Seed for the random number generator. Setting the seed
-                ensures the same mask is generated each time for the same
-                shape. The random state is reset afterwards.
+            num_cols: Number of columns of k-space (2D subsampling).
+            acceleration: Desired acceleration rate.
+            offset: Offset from 0 to begin masking. If no offset is specified,
+                then one is selected randomly.
+            num_low_frequencies: Number of low frequencies. Used to adjust mask
+                to exactly match the target acceleration.
 
         Returns:
-            A mask of the specified shape.
+            A mask for the high spatial frequencies of k-space.
         """
-        if len(shape) < 3:
-            raise ValueError("Shape should have 3 or more dimensions")
+        # determine acceleration rate by adjusting for the number of low frequencies
+        adjusted_accel = (acceleration * (num_low_frequencies - num_cols)) / (
+            num_low_frequencies * acceleration - num_cols
+        )
+        if offset is None:
+            offset = self.rng.randint(0, high=round(adjusted_accel))
 
-        with temp_seed(self.rng, seed):
-            center_fraction, acceleration = self.choose_acceleration()
-            num_cols = shape[-2]
-            num_low_freqs = int(round(num_cols * center_fraction))
+        mask = np.zeros(num_cols)
+        accel_samples = np.arange(offset, num_cols - 1, adjusted_accel)
+        accel_samples = np.around(accel_samples).astype(np.uint)
+        mask[accel_samples] = 1.0
 
-            # create the mask
-            mask = np.zeros(num_cols, dtype=np.float32)
-            pad = (num_cols - num_low_freqs + 1) // 2
-            mask[pad : pad + num_low_freqs] = True
+        return mask
 
-            # If everything has been sampled in the center: we don't need to sample anything else.
-            if num_low_freqs * acceleration <= num_cols:
-                if self.skip_low_freqs:
-                    buffer = 0
-                    if self.skip_around_low_freqs:
-                        buffer = 2
-                    # Compute the adjusted acceleration according to having
-                    #  (num_low_freqs + buffer) center lines.
-                    adjusted_accel = (
-                        acceleration * (num_low_freqs + buffer - num_cols)
-                    ) / (num_low_freqs * acceleration - num_cols)
-                    offset = self.rng.randint(0, round(adjusted_accel) - 1)
 
-                    # Select samples from the remaining columns
-                    accel_samples = np.arange(
-                        offset, num_cols - num_low_freqs - buffer - 1, adjusted_accel
-                    )
-                    accel_samples = np.around(accel_samples).astype(np.uint)
+class MagicMaskFunc(MaskFunc):
+    """
+    Masking function for exploiting conjugate symmetry via offset-sampling.
 
-                    skip = (
-                        num_low_freqs + buffer
-                    )  # Skip low freq AND optionally lines right next to it
-                    for sample in accel_samples:
-                        if sample < pad - buffer // 2:
-                            mask[sample] = True
-                        else:  # sample is further than center, so skip low_freqs
-                            mask[int(sample + skip)] = True
-                else:  # Default behaviour
-                    # determine acceleration rate by adjusting for the number of low frequencies
-                    adjusted_accel = (acceleration * (num_low_freqs - num_cols)) / (
-                        num_low_freqs * acceleration - num_cols
-                    )
-                    offset = self.rng.randint(0, round(adjusted_accel))
+    This function applies the mask described in the following paper:
 
-                    accel_samples = np.arange(offset, num_cols - 1, adjusted_accel)
-                    accel_samples = np.around(accel_samples).astype(np.uint)
-                    mask[accel_samples] = True
+    Defazio, A. (2019). Offset Sampling Improves Deep Learning based
+    Accelerated MRI Reconstructions by Exploiting Symmetry. arXiv preprint,
+    arXiv:1912.01101.
 
-            # reshape the mask
-            mask_shape = [1 for _ in shape]
-            mask_shape[-2] = num_cols
-            mask_np = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
+    It is essentially an equispaced mask with an offset for the opposite site
+    of k-space. Since MRI images often exhibit approximate conjugate k-space
+    symmetry, this mask is generally more efficient than a standard equispaced
+    mask.
 
-        return mask_np
+    Similarly to ``EquispacedMaskFunc``, this mask will usually undereshoot the
+    target acceleration rate.
+    """
+
+    def calculate_acceleration_mask(
+        self,
+        num_cols: int,
+        acceleration: int,
+        offset: Optional[int],
+        num_low_frequencies: int,
+    ) -> np.ndarray:
+        """
+        Produce mask for non-central acceleration lines.
+
+        Args:
+            num_cols: Number of columns of k-space (2D subsampling).
+            acceleration: Desired acceleration rate.
+            offset: Offset from 0 to begin masking. If no offset is specified,
+                then one is selected randomly.
+            num_low_frequencies: Not used.
+
+        Returns:
+            A mask for the high spatial frequencies of k-space.
+        """
+        if offset is None:
+            offset = self.rng.integers(high=acceleration)
+
+        if offset % 2 == 0:
+            offset_pos = offset + 1
+            offset_neg = offset + 2
+        else:
+            offset_pos = offset - 1 + 3
+            offset_neg = offset - 1 + 0
+
+        poslen = (num_cols + 1) // 2
+        neglen = num_cols - (num_cols + 1) // 2
+        mask_positive = np.zeros(poslen, dtype=np.float32)
+        mask_negative = np.zeros(neglen, dtype=np.float32)
+
+        mask_positive[offset_pos::acceleration] = 1
+        mask_negative[offset_neg::acceleration] = 1
+        mask_negative = np.flip(mask_negative)
+
+        mask = np.concatenate((mask_positive, mask_negative))
+
+        return np.fft.fftshift(mask)  # shift mask and return
+
+
+class MagicMaskFractionFunc(MagicMaskFunc):
+    """
+    Masking function for exploiting conjugate symmetry via offset-sampling.
+
+    This function applies the mask described in the following paper:
+
+    Defazio, A. (2019). Offset Sampling Improves Deep Learning based
+    Accelerated MRI Reconstructions by Exploiting Symmetry. arXiv preprint,
+    arXiv:1912.01101.
+
+    It is essentially an equispaced mask with an offset for the opposite site
+    of k-space. Since MRI images often exhibit approximate conjugate k-space
+    symmetry, this mask is generally more efficient than a standard equispaced
+    mask.
+
+    Similarly to ``EquispacedMaskFractionFunc``, this method exactly matches
+    the target acceleration by adjusting the offsets.
+    """
+
+    def sample_mask(
+        self,
+        shape: Sequence[int],
+        offset: Optional[int],
+    ) -> Tuple[torch.Tensor, torch.Tensor, int]:
+        """
+        Sample a new k-space mask.
+
+        This function samples and returns two components of a k-space mask: 1)
+        the center mask (e.g., for sensitivity map calculation) and 2) the
+        acceleration mask (for the edge of k-space). Both of these masks, as
+        well as the integer of low frequency samples, are returned.
+
+        Args:
+            shape: Shape of the k-space to subsample.
+            offset: Offset from 0 to begin mask (for equispaced masks).
+
+        Returns:
+            A 3-tuple contaiing 1) the mask for the center of k-space, 2) the
+            mask for the high frequencies of k-space, and 3) the integer count
+            of low frequency samples.
+        """
+        num_cols = shape[-2]
+        fraction_low_freqs, acceleration = self.choose_acceleration()
+        num_cols = shape[-2]
+        num_low_frequencies = round(num_cols * fraction_low_freqs)
+
+        # bound the number of low frequencies between 1 and target columns
+        target_columns_to_sample = round(num_cols / acceleration)
+        num_low_frequencies = max(min(num_low_frequencies, target_columns_to_sample), 1)
+
+        # adjust acceleration rate based on target acceleration.
+        adjusted_target_columns_to_sample = (
+            target_columns_to_sample - num_low_frequencies
+        )
+        adjusted_acceleration = 0
+        if adjusted_target_columns_to_sample > 0:
+            adjusted_acceleration = round(num_cols / adjusted_target_columns_to_sample)
+
+        center_mask = self.reshape_mask(
+            self.calculate_center_mask(shape, num_low_frequencies), shape
+        )
+        accel_mask = self.reshape_mask(
+            self.calculate_acceleration_mask(
+                num_cols, adjusted_acceleration, offset, num_low_frequencies
+            ),
+            shape,
+        )
+
+        return center_mask, accel_mask, num_low_frequencies
 
 
 def create_mask_for_mask_type(
     mask_type_str: str,
     center_fractions: Sequence[float],
     accelerations: Sequence[int],
-    skip_low_freqs: Optional[bool] = False,
-    skip_around_low_freqs: Optional[bool] = False,
 ) -> MaskFunc:
     """
     Creates a mask of the specified type.
@@ -275,14 +472,19 @@ def create_mask_for_mask_type(
     Args:
         center_fractions: What fraction of the center of k-space to include.
         accelerations: What accelerations to apply.
-        skip_low_freqs: Only used for EquispacedMaskFunc.
-        skip_around_low_freqs: Only used for EquispacedMaskFunc.
+
+    Returns:
+        A mask func for the target mask type.
     """
     if mask_type_str == "random":
         return RandomMaskFunc(center_fractions, accelerations)
     elif mask_type_str == "equispaced":
-        return EquispacedMaskFunc(
-            center_fractions, accelerations, skip_low_freqs, skip_around_low_freqs
-        )
+        return EquiSpacedMaskFunc(center_fractions, accelerations)
+    elif mask_type_str == "equispaced_fraction":
+        return EquispacedMaskFractionFunc(center_fractions, accelerations)
+    elif mask_type_str == "magic":
+        return MagicMaskFunc(center_fractions, accelerations)
+    elif mask_type_str == "magic_fraction":
+        return MagicMaskFractionFunc(center_fractions, accelerations)
     else:
-        raise Exception(f"{mask_type_str} not supported")
+        raise ValueError(f"{mask_type_str} not supported")

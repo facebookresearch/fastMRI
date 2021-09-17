@@ -155,15 +155,9 @@ class SensitivityModel(nn.Module):
                 calculation.
             num_sense_lines: Number of low-frequency lines to use for
                 sensitivity map computation, must be even or ``None``. Default
-                ``None`` will automatically compute the number from masks.
-                Default behaviour may cause some slices to use more
-                low-frequency lines than others, when used in conjunction with,
-                e.g., the ``EquispacedMaskFunc`` defaults. To prevent this,
-                either set ``num_sense_lines``, or set ``skip_low_freqs`` and
-                ``skip_around_low_freqs`` to ``True`` in the
-                ``EquispacedMaskFunc``. Note that setting this value may lead
-                to undesired behaviour when training on multiple accelerations
-                simultaneously.
+                ``None`` will automatically compute the number from masks by
+                using the largest even, continuous region possible from the
+                k-space center.
         """
         super().__init__()
         self.num_sense_lines = num_sense_lines
@@ -191,35 +185,36 @@ class SensitivityModel(nn.Module):
         return x / fastmri.rss_complex(x, dim=1).unsqueeze(-1).unsqueeze(1)
 
     def get_pad_and_num_low_freqs(
-        self, mask: torch.Tensor, num_sense_lines: Optional[int] = None
+        self, mask: torch.Tensor, num_low_frequencies: Optional[int] = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # get low frequency line locations and mask them out
-        squeezed_mask = mask[:, 0, 0, :, 0]
-        cent = squeezed_mask.shape[1] // 2
-        # running argmin returns the first non-zero
-        left = torch.argmin(squeezed_mask[:, :cent].flip(1), dim=1)
-        right = torch.argmin(squeezed_mask[:, cent:], dim=1)
-        num_low_freqs = torch.max(
-            2 * torch.min(left, right), torch.ones_like(left)
-        )  # force a symmetric center unless 1
-
-        if self.num_sense_lines is not None:  # Use prespecified number instead
-            if (num_low_freqs < num_sense_lines).all():
-                raise RuntimeError(
-                    "`num_sense_lines` cannot be greater than the actual number of "
-                    "low-frequency lines in the mask: {}".format(num_low_freqs)
-                )
-            num_low_freqs = num_sense_lines * torch.ones(
+        if num_low_frequencies is None:
+            # get low frequency line locations and mask them out
+            squeezed_mask = mask[:, 0, 0, :, 0]
+            cent = squeezed_mask.shape[1] // 2
+            # running argmin returns the first non-zero
+            left = torch.argmin(squeezed_mask[:, :cent].flip(1), dim=1)
+            right = torch.argmin(squeezed_mask[:, cent:], dim=1)
+            num_low_frequencies_tensor = torch.max(
+                2 * torch.min(left, right), torch.ones_like(left)
+            )  # force a symmetric center unless 1
+        else:
+            num_low_frequencies_tensor = num_low_frequencies * torch.ones(
                 mask.shape[0], dtype=mask.dtype, device=mask.device
             )
 
-        pad = (mask.shape[-2] - num_low_freqs + 1) // 2
-        return pad, num_low_freqs
+        pad = (mask.shape[-2] - num_low_frequencies_tensor + 1) // 2
 
-    def forward(self, masked_kspace: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        return pad, num_low_frequencies_tensor
+
+    def forward(
+        self,
+        masked_kspace: torch.Tensor,
+        mask: torch.Tensor,
+        num_low_frequencies: Optional[int] = None,
+    ) -> torch.Tensor:
         if self.mask_center:
             pad, num_low_freqs = self.get_pad_and_num_low_freqs(
-                mask, self.num_sense_lines
+                mask, num_low_frequencies
             )
             masked_kspace = transforms.batched_mask_center(
                 masked_kspace, pad, pad + num_low_freqs
@@ -250,7 +245,6 @@ class VarNet(nn.Module):
         chans: int = 18,
         pools: int = 4,
         mask_center: bool = True,
-        num_sense_lines: Optional[int] = None,
     ):
         """
         Args:
@@ -264,17 +258,6 @@ class VarNet(nn.Module):
                 U-Net.
             mask_center: Whether to mask center of k-space for sensitivity map
                 calculation.
-            num_sense_lines: Number of low-frequency lines to use for
-                sensitivity map computation, must be even or ``None``. Default
-                ``None`` will automatically compute the number from masks.
-                Default behaviour may cause some slices to use more
-                low-frequency lines than others, when used in conjunction with,
-                e.g., the ``EquispacedMaskFunc`` defaults. To prevent this,
-                either set ``num_sense_lines``, or set ``skip_low_freqs`` and
-                ``skip_around_low_freqs`` to ``True`` in the
-                ``EquispacedMaskFunc``. Note that setting this value may lead
-                to undesired behaviour when training on multiple accelerations
-                simultaneously.
         """
         super().__init__()
 
@@ -282,14 +265,18 @@ class VarNet(nn.Module):
             chans=sens_chans,
             num_pools=sens_pools,
             mask_center=mask_center,
-            num_sense_lines=num_sense_lines,
         )
         self.cascades = nn.ModuleList(
             [VarNetBlock(NormUnet(chans, pools)) for _ in range(num_cascades)]
         )
 
-    def forward(self, masked_kspace: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        sens_maps = self.sens_net(masked_kspace, mask)
+    def forward(
+        self,
+        masked_kspace: torch.Tensor,
+        mask: torch.Tensor,
+        num_low_frequencies: Optional[int] = None,
+    ) -> torch.Tensor:
+        sens_maps = self.sens_net(masked_kspace, mask, num_low_frequencies)
         kspace_pred = masked_kspace.clone()
 
         for cascade in self.cascades:

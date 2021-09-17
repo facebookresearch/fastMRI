@@ -13,7 +13,7 @@ import torch
 
 
 @contextlib.contextmanager
-def temp_seed(rng: np.random.Generator, seed: Optional[Union[int, Tuple[int, ...]]]):
+def temp_seed(rng: np.random.RandomState, seed: Optional[Union[int, Tuple[int, ...]]]):
     """A context manager for temporarily adjusting the random seed."""
     if seed is None:
         try:
@@ -367,7 +367,7 @@ class MagicMaskFunc(MaskFunc):
             A mask for the high spatial frequencies of k-space.
         """
         if offset is None:
-            offset = self.rng.integers(high=acceleration)
+            offset = self.rng.randint(0, high=acceleration)
 
         if offset % 2 == 0:
             offset_pos = offset + 1

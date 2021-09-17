@@ -21,15 +21,16 @@ def test_apply_mask(shape, center_fractions, accelerations):
     state = np.random.get_state()
 
     mask_func = RandomMaskFunc(center_fractions, accelerations)
-    expected_mask = mask_func(shape, seed=123)
+    expected_mask, expected_num_low_frequencies = mask_func(shape, seed=123)
     x = create_input(shape)
-    output, mask = transforms.apply_mask(x, mask_func, seed=123)
+    output, mask, num_low_frequencies = transforms.apply_mask(x, mask_func, seed=123)
 
     assert (state[1] == np.random.get_state()[1]).all()
     assert output.shape == x.shape
     assert mask.shape == expected_mask.shape
     assert np.all(expected_mask.numpy() == mask.numpy())
     assert np.all(np.where(mask.numpy() == 0, 0, output.numpy()) == output.numpy())
+    assert num_low_frequencies == expected_num_low_frequencies
 
 
 @pytest.mark.parametrize(

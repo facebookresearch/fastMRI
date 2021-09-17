@@ -5,7 +5,6 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-from typing import Optional
 from argparse import ArgumentParser
 
 import fastmri
@@ -43,7 +42,6 @@ class VarNetModule(MriModule):
         lr_step_size: int = 40,
         lr_gamma: float = 0.1,
         weight_decay: float = 0.0,
-        num_sense_lines: Optional[int] = None,
         **kwargs,
     ):
         """
@@ -82,7 +80,6 @@ class VarNetModule(MriModule):
         self.lr_step_size = lr_step_size
         self.lr_gamma = lr_gamma
         self.weight_decay = weight_decay
-        self.num_sense_lines = num_sense_lines
 
         self.varnet = VarNet(
             num_cascades=self.num_cascades,
@@ -90,59 +87,57 @@ class VarNetModule(MriModule):
             sens_pools=self.sens_pools,
             chans=self.chans,
             pools=self.pools,
-            num_sense_lines=self.num_sense_lines,
         )
 
         self.loss = fastmri.SSIMLoss()
 
-    def forward(self, masked_kspace, mask):
-        return self.varnet(masked_kspace, mask)
+    def forward(self, masked_kspace, mask, num_low_frequencies):
+        return self.varnet(masked_kspace, mask, num_low_frequencies)
 
     def training_step(self, batch, batch_idx):
-        masked_kspace, mask, target, _, _, max_value, _ = batch
+        output = self(batch.masked_kspace, batch.mask, batch.num_low_frequencies)
 
-        output = self(masked_kspace, mask)
-
-        target, output = transforms.center_crop_to_smallest(target, output)
-        loss = self.loss(output.unsqueeze(1), target.unsqueeze(1), data_range=max_value)
+        target, output = transforms.center_crop_to_smallest(batch.target, output)
+        loss = self.loss(
+            output.unsqueeze(1), target.unsqueeze(1), data_range=batch.max_value
+        )
 
         self.log("train_loss", loss)
 
         return loss
 
     def validation_step(self, batch, batch_idx):
-        masked_kspace, mask, target, fname, slice_num, max_value, _ = batch
-
-        output = self.forward(masked_kspace, mask)
-        target, output = transforms.center_crop_to_smallest(target, output)
+        output = self.forward(
+            batch.masked_kspace, batch.mask, batch.num_low_frequencies
+        )
+        target, output = transforms.center_crop_to_smallest(batch.target, output)
 
         return {
             "batch_idx": batch_idx,
-            "fname": fname,
-            "slice_num": slice_num,
-            "max_value": max_value,
+            "fname": batch.fname,
+            "slice_num": batch.slice_num,
+            "max_value": batch.max_value,
             "output": output,
             "target": target,
             "val_loss": self.loss(
-                output.unsqueeze(1), target.unsqueeze(1), data_range=max_value
+                output.unsqueeze(1), target.unsqueeze(1), data_range=batch.max_value
             ),
         }
 
     def test_step(self, batch, batch_idx):
-        masked_kspace, mask, _, fname, slice_num, _, crop_size = batch
-        crop_size = crop_size[0]  # always have a batch size of 1 for varnet
-
-        output = self(masked_kspace, mask)
+        output = self(batch.masked_kspace, batch.mask, batch.num_low_frequencies)
 
         # check for FLAIR 203
-        if output.shape[-1] < crop_size[1]:
+        if output.shape[-1] < batch.crop_size[1]:
             crop_size = (output.shape[-1], output.shape[-1])
+        else:
+            crop_size = batch.crop_size
 
         output = transforms.center_crop(output, crop_size)
 
         return {
-            "fname": fname,
-            "slice": slice_num,
+            "fname": batch.fname,
+            "slice": batch.slice_num,
             "output": output.cpu().numpy(),
         }
 

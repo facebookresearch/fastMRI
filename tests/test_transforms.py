@@ -8,7 +8,7 @@ LICENSE file in the root directory of this source tree.
 import numpy as np
 import pytest
 from fastmri.data import transforms
-from fastmri.data.subsample import RandomMaskFunc
+from fastmri.data.subsample import RandomMaskFunc, create_mask_for_mask_type
 
 from .conftest import create_input
 
@@ -31,6 +31,39 @@ def test_apply_mask(shape, center_fractions, accelerations):
     assert np.all(expected_mask.numpy() == mask.numpy())
     assert np.all(np.where(mask.numpy() == 0, 0, output.numpy()) == output.numpy())
     assert num_low_frequencies == expected_num_low_frequencies
+
+
+@pytest.mark.parametrize(
+    "mask_type",
+    ["random", "equispaced", "equispaced_fraction", "magic", "magic_fraction"],
+)
+def test_mask_types(mask_type):
+    shape_list = ((4, 32, 32, 2), (2, 64, 32, 2), (1, 33, 24, 2))
+    center_fraction_list = ([0.08], [0.04], [0.04, 0.08])
+    acceleration_list = ([4], [8], [4, 8])
+    state = np.random.get_state()
+
+    for shape in shape_list:
+        for center_fractions, accelerations in zip(
+            center_fraction_list, acceleration_list
+        ):
+            mask_func = create_mask_for_mask_type(
+                mask_type, center_fractions, accelerations
+            )
+            expected_mask, expected_num_low_frequencies = mask_func(shape, seed=123)
+            x = create_input(shape)
+            output, mask, num_low_frequencies = transforms.apply_mask(
+                x, mask_func, seed=123
+            )
+
+            assert (state[1] == np.random.get_state()[1]).all()
+            assert output.shape == x.shape
+            assert mask.shape == expected_mask.shape
+            assert np.all(expected_mask.numpy() == mask.numpy())
+            assert np.all(
+                np.where(mask.numpy() == 0, 0, output.numpy()) == output.numpy()
+            )
+            assert num_low_frequencies == expected_num_low_frequencies
 
 
 @pytest.mark.parametrize(

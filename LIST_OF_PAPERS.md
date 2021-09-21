@@ -11,8 +11,8 @@ The following is a short list of fastMRI publications. Clicking on the title wil
 7. Recht, M. P., Zbontar, J., Sodickson, D. K., Knoll, F., Yakubova, N., Sriram, A., ... & Zitnick, C. L. (2020). [Using Deep Learning to Accelerate Knee MRI at 3T: Results of an Interchangeability Study](#using-deep-learning-to-accelerate-knee-mri-at-3t-results-of-an-interchangeability-study). *American Journal of Roentgenology*, 215(6), pages 1421-1429.
 8. Pineda, L., Basu, S., Romero, A., Calandra, R., & Drozdzal, M. (2020). [Active MR k-space Sampling with Reinforcement Learning](#active-mr-k-space-sampling-with-reinforcement-learning). In *International Conference on Medical Image Computing and Computer-Assisted Intervention*, pages 23-33.
 9. Sriram, A.\*, Zbontar, J.\*, Murrell, T., Defazio, A., Zitnick, C. L., Yakubova, N., ... & Johnson, P. (2020). [End-to-End Variational Networks for Accelerated MRI Reconstruction](#end-to-end-variational-networks-for-accelerated-mri-reconstruction). In *International Conference on Medical Image Computing and Computer-Assisted Intervention*, pages 64-73.
-10. Defazio, A., Murrell, T., & Recht, M. P. (2020). [MRI Banding Removal via Adversarial Training](#mri-banding-removal-via-adversarial-training). In *Advances in Neural Information Processing Systems*.
-11. Muckley, M. J.\*, Riemenschneider, B.\*, Radmanesh, A., Kim, S., Jeong, G., Ko, J., ... & Knoll, F. (2021). [Results of the 2020 fastMRI Challenge for Machine Learning MR Image Reconstruction](#results-of-the-2020-fastmri-challenge-for-machine-learning-mr-image-reconstruction). *IEEE Transactions on Medical Imaging*. To appear.
+10. Defazio, A., Murrell, T., & Recht, M. P. (2020). [MRI Banding Removal via Adversarial Training](#mri-banding-removal-via-adversarial-training). In *Advances in Neural Information Processing Systems*, 33, pages 7660-7670.
+11. Muckley, M. J.\*, Riemenschneider, B.\*, Radmanesh, A., Kim, S., Jeong, G., Ko, J., ... & Knoll, F. (2021). [Results of the 2020 fastMRI Challenge for Machine Learning MR Image Reconstruction](#results-of-the-2020-fastmri-challenge-for-machine-learning-mr-image-reconstruction). *IEEE Transactions on Medical Imaging*, 40(9), pages 2306-2317.
 
 ## fastMRI: An open dataset and benchmarks for accelerated MRI
 
@@ -224,6 +224,8 @@ MRI images reconstructed from sub-sampled Cartesian data using deep learning tec
     author={Aaron Defazio and Tullie Murrell and Michael P. Recht},
     year={2020},
     booktitle={Advances in Neural Information Processing Systems},
+    volume={33},
+    pages={7660--7670},
 }
 ```
 
@@ -240,9 +242,9 @@ Accelerating MRI scans is one of the principal outstanding problems in the MRI r
     journal={IEEE Transactions on Medical Imaging}, 
     title={Results of the 2020 fastMRI Challenge for Machine Learning MR Image Reconstruction}, 
     year={2021},
-    volume={},
-    number={},
-    pages={1-1},
+    volume={40},
+    number={9},
+    pages={2306--2317},
     doi={10.1109/TMI.2021.3075856}
 }
 ```

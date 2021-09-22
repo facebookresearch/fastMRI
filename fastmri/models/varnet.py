@@ -142,7 +142,6 @@ class SensitivityModel(nn.Module):
         out_chans: int = 2,
         drop_prob: float = 0.0,
         mask_center: bool = True,
-        num_sense_lines: Optional[int] = None,
     ):
         """
         Args:
@@ -153,14 +152,8 @@ class SensitivityModel(nn.Module):
             drop_prob: Dropout probability.
             mask_center: Whether to mask center of k-space for sensitivity map
                 calculation.
-            num_sense_lines: Number of low-frequency lines to use for
-                sensitivity map computation, must be even or ``None``. Default
-                ``None`` will automatically compute the number from masks by
-                using the largest even, continuous region possible from the
-                k-space center.
         """
         super().__init__()
-        self.num_sense_lines = num_sense_lines
         self.mask_center = mask_center
         self.norm_unet = NormUnet(
             chans,

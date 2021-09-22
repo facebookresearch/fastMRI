@@ -48,7 +48,12 @@ class MaskFunc:
     and ``EquispacedMaskFunc``.
     """
 
-    def __init__(self, center_fractions: Sequence[float], accelerations: Sequence[int]):
+    def __init__(
+        self,
+        center_fractions: Sequence[float],
+        accelerations: Sequence[int],
+        sync_center_fractions_accelerations: bool = True,
+    ):
         """
         Args:
             center_fractions: Fraction of low-frequency columns to be retained.
@@ -57,6 +62,12 @@ class MaskFunc:
             accelerations: Amount of under-sampling. This should have the same
                 length as center_fractions. If multiple values are provided,
                 then one of these is chosen uniformly each time.
+            sync_center_fractions_accelerations: Whether to sync indicies
+                between ``center_fractions`` and ``accelerations``. For
+                example, if both are of length-2 and
+                ``sync_center_fractions_accelerations`` is ``True``, then the
+                first element of ``center_fractions`` will only be selected
+                with the first element of ``accelerations``, etc.
         """
         if not len(center_fractions) == len(accelerations):
             raise ValueError(
@@ -65,6 +76,7 @@ class MaskFunc:
 
         self.center_fractions = center_fractions
         self.accelerations = accelerations
+        self.sync_center_fractions_accelerations = sync_center_fractions_accelerations
         self.rng = np.random.RandomState()
 
     def __call__(
@@ -186,9 +198,13 @@ class MaskFunc:
 
     def choose_acceleration(self):
         """Choose acceleration based on class parameters."""
-        choice = self.rng.randint(0, high=len(self.accelerations))
-        center_fraction = self.center_fractions[choice]
-        acceleration = self.accelerations[choice]
+        choice_cf = self.rng.randint(0, high=len(self.center_fractions))
+        if self.sync_center_fractions_accelerations:
+            choice_accel = choice_cf
+        else:
+            choice_accel = self.rng.randint(0, high=len(self.accelerations))
+        center_fraction = self.center_fractions[choice_cf]
+        acceleration = self.accelerations[choice_accel]
 
         return center_fraction, acceleration
 

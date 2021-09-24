@@ -73,7 +73,8 @@ class MaskFunc:
             not len(center_fractions) == len(accelerations)
         ) and sync_center_fractions_accelerations:
             raise ValueError(
-                "Number of center fractions should match number of accelerations"
+                "Number of center fractions should match number of accelerations "
+                "if sync_center_fractions_accelerations is True."
             )
 
         self.center_fractions = center_fractions

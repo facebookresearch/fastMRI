@@ -69,7 +69,9 @@ class MaskFunc:
                 first element of ``center_fractions`` will only be selected
                 with the first element of ``accelerations``, etc.
         """
-        if not len(center_fractions) == len(accelerations):
+        if (
+            not len(center_fractions) == len(accelerations)
+        ) and sync_center_fractions_accelerations:
             raise ValueError(
                 "Number of center fractions should match number of accelerations"
             )

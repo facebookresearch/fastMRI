@@ -74,8 +74,10 @@ def test_varnet(shape, chans, center_fractions, accelerations, mask_center):
 @pytest.mark.parametrize(
     "shape, chans, center_fractions, accelerations, mask_center",
     [
-        ([1, 3, 16, 64, 2], 1, [0.08], [4], True),
-        ([1, 3, 16, 64, 2], 1, [0.08], [4], False),
+        ([1, 3, 64, 82, 2], 1, [0.08], [4], True),
+        ([1, 3, 64, 76, 2], 1, [0.04], [4], True),
+        ([1, 3, 64, 55, 2], 1, [0.08], [4], False),
+        ([1, 3, 64, 90, 2], 1, [0.04], [4], False),
     ],
 )
 def test_varnet_num_sense_lines(
@@ -83,14 +85,7 @@ def test_varnet_num_sense_lines(
 ):
     mask_func = RandomMaskFunc(center_fractions, accelerations)
     x = create_input(shape)
-    outputs, masks = [], []
-    for i in range(x.shape[0]):
-        output, mask, _ = transforms.apply_mask(x[i : i + 1], mask_func, seed=123)
-        outputs.append(output)
-        masks.append(mask)
-
-    output = torch.cat(outputs)
-    mask = torch.cat(masks)
+    output, mask, num_low_freqs = transforms.apply_mask(x, mask_func, seed=123)
 
     varnet = VarNet(
         num_cascades=2,
@@ -100,6 +95,16 @@ def test_varnet_num_sense_lines(
         pools=2,
         mask_center=mask_center,
     )
+
+    if mask_center is True:
+        pad, net_low_freqs = varnet.sens_net.get_pad_and_num_low_freqs(
+            mask, num_low_freqs
+        )
+        assert net_low_freqs == num_low_freqs
+        assert torch.allclose(
+            mask.squeeze()[int(pad) : int(pad + net_low_freqs)].to(torch.int8),
+            torch.ones([int(net_low_freqs)], dtype=torch.int8),
+        )
 
     y = varnet(output, mask.byte(), num_low_frequencies=4)
 

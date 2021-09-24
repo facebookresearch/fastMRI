@@ -48,7 +48,13 @@ class MaskFunc:
     and ``EquispacedMaskFunc``.
     """
 
-    def __init__(self, center_fractions: Sequence[float], accelerations: Sequence[int]):
+    def __init__(
+        self,
+        center_fractions: Sequence[float],
+        accelerations: Sequence[int],
+        allow_any_combination: bool = False,
+        seed: Optional[int] = None,
+    ):
         """
         Args:
             center_fractions: Fraction of low-frequency columns to be retained.
@@ -57,15 +63,21 @@ class MaskFunc:
             accelerations: Amount of under-sampling. This should have the same
                 length as center_fractions. If multiple values are provided,
                 then one of these is chosen uniformly each time.
+            allow_any_combination: Whether to allow cross combinations of
+                elements from ``center_fractions`` and ``accelerations``.
+            seed: Seed for starting the internal random number generator of the
+                ``MaskFunc``.
         """
-        if not len(center_fractions) == len(accelerations):
+        if len(center_fractions) != len(accelerations) and not allow_any_combination:
             raise ValueError(
-                "Number of center fractions should match number of accelerations"
+                "Number of center fractions should match number of accelerations "
+                "if allow_any_combination is False."
             )
 
         self.center_fractions = center_fractions
         self.accelerations = accelerations
-        self.rng = np.random.RandomState()
+        self.allow_any_combination = allow_any_combination
+        self.rng = np.random.RandomState(seed)
 
     def __call__(
         self,
@@ -186,11 +198,13 @@ class MaskFunc:
 
     def choose_acceleration(self):
         """Choose acceleration based on class parameters."""
-        choice = self.rng.randint(0, high=len(self.accelerations))
-        center_fraction = self.center_fractions[choice]
-        acceleration = self.accelerations[choice]
-
-        return center_fraction, acceleration
+        if self.allow_any_combination:
+            return self.rng.choice(self.center_fractions), self.rng.choice(
+                self.accelerations
+            )
+        else:
+            choice = self.rng.randint(len(self.center_fractions))
+            return self.center_fractions[choice], self.accelerations[choice]
 
 
 class RandomMaskFunc(MaskFunc):

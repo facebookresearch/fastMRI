@@ -8,7 +8,7 @@ LICENSE file in the root directory of this source tree.
 import numpy as np
 import pytest
 from fastmri.data import transforms
-from fastmri.data.subsample import RandomMaskFunc, create_mask_for_mask_type
+from fastmri.data.subsample import MaskFunc, RandomMaskFunc, create_mask_for_mask_type
 
 from .conftest import create_input
 
@@ -64,6 +64,41 @@ def test_mask_types(mask_type):
                 np.where(mask.numpy() == 0, 0, output.numpy()) == output.numpy()
             )
             assert num_low_frequencies == expected_num_low_frequencies
+
+
+@pytest.mark.parametrize(
+    (
+        "allow_any_combination, center_fractions, accelerations, seed, "
+        "choose_acceleration_output"
+    ),
+    [
+        (True, [0.04, 0.08], [8, 4], 2, (0.04, 4)),
+        (False, [0.04, 0.08], [8, 4], 2, (0.04, 8)),
+        (True, [0.04, 0.08], [16, 8, 4], 8, (0.08, 16)),
+    ],
+)
+def test_fraction_accel_sync(
+    allow_any_combination,
+    center_fractions,
+    accelerations,
+    seed,
+    choose_acceleration_output,
+):
+    """For this test we have manually checked choose_acceleration_output."""
+    f = MaskFunc(
+        center_fractions=center_fractions,
+        accelerations=accelerations,
+        allow_any_combination=allow_any_combination,
+        seed=seed,
+    )
+    if not allow_any_combination:
+        for _ in range(50):
+            center_fraction, acceleration = f.choose_acceleration()
+            assert center_fractions.index(center_fraction) == accelerations.index(
+                acceleration
+            )
+    else:
+        assert f.choose_acceleration() == choose_acceleration_output
 
 
 @pytest.mark.parametrize(

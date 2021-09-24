@@ -15,13 +15,16 @@ from .conftest import create_input
 
 @pytest.mark.parametrize(
     "shape, center_fractions, accelerations",
-    [([4, 32, 32, 2], [0.08], [4]), ([2, 64, 64, 2], [0.04, 0.08], [8, 4])],
+    [([4, 150, 75, 2], [0.08], [4]), ([2, 120, 60, 2], [0.04, 0.08], [8, 4])],
 )
 def test_apply_mask(shape, center_fractions, accelerations):
     state = np.random.get_state()
 
     mask_func = RandomMaskFunc(center_fractions, accelerations)
     expected_mask, expected_num_low_frequencies = mask_func(shape, seed=123)
+    assert expected_num_low_frequencies in [
+        round(cf * shape[-2]) for cf in center_fractions
+    ]
     x = create_input(shape)
     output, mask, num_low_frequencies = transforms.apply_mask(x, mask_func, seed=123)
 

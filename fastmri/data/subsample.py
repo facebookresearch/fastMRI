@@ -53,6 +53,7 @@ class MaskFunc:
         center_fractions: Sequence[float],
         accelerations: Sequence[int],
         sync_center_fractions_accelerations: bool = True,
+        seed: Optional[int] = None,
     ):
         """
         Args:
@@ -68,6 +69,8 @@ class MaskFunc:
                 ``sync_center_fractions_accelerations`` is ``True``, then the
                 first element of ``center_fractions`` will only be selected
                 with the first element of ``accelerations``, etc.
+            seed: Seed for starting the internal random number generator of the
+                ``MaskFunc``.
         """
         if (
             not len(center_fractions) == len(accelerations)
@@ -80,7 +83,7 @@ class MaskFunc:
         self.center_fractions = center_fractions
         self.accelerations = accelerations
         self.sync_center_fractions_accelerations = sync_center_fractions_accelerations
-        self.rng = np.random.RandomState()
+        self.rng = np.random.RandomState(seed)
 
     def __call__(
         self,

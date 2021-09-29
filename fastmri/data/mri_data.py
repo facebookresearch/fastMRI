@@ -113,6 +113,7 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
         use_dataset_cache: bool = False,
         dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
         num_cols: Optional[Tuple[int]] = None,
+        fname_filter: Optional[Sequence[str]] = None,
     ):
         """
         Args:
@@ -140,6 +141,9 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
                 information for faster load times.
             num_cols: Optional; If provided, only slices with the desired
                 number of columns will be considered.
+            fname_filter: A list of substrings use as a filename filter. For
+                example, use ``["T2"]`` to only select filenames with ``T2`` in
+                them.
         """
         if sample_rates is not None and volume_sample_rates is not None:
             raise ValueError(
@@ -161,7 +165,8 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
             raise ValueError(
                 "Lengths of roots, transforms, challenges, sample_rates do not match"
             )
-
+        
+        self.fname_filter = fname_filter
         self.datasets = []
         self.examples: List[Tuple[Path, int, Dict[str, object]]] = []
         for i in range(len(roots)):
@@ -175,6 +180,7 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
                     use_dataset_cache=use_dataset_cache,
                     dataset_cache_file=dataset_cache_file,
                     num_cols=num_cols,
+                    fname_filter=fname_filter,
                 )
             )
 
@@ -206,6 +212,7 @@ class SliceDataset(torch.utils.data.Dataset):
         volume_sample_rate: Optional[float] = None,
         dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
         num_cols: Optional[Tuple[int]] = None,
+        fname_filter: Optional[Sequence[str]] = None,
     ):
         """
         Args:
@@ -228,15 +235,19 @@ class SliceDataset(torch.utils.data.Dataset):
                 or volume_sample_rate (sample by volumes) but not both.
             dataset_cache_file: Optional; A file in which to cache dataset
                 information for faster load times.
-            num_cols: Optional; If provided, only slices with the desired
-                number of columns will be considered.
+            num_cols: If provided, only slices with the desired number of
+                columns will be considered.
+            fname_filter: A list of substrings use as a filename filter. For
+                example, use ``["T2"]`` to only select filenames with ``T2`` in
+                them.
         """
         if challenge not in ("singlecoil", "multicoil"):
             raise ValueError('challenge should be either "singlecoil" or "multicoil"')
 
         if sample_rate is not None and volume_sample_rate is not None:
             raise ValueError(
-                "either set sample_rate (sample by slices) or volume_sample_rate (sample by volumes) but not both"
+                "either set sample_rate (sample by slices) or volume_sample_rate "
+                "(sample by volumes) but not both"
             )
 
         self.dataset_cache_file = Path(dataset_cache_file)
@@ -246,6 +257,7 @@ class SliceDataset(torch.utils.data.Dataset):
             "reconstruction_esc" if challenge == "singlecoil" else "reconstruction_rss"
         )
         self.examples = []
+        self.fname_filter = fname_filter
 
         # set default sampling mode if none given
         if sample_rate is None:
@@ -279,6 +291,15 @@ class SliceDataset(torch.utils.data.Dataset):
         else:
             logging.info(f"Using dataset cache from {self.dataset_cache_file}.")
             self.examples = dataset_cache[root]
+
+        if self.fname_filter is not None:
+            # go through all examples and all entries in the filter
+            # if the filter is a substring of the filename, keep that example
+            self.examples = [
+                ex
+                for ex in self.examples
+                if any(substr in str(ex[0]) for substr in self.fname_filter)
+            ]
 
         # subsample if desired
         if sample_rate < 1.0:  # sample by slice

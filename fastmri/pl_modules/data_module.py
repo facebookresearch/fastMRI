@@ -7,7 +7,7 @@ LICENSE file in the root directory of this source tree.
 
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Sequence, Union
 
 import fastmri
 import pytorch_lightning as pl
@@ -91,6 +91,7 @@ class FastMriDataModule(pl.LightningDataModule):
         batch_size: int = 1,
         num_workers: int = 4,
         distributed_sampler: bool = False,
+        fname_filter: Optional[Sequence[str]] = None,
     ):
         """
         Args:
@@ -120,6 +121,9 @@ class FastMriDataModule(pl.LightningDataModule):
             num_workers: Number of workers for PyTorch dataloader.
             distributed_sampler: Whether to use a distributed sampler. This
                 should be set to True if training with ddp.
+            fname_filter: A list of substrings use as a filename filter. For
+                example, use ``["T2"]`` to only select filenames with ``T2`` in
+                them.
         """
         super().__init__()
 
@@ -137,6 +141,7 @@ class FastMriDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.distributed_sampler = distributed_sampler
+        self.fname_filter = fname_filter
 
     def _create_data_loader(
         self,
@@ -179,6 +184,7 @@ class FastMriDataModule(pl.LightningDataModule):
                 sample_rates=sample_rates,
                 volume_sample_rates=volume_sample_rates,
                 use_dataset_cache=self.use_dataset_cache_file,
+                fname_filter=self.fname_filter,
             )
         else:
             if data_partition in ("test", "challenge") and self.test_path is not None:
@@ -193,6 +199,7 @@ class FastMriDataModule(pl.LightningDataModule):
                 volume_sample_rate=volume_sample_rate,
                 challenge=self.challenge,
                 use_dataset_cache=self.use_dataset_cache_file,
+                fname_filter=self.fname_filter,
             )
 
         # ensure that entire volumes go to the same GPU in the ddp setting
@@ -318,6 +325,12 @@ class FastMriDataModule(pl.LightningDataModule):
             default=False,
             type=bool,
             help="Whether to combine train and val splits for training",
+        )
+        parser.add_argument(
+            "--fname_filter",
+            default=None,
+            type=Sequence[str],
+            help="Filter to apply to filenames.",
         )
 
         # data loader arguments

@@ -274,7 +274,7 @@ class EquiSpacedMaskFunc(MaskFunc):
             A mask for the high spatial frequencies of k-space.
         """
         if offset is None:
-            offset = self.rng.randint(0, high=round(acceleration))
+            offset = self.rng.randint(round(acceleration))
 
         mask = np.zeros(num_cols, dtype=np.float32)
         mask[offset::acceleration] = 1
@@ -331,7 +331,7 @@ class EquispacedMaskFractionFunc(MaskFunc):
             num_low_frequencies * acceleration - num_cols
         )
         if offset is None:
-            offset = self.rng.randint(0, high=round(adjusted_accel))
+            offset = self.rng.randint(round(adjusted_accel))
 
         mask = np.zeros(num_cols)
         accel_samples = np.arange(offset, num_cols - 1, adjusted_accel)
@@ -380,8 +380,11 @@ class MagicMaskFunc(MaskFunc):
         Returns:
             A mask for the high spatial frequencies of k-space.
         """
+        if acceleration <= 0:
+            return np.zeros(num_cols, dtype=np.float32)
+
         if offset is None:
-            offset = self.rng.randint(0, high=acceleration)
+            offset = self.rng.randint(acceleration)
 
         if offset % 2 == 0:
             offset_pos = offset + 1
@@ -448,7 +451,7 @@ class MagicMaskFractionFunc(MagicMaskFunc):
         num_cols = shape[-2]
         fraction_low_freqs, acceleration = self.choose_acceleration()
         num_cols = shape[-2]
-        num_low_frequencies = round(num_cols * fraction_low_freqs)
+        num_low_frequencies = max(round(num_cols * fraction_low_freqs), 1)
 
         # bound the number of low frequencies between 1 and target columns
         target_columns_to_sample = round(num_cols / acceleration)
@@ -479,6 +482,7 @@ def create_mask_for_mask_type(
     mask_type_str: str,
     center_fractions: Sequence[float],
     accelerations: Sequence[int],
+    allow_any_combination: bool = False,
 ) -> MaskFunc:
     """
     Creates a mask of the specified type.
@@ -491,14 +495,24 @@ def create_mask_for_mask_type(
         A mask func for the target mask type.
     """
     if mask_type_str == "random":
-        return RandomMaskFunc(center_fractions, accelerations)
+        return RandomMaskFunc(
+            center_fractions, accelerations, allow_any_combination=allow_any_combination
+        )
     elif mask_type_str == "equispaced":
-        return EquiSpacedMaskFunc(center_fractions, accelerations)
+        return EquiSpacedMaskFunc(
+            center_fractions, accelerations, allow_any_combination=allow_any_combination
+        )
     elif mask_type_str == "equispaced_fraction":
-        return EquispacedMaskFractionFunc(center_fractions, accelerations)
+        return EquispacedMaskFractionFunc(
+            center_fractions, accelerations, allow_any_combination=allow_any_combination
+        )
     elif mask_type_str == "magic":
-        return MagicMaskFunc(center_fractions, accelerations)
+        return MagicMaskFunc(
+            center_fractions, accelerations, allow_any_combination=allow_any_combination
+        )
     elif mask_type_str == "magic_fraction":
-        return MagicMaskFractionFunc(center_fractions, accelerations)
+        return MagicMaskFractionFunc(
+            center_fractions, accelerations, allow_any_combination=allow_any_combination
+        )
     else:
         raise ValueError(f"{mask_type_str} not supported")

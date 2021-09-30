@@ -7,7 +7,7 @@ LICENSE file in the root directory of this source tree.
 
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Callable, Optional, Sequence, Union
+from typing import Callable, List, Optional, Sequence, Union
 
 import fastmri
 import pytorch_lightning as pl
@@ -87,6 +87,7 @@ class FastMriDataModule(pl.LightningDataModule):
         test_path: Optional[Path] = None,
         sample_rate: Optional[float] = None,
         volume_sample_rate: Optional[float] = None,
+        val_examples: Optional[List] = None,
         use_dataset_cache_file: bool = True,
         batch_size: int = 1,
         num_workers: int = 4,
@@ -137,6 +138,7 @@ class FastMriDataModule(pl.LightningDataModule):
         self.test_path = test_path
         self.sample_rate = sample_rate
         self.volume_sample_rate = volume_sample_rate
+        self.val_examples = val_examples
         self.use_dataset_cache_file = use_dataset_cache_file
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -201,6 +203,9 @@ class FastMriDataModule(pl.LightningDataModule):
                 use_dataset_cache=self.use_dataset_cache_file,
                 fname_filter=self.fname_filter,
             )
+
+        if data_partition == "val" and self.val_examples is not None:
+            dataset.examples = self.val_examples
 
         # ensure that entire volumes go to the same GPU in the ddp setting
         sampler = None

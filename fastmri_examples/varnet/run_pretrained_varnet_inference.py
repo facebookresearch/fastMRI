@@ -45,10 +45,9 @@ def download_model(url, fname):
 
 
 def run_varnet_model(batch, model, device):
-    masked_kspace, mask, _, fname, slice_num, _, crop_size = batch
-    crop_size = crop_size[0]  # always have a batch size of 1 for varnet
+    crop_size = batch.crop_size
 
-    output = model(masked_kspace.to(device), mask.to(device)).cpu()
+    output = model(batch.masked_kspace.to(device), batch.mask.to(device)).cpu()
 
     # detect FLAIR 203
     if output.shape[-1] < crop_size[1]:
@@ -56,7 +55,7 @@ def run_varnet_model(batch, model, device):
 
     output = T.center_crop(output, crop_size)[0]
 
-    return output, int(slice_num[0]), fname[0]
+    return output, int(batch.slice_num[0]), batch.fname[0]
 
 
 def run_inference(challenge, state_dict_file, data_path, output_path, device):
@@ -108,18 +107,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--challenge",
         default="varnet_knee_mc",
-        choices=(
-            "varnet_knee_mc",
-            "varnet_brain_mc",
-        ),
+        choices=("varnet_knee_mc", "varnet_brain_mc",),
         type=str,
         help="Model to run",
     )
     parser.add_argument(
-        "--device",
-        default="cuda",
-        type=str,
-        help="Model to run",
+        "--device", default="cuda", type=str, help="Model to run",
     )
     parser.add_argument(
         "--state_dict_file",
@@ -128,10 +121,7 @@ if __name__ == "__main__":
         help="Path to saved state_dict (will download if not provided)",
     )
     parser.add_argument(
-        "--data_path",
-        type=Path,
-        required=True,
-        help="Path to subsampled data",
+        "--data_path", type=Path, required=True, help="Path to subsampled data",
     )
     parser.add_argument(
         "--output_path",

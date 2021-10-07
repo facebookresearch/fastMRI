@@ -255,9 +255,7 @@ class VarNet(nn.Module):
         super().__init__()
 
         self.sens_net = SensitivityModel(
-            chans=sens_chans,
-            num_pools=sens_pools,
-            mask_center=mask_center,
+            chans=sens_chans, num_pools=sens_pools, mask_center=mask_center,
         )
         self.cascades = nn.ModuleList(
             [VarNetBlock(NormUnet(chans, pools)) for _ in range(num_cascades)]
@@ -269,6 +267,9 @@ class VarNet(nn.Module):
         mask: torch.Tensor,
         num_low_frequencies: Optional[int] = None,
     ) -> torch.Tensor:
+        if num_low_frequencies == 0:
+            num_low_frequencies = None
+
         sens_maps = self.sens_net(masked_kspace, mask, num_low_frequencies)
         kspace_pred = masked_kspace.clone()
 

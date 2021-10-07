@@ -180,7 +180,7 @@ class SensitivityModel(nn.Module):
     def get_pad_and_num_low_freqs(
         self, mask: torch.Tensor, num_low_frequencies: Optional[int] = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        if num_low_frequencies is None:
+        if num_low_frequencies is None or num_low_frequencies == 0:
             # get low frequency line locations and mask them out
             squeezed_mask = mask[:, 0, 0, :, 0].to(torch.int8)
             cent = squeezed_mask.shape[1] // 2
@@ -302,10 +302,9 @@ class VarNetBlock(nn.Module):
         return fastmri.fft2c(fastmri.complex_mul(x, sens_maps))
 
     def sens_reduce(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
-        x = fastmri.ifft2c(x)
-        return fastmri.complex_mul(x, fastmri.complex_conj(sens_maps)).sum(
-            dim=1, keepdim=True
-        )
+        return fastmri.complex_mul(
+            fastmri.ifft2c(x), fastmri.complex_conj(sens_maps)
+        ).sum(dim=1, keepdim=True)
 
     def forward(
         self,

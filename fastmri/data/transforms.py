@@ -500,7 +500,7 @@ class VarNetDataTransform:
             sample = VarNetSample(
                 masked_kspace=masked_kspace,
                 mask=mask_torch.to(torch.bool),
-                num_low_frequencies=None,
+                num_low_frequencies=0,
                 target=target_torch,
                 fname=fname,
                 slice_num=slice_num,

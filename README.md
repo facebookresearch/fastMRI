@@ -101,7 +101,7 @@ in another repository.
 
 * **Sampling, Reconstruction and Artifact Correction**
 
-  * [Offset Sampling Improves Deep Learning based Accelerated MRI Reconstructions by Exploiting Symmetry (A. Defazio, 2019)](https://github.com/facebookresearch/fastMRI/tree/master/banding_removal/fastmri/common/subsample.py#L126-L198)
+  * [Offset Sampling Improves Deep Learning based Accelerated MRI Reconstructions by Exploiting Symmetry (A. Defazio, 2019)](https://github.com/facebookresearch/fastMRI/blob/8abe6eaeeb3d4504f26dc77adffb02a4be41d6f4/fastmri/data/subsample.py#L344-L475)
   * [End-to-End Variational Networks for Accelerated MRI Reconstruction ({A. Sriram*, J. Zbontar*} et al., 2020)](https://github.com/facebookresearch/fastMRI/tree/master/fastmri_examples/varnet/)
   * [MRI Banding Removal via Adversarial Training (A. Defazio, et al., 2020)](https://github.com/facebookresearch/fastMRI/tree/master/banding_removal)
 

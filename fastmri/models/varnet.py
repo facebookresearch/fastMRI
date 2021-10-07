@@ -180,7 +180,7 @@ class SensitivityModel(nn.Module):
     def get_pad_and_num_low_freqs(
         self, mask: torch.Tensor, num_low_frequencies: Optional[int] = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        if num_low_frequencies is None:
+        if num_low_frequencies is None or num_low_frequencies == 0:
             # get low frequency line locations and mask them out
             squeezed_mask = mask[:, 0, 0, :, 0].to(torch.int8)
             cent = squeezed_mask.shape[1] // 2
@@ -269,9 +269,6 @@ class VarNet(nn.Module):
         mask: torch.Tensor,
         num_low_frequencies: Optional[int] = None,
     ) -> torch.Tensor:
-        if num_low_frequencies == 0:
-            num_low_frequencies = None
-
         sens_maps = self.sens_net(masked_kspace, mask, num_low_frequencies)
         kspace_pred = masked_kspace.clone()
 

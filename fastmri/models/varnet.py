@@ -302,10 +302,9 @@ class VarNetBlock(nn.Module):
         return fastmri.fft2c(fastmri.complex_mul(x, sens_maps))
 
     def sens_reduce(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
-        x = fastmri.ifft2c(x)
-        return fastmri.complex_mul(x, fastmri.complex_conj(sens_maps)).sum(
-            dim=1, keepdim=True
-        )
+        return fastmri.complex_mul(
+            fastmri.ifft2c(x), fastmri.complex_conj(sens_maps)
+        ).sum(dim=1, keepdim=True)
 
     def forward(
         self,

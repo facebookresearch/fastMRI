@@ -107,12 +107,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "--challenge",
         default="varnet_knee_mc",
-        choices=("varnet_knee_mc", "varnet_brain_mc",),
+        choices=(
+            "varnet_knee_mc",
+            "varnet_brain_mc",
+        ),
         type=str,
         help="Model to run",
     )
     parser.add_argument(
-        "--device", default="cuda", type=str, help="Model to run",
+        "--device",
+        default="cuda",
+        type=str,
+        help="Model to run",
     )
     parser.add_argument(
         "--state_dict_file",
@@ -121,7 +127,10 @@ if __name__ == "__main__":
         help="Path to saved state_dict (will download if not provided)",
     )
     parser.add_argument(
-        "--data_path", type=Path, required=True, help="Path to subsampled data",
+        "--data_path",
+        type=Path,
+        required=True,
+        help="Path to subsampled data",
     )
     parser.add_argument(
         "--output_path",

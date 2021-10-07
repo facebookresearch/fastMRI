@@ -255,7 +255,9 @@ class VarNet(nn.Module):
         super().__init__()
 
         self.sens_net = SensitivityModel(
-            chans=sens_chans, num_pools=sens_pools, mask_center=mask_center,
+            chans=sens_chans,
+            num_pools=sens_pools,
+            mask_center=mask_center,
         )
         self.cascades = nn.ModuleList(
             [VarNetBlock(NormUnet(chans, pools)) for _ in range(num_cascades)]

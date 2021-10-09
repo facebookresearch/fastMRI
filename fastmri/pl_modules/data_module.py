@@ -188,6 +188,12 @@ class FastMriDataModule(pl.LightningDataModule):
                 use_dataset_cache=self.use_dataset_cache_file,
                 fname_filter=self.fname_filter,
             )
+
+            if self.val_examples is not None:
+                dataset.datasets[1].examples = self.val_examples
+                dataset.examples = (
+                    dataset.datasets[0].examples + dataset.datasets[1].examples
+                )
         else:
             if data_partition in ("test", "challenge") and self.test_path is not None:
                 data_path = self.test_path
@@ -204,8 +210,8 @@ class FastMriDataModule(pl.LightningDataModule):
                 fname_filter=self.fname_filter,
             )
 
-        if data_partition == "val" and self.val_examples is not None:
-            dataset.examples = self.val_examples
+            if data_partition == "val" and self.val_examples is not None:
+                dataset.examples = self.val_examples
 
         # ensure that entire volumes go to the same GPU in the ddp setting
         sampler = None

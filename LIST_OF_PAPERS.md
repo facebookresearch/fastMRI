@@ -13,6 +13,7 @@ The following is a short list of fastMRI publications. Clicking on the title wil
 9. Sriram, A.\*, Zbontar, J.\*, Murrell, T., Defazio, A., Zitnick, C. L., Yakubova, N., ... & Johnson, P. (2020). [End-to-End Variational Networks for Accelerated MRI Reconstruction](#end-to-end-variational-networks-for-accelerated-mri-reconstruction). In *International Conference on Medical Image Computing and Computer-Assisted Intervention*, pages 64-73.
 10. Defazio, A., Murrell, T., & Recht, M. P. (2020). [MRI Banding Removal via Adversarial Training](#mri-banding-removal-via-adversarial-training). In *Advances in Neural Information Processing Systems*, 33, pages 7660-7670.
 11. Muckley, M. J.\*, Riemenschneider, B.\*, Radmanesh, A., Kim, S., Jeong, G., Ko, J., ... & Knoll, F. (2021). [Results of the 2020 fastMRI Challenge for Machine Learning MR Image Reconstruction](#results-of-the-2020-fastmri-challenge-for-machine-learning-mr-image-reconstruction). *IEEE Transactions on Medical Imaging*, 40(9), pages 2306-2317.
+12. Johnson, P. M., Jeong, G., Hammernik, K., Schlemper, J., Qin, C., Duan, J., ..., & Knoll, F. [Evaluation of the Robustness of Learned MR Image Reconstruction to Systematic Deviations Between Training and Test Data for the Models from the fastMRI Challenge](https://doi.org/10.1007/978-3-030-88552-6_3). In *MICCAI Machine Learning for Medical Image Reconstruction Workshop*, pages 25–34, 2021.
 
 ## fastMRI: An open dataset and benchmarks for accelerated MRI
 
@@ -246,5 +247,21 @@ Accelerating MRI scans is one of the principal outstanding problems in the MRI r
     number={9},
     pages={2306--2317},
     doi={10.1109/TMI.2021.3075856}
+}
+```
+
+## Evaluation of the Robustness of Learned MR Image Reconstruction to Systematic Deviations Between Training and Test Data for the Models from the fastMRI Challenge
+
+[publication](https://doi.org/10.1007/978-3-030-88552-6_3)
+
+The 2019 fastMRI challenge was an open challenge designed to advance research in the field of machine learning for MR image reconstruction. The goal for the participants was to reconstruct undersampled MRI k-space data. The original challenge left an open question as to how well the reconstruction methods will perform in the setting where there is a systematic difference between training and test data. In this work we tested the generalization performance of the submissions with respect to various perturbations, and despite differences in model architecture and training, all of the methods perform very similarly.
+
+```bibtex
+@inproceedings{johnson2021evaluation,
+    author={Patricia M. Johnson and Geunu Jeong and Kerstin Hammernik and Jo Schlemper and Chen Qin and Jinming Duan and Daniel Rueckert and Jingu Lee and Nicola Pezzotti and Elwin De Weerdt and Sahar Yousefi and Mohamed S. Elmahdy and Jeroen Hendrikus Franciscus Van Gemert and Christophe Schülke and Mariya Doneva and Tim Nielsen and Sergey Kastryulin and Boudewijn P. F. Lelieveldt and Matthias J. P. Van Osch and Marius Staring and Eric Z. Chen and Puyang Wang and Xiao Chen and Terrence Chen and Vishal M. Patel and Shanhui Sun and Hyungseob Shin and Yohan Jun and Taejoon Eo and Sewon Kim and Taeseong Kim and Dosik Hwang and Patrick Putzky and Dimitrios Karkalousos and Jonas Teuwen and Nikita Miriakov and Bart Bakker and Matthan Caan and Max Welling and Matthew J. Muckley and Florian Knoll},
+    title={Evaluation of the Robustness of Learned {MR} Image Reconstruction to Systematic Deviations Between Training and Test Data for the Models from the {fastMRI} Challenge},
+    booktitle={International Workshop on Machine Learning for Medical Image Reconstruction},
+    year={2021},
+    pages={25--34},
 }
 ```

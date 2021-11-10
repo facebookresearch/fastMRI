@@ -28,9 +28,18 @@ publications of the fastMRI project.
 
 ## Documentation
 
-Documentation for the fastMRI dataset and baseline reconstruction performance
-can be found in [our paper on arXiv](https://arxiv.org/abs/1811.08839). The
-paper is updated on an ongoing basis for dataset additions and new baselines.
+### The fastMRI Dataset
+
+There are multiple publications describing different subcomponents of the data
+(e.g., brain vs. knee) and associated baselines.
+
+* **Project Summary, Datasets, Baselines:** [fastMRI: An Open Dataset and Benchmarks for Accelerated MRI ({J. Zbontar*, F. Knoll*, A. Sriram*} et al., 2018)](https://arxiv.org/abs/1811.08839)
+
+* **Knee Data:** [fastMRI: A Publicly Available Raw k-Space and DICOM Dataset of Knee Images for Accelerated MR Image Reconstruction Using Machine Learning ({F. Knoll*, J. Zbontar*} et al., 2020)](https://doi.org/10.1148/ryai.2020190007)
+
+* **Brain Dataset Properties:** [Supplemental Material](https://ieeexplore.ieee.org/ielx7/42/9526230/9420272/supp1-3075856.pdf?arnumber=9420272) of [Results of the 2020 fastMRI Challenge for Machine Learning MR Image Reconstruction ({M. Muckley*, B. Riemenschneider*} et al., 2021)](https://doi.org/10.1109/TMI.2021.3075856)
+
+### Code Repository
 
 For code documentation, most functions and classes have accompanying docstrings
 that you can access via the `help` function in IPython. For example:
@@ -85,9 +94,7 @@ and logging.
 ## Examples and Reproducibility
 
 The `fastmri_examples` and `banding_removal` folders include code for
-reproducibility. The baseline models were used in the arXiv paper:
-
-[fastMRI: An Open Dataset and Benchmarks for Accelerated MRI ({J. Zbontar*, F. Knoll*, A. Sriram*} et al., 2018)](https://arxiv.org/abs/1811.08839)
+reproducibility. The baseline models were used in the [arXiv paper](https://arxiv.org/abs/1811.08839).
 
 A brief summary of implementions based on papers with links to code follows.
 For completeness we also mention work on active acquisition, which is hosted

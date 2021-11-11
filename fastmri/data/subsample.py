@@ -487,9 +487,29 @@ def create_mask_for_mask_type(
     """
     Creates a mask of the specified type.
 
+    The type of mask created depends on ``mask_type_str``. Options include:
+
+    * ``"random`"`: uniform random mask with a densely-sampled center.
+    * ``"equispaced"``: equispaced mask in standard format of parallel imaging.
+    * ``"equispaced_fraction"``: an equispaced mask with a spacing adjustment to
+        exactly match the target acceleration rate.
+    * ``"magic"``: mask with offset sampling in each k-space half to take
+        advantage of weak Hermitian symmettry - see "Defazio, A. (2019).
+        Offset Sampling Improves Deep Learning based Accelerated MRI
+        Reconstructions by Exploiting Symmetry. arXiv preprint,
+        arXiv:1912.01101.
+    * ``"magic_equispaced"``: Same as ``"magic"`` but with an offset adjustment
+        to exactly match the target acceleration rate.
+
     Args:
+        mask_type_str: Type of mask. See above.
         center_fractions: What fraction of the center of k-space to include.
         accelerations: What accelerations to apply.
+        allow_any_combination: If ``True``, allows any combination of elements
+            in ``center_fraction`` and ``accelerations``. If ``False``, then
+            elements at the same index must be selected, i.e., the ith element
+            of ``center_fractions`` will always be paired with the ith element
+            of ``accelerations``.
 
     Returns:
         A mask func for the target mask type.

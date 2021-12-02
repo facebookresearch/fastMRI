@@ -16,14 +16,16 @@ from warnings import warn
 
 import h5py
 import numpy as np
+import pandas as pd
+import requests
 import torch
 import yaml
 
 
 def et_query(
-    root: etree.Element,
-    qlist: Sequence[str],
-    namespace: str = "http://www.ismrm.org/ISMRMRD",
+        root: etree.Element,
+        qlist: Sequence[str],
+        namespace: str = "http://www.ismrm.org/ISMRMRD",
 ) -> str:
     """
     ElementTree query function.
@@ -56,7 +58,7 @@ def et_query(
 
 
 def fetch_dir(
-    key: str, data_config_file: Union[str, Path, os.PathLike] = "fastmri_dirs.yaml"
+        key: str, data_config_file: Union[str, Path, os.PathLike] = "fastmri_dirs.yaml"
 ) -> Path:
     """
     Data directory fetcher.
@@ -104,15 +106,15 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
     """
 
     def __init__(
-        self,
-        roots: Sequence[Path],
-        challenges: Sequence[str],
-        transforms: Optional[Sequence[Optional[Callable]]] = None,
-        sample_rates: Optional[Sequence[Optional[float]]] = None,
-        volume_sample_rates: Optional[Sequence[Optional[float]]] = None,
-        use_dataset_cache: bool = False,
-        dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
-        num_cols: Optional[Tuple[int]] = None,
+            self,
+            roots: Sequence[Path],
+            challenges: Sequence[str],
+            transforms: Optional[Sequence[Optional[Callable]]] = None,
+            sample_rates: Optional[Sequence[Optional[float]]] = None,
+            volume_sample_rates: Optional[Sequence[Optional[float]]] = None,
+            use_dataset_cache: bool = False,
+            dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
+            num_cols: Optional[Tuple[int]] = None,
     ):
         """
         Args:
@@ -152,11 +154,11 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
         if volume_sample_rates is None:
             volume_sample_rates = [None] * len(roots)
         if not (
-            len(roots)
-            == len(transforms)
-            == len(challenges)
-            == len(sample_rates)
-            == len(volume_sample_rates)
+                len(roots)
+                == len(transforms)
+                == len(challenges)
+                == len(sample_rates)
+                == len(volume_sample_rates)
         ):
             raise ValueError(
                 "Lengths of roots, transforms, challenges, sample_rates do not match"
@@ -197,15 +199,15 @@ class SliceDataset(torch.utils.data.Dataset):
     """
 
     def __init__(
-        self,
-        root: Union[str, Path, os.PathLike],
-        challenge: str,
-        transform: Optional[Callable] = None,
-        use_dataset_cache: bool = False,
-        sample_rate: Optional[float] = None,
-        volume_sample_rate: Optional[float] = None,
-        dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
-        num_cols: Optional[Tuple[int]] = None,
+            self,
+            root: Union[str, Path, os.PathLike],
+            challenge: str,
+            transform: Optional[Callable] = None,
+            use_dataset_cache: bool = False,
+            sample_rate: Optional[float] = None,
+            volume_sample_rate: Optional[float] = None,
+            dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
+            num_cols: Optional[Tuple[int]] = None,
     ):
         """
         Args:
@@ -358,3 +360,65 @@ class SliceDataset(torch.utils.data.Dataset):
             sample = self.transform(kspace, mask, target, attrs, fname.name, dataslice)
 
         return sample
+
+
+class AnnotatedSliceDataset(SliceDataset):
+    def __init__(
+            self,
+            root: Union[str, Path, os.PathLike],
+            challenge: str,
+            transform: Optional[Callable] = None,
+            use_dataset_cache: bool = False,
+            sample_rate: Optional[float] = None,
+            volume_sample_rate: Optional[float] = None,
+            dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
+            num_cols: Optional[Tuple[int]] = None,
+            use_annotation: bool = False,
+            annotation_version: Optional[str] = None,
+            mri_type: Optional[str] = None
+    ):
+        SliceDataset.__init__(self, root, challenge, transform, use_dataset_cache, sample_rate, volume_sample_rate,
+                              dataset_cache_file, num_cols)
+
+        self.annotated_examples = []
+        if use_annotation is True:
+            annotation_file_name = self.download_csv(annotation_version, mri_type)
+            annotations_csv = pd.read_csv(annotation_file_name)
+            for example in self.examples:
+                fname = example[0]
+                slice_ind = example[1]
+                metadata = example[2]
+
+                annotations_df = annotations_csv[
+                    (annotations_csv['file'] == fname.stem) & (annotations_csv['slice'] == slice_ind)]
+                if len(annotations_df) != 0:
+                    for row in annotations_df.itertuples(index=True, name='Pandas'):
+                        annotation = {
+                            'fname': str(row.file),
+                            'slice': int(row.slice),
+                            'study_level': str(row.study_level),
+                            'x': int(row.x),
+                            'y': int(row.y),
+                            'width': int(row.width),
+                            'height': int(row.height),
+                            'label': str(row.label)
+                        }
+                        metadata['annotation'] = annotation
+                    self.annotated_examples += [(fname, slice_ind, metadata)]
+
+    def download_csv(self, version, mri_type):
+        url = f'https://raw.githubusercontent.com/microsoft/fastmri-plus/{version}/Annotations/{mri_type}.csv'
+        request = requests.get(url, timeout=10, stream=True)
+        fname = f"{mri_type}{version}.csv"
+
+        if not os.path.isdir('.annotation_cache'):
+            os.system('mkdir .annotation_cache')
+
+        annotation_file_name = os.path.join(os.getcwd(), '.annotation_cache', fname)
+        if not os.path.isfile(annotation_file_name):
+            # download csv from github and save it locally
+            with open(annotation_file_name, "wb") as fh:
+                for chunk in request.iter_content(1024 * 1024):
+                    fh.write(chunk)
+
+        return annotation_file_name

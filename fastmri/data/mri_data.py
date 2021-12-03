@@ -375,42 +375,88 @@ class AnnotatedSliceDataset(SliceDataset):
             num_cols: Optional[Tuple[int]] = None,
             use_annotation: bool = False,
             annotation_version: Optional[str] = None,
-            mri_type: Optional[str] = None
+            mri_type: Optional[str] = None,
+            multiple_annotation_policy: Optional[str] = None
     ):
+        # subclass SliceDataset
         SliceDataset.__init__(self, root, challenge, transform, use_dataset_cache, sample_rate, volume_sample_rate,
                               dataset_cache_file, num_cols)
 
         self.annotated_examples = []
+
         if use_annotation is True:
+            # download csv file from github using git hash to find certain version
             annotation_file_name = self.download_csv(annotation_version, mri_type)
             annotations_csv = pd.read_csv(annotation_file_name)
             for example in self.examples:
-                fname = example[0]
-                slice_ind = example[1]
-                metadata = example[2]
+                fname, slice_ind, metadata = example
 
+                # using filename and slice to find desired annotation
                 annotations_df = annotations_csv[
                     (annotations_csv['file'] == fname.stem) & (annotations_csv['slice'] == slice_ind)]
-                if len(annotations_df) != 0:
-                    for row in annotations_df.itertuples(index=True, name='Pandas'):
-                        annotation = {
-                            'fname': str(row.file),
-                            'slice': int(row.slice),
-                            'study_level': str(row.study_level),
-                            'x': int(row.x),
-                            'y': int(row.y),
-                            'width': int(row.width),
-                            'height': int(row.height),
-                            'label': str(row.label)
-                        }
-                        metadata['annotation'] = annotation
+
+                annotations_list = annotations_df.itertuples(index=True, name='Pandas')
+
+                # if annotation (filename or slice) not found, fill in dummy values
+                if len(annotations_df) == 0:
+                    annotation = self.get_annotation(True, None)
+                    metadata['annotation'] = annotation
                     self.annotated_examples += [(fname, slice_ind, metadata)]
+
+                else:
+                    # only use the first annotation
+                    if multiple_annotation_policy == 'first':
+                        rows = list(annotations_list)[0]
+                        annotation = self.get_annotation(False, rows)
+                        metadata['annotation'] = annotation
+                        self.annotated_examples += [(fname, slice_ind, metadata)]
+
+                    # use an annotation at random
+                    elif multiple_annotation_policy == 'random':
+                        random_number = random.randint(0, len(annotations_df) - 1)
+                        rows = list(annotations_list)[random_number]
+                        annotation = self.get_annotation(False, rows)
+                        metadata['annotation'] = annotation
+                        self.annotated_examples += [(fname, slice_ind, metadata)]
+
+                    # extend examples to have tow copies of the same slice, one for each annotation
+                    elif multiple_annotation_policy == 'all':
+                        for rows in annotations_list:
+                            annotation = self.get_annotation(False, rows)
+                            metadata['annotation'] = annotation
+                            self.annotated_examples += [(fname, slice_ind, metadata)]
+
+    def get_annotation(self, dummy_value, row):
+        if dummy_value is True:
+            annotation = {
+                'fname': "",
+                'slice': "",
+                'study_level': "",
+                'x': -1,
+                'y': -1,
+                'width': -1,
+                'height': -1,
+                'label': ""
+            }
+        else:
+            annotation = {
+                'fname': str(row.file),
+                'slice': int(row.slice),
+                'study_level': str(row.study_level),
+                'x': int(row.x),
+                'y': int(row.y),
+                'width': int(row.width),
+                'height': int(row.height),
+                'label': str(row.label)
+            }
+        return annotation
 
     def download_csv(self, version, mri_type):
         url = f'https://raw.githubusercontent.com/microsoft/fastmri-plus/{version}/Annotations/{mri_type}.csv'
         request = requests.get(url, timeout=10, stream=True)
         fname = f"{mri_type}{version}.csv"
 
+        # create temporary folders
         if not os.path.isdir('.annotation_cache'):
             os.system('mkdir .annotation_cache')
 

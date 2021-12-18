@@ -394,7 +394,6 @@ class AnnotatedSliceDataset(SliceDataset):
                 # using filename and slice to find desired annotation
                 annotations_df = annotations_csv[
                     (annotations_csv['file'] == fname.stem) & (annotations_csv['slice'] == slice_ind)]
-
                 annotations_list = annotations_df.itertuples(index=True, name='Pandas')
 
                 # if annotation (filename or slice) not found, fill in dummy values
@@ -452,6 +451,7 @@ class AnnotatedSliceDataset(SliceDataset):
         return annotation
 
     def download_csv(self, version, mri_type):
+        # request file by git hash and mri type
         url = f'https://raw.githubusercontent.com/microsoft/fastmri-plus/{version}/Annotations/{mri_type}.csv'
         request = requests.get(url, timeout=10, stream=True)
         fname = f"{mri_type}{version}.csv"

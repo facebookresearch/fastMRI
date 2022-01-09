@@ -367,66 +367,113 @@ class AnnotatedSliceDataset(SliceDataset):
             self,
             root: Union[str, Path, os.PathLike],
             challenge: str,
+            mri_type: str,
+            multiple_annotation_policy: str,
             transform: Optional[Callable] = None,
             use_dataset_cache: bool = False,
             sample_rate: Optional[float] = None,
             volume_sample_rate: Optional[float] = None,
             dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
             num_cols: Optional[Tuple[int]] = None,
-            use_annotation: bool = False,
             annotation_version: Optional[str] = None,
-            mri_type: Optional[str] = None,
-            multiple_annotation_policy: Optional[str] = None
     ):
+        """
+        Args:
+            root: Path to the dataset.
+            challenge: "singlecoil" or "multicoil" depending on which challenge
+                to use.
+            mri_type: 'knee' or 'brain' depending on which dataset to use.
+            multiple_annotation_policy: 'first', 'random' or 'all'. 
+                If 'first', then only use the first annotation.
+                If 'random', then pick an annotation at random.
+                If 'all' then two or more copies of the same slice for each annotation
+                will be extended.
+            transform: Optional; A callable object that pre-processes the raw
+                data into appropriate form. The transform function should take
+                'kspace', 'target', 'attributes', 'filename', and 'slice' as
+                inputs. 'target' may be null for test data.
+            use_dataset_cache: Whether to cache dataset metadata. This is very
+                useful for large datasets like the brain data.
+            sample_rate: Optional; A float between 0 and 1. This controls what fraction
+                of the slices should be loaded. Defaults to 1 if no value is given.
+                When creating a sampled dataset either set sample_rate (sample by slices)
+                or volume_sample_rate (sample by volumes) but not both.
+            volume_sample_rate: Optional; A float between 0 and 1. This controls what fraction
+                of the volumes should be loaded. Defaults to 1 if no value is given.
+                When creating a sampled dataset either set sample_rate (sample by slices)
+                or volume_sample_rate (sample by volumes) but not both.
+            dataset_cache_file: Optional; A file in which to cache dataset
+                information for faster load times.
+            num_cols: Optional; If provided, only slices with the desired
+                number of columns will be considered.
+            annotation_version: Optional; If provided, a specific version of csv file will be
+                downloaded based on its git hash. Default value is None, then the latest version 
+                will be used.
+        """
+
         # subclass SliceDataset
-        SliceDataset.__init__(self, root, challenge, transform, use_dataset_cache, sample_rate, volume_sample_rate,
-                              dataset_cache_file, num_cols)
+        super().__init__(root, challenge, transform, use_dataset_cache, sample_rate, volume_sample_rate,
+                         dataset_cache_file, num_cols)
 
         self.annotated_examples = []
 
-        if use_annotation is True:
-            # download csv file from github using git hash to find certain version
-            annotation_file_name = self.download_csv(annotation_version, mri_type)
-            annotations_csv = pd.read_csv(annotation_file_name)
-            for example in self.examples:
-                fname, slice_ind, metadata = example
+        if mri_type not in ("knee", "brain"):
+            raise ValueError('mri_type should be either "knee" or "brain"')
+        if multiple_annotation_policy not in ("first", "random", "all"):
+            raise ValueError('multiple_annotation_policy should be either "single", "random", or "all"')
 
-                # using filename and slice to find desired annotation
-                annotations_df = annotations_csv[
-                    (annotations_csv['file'] == fname.stem) & (annotations_csv['slice'] == slice_ind)]
-                annotations_list = annotations_df.itertuples(index=True, name='Pandas')
+        # download csv file from github using git hash to find certain version
+        annotation_name = f"{mri_type}{annotation_version}.csv"
+        annotation_path = Path(os.getcwd(),'.annotation_cache', annotation_name)
+        if not annotation_path.is_file():
+            self.download_csv(annotation_version, mri_type, annotation_path)
+        annotations_csv = pd.read_csv(annotation_path)
 
-                # if annotation (filename or slice) not found, fill in dummy values
-                if len(annotations_df) == 0:
-                    annotation = self.get_annotation(True, None)
+        for example in self.examples:
+            fname, slice_ind, metadata = example
+
+            # using filename and slice to find desired annotation
+            annotations_df = annotations_csv[
+                (annotations_csv['file'] == fname.stem) & (annotations_csv['slice'] == slice_ind)]
+            annotations_list = annotations_df.itertuples(index=True, name='Pandas')
+
+            # if annotation (filename or slice) not found, fill in empty values
+            if len(annotations_df) == 0:
+                annotation = self.get_annotation(True, None)
+                metadata['annotation'] = annotation
+                self.annotated_examples.append(list([fname, slice_ind, metadata.copy()]))
+
+            elif len(annotations_df) == 1:
+                rows = list(annotations_list)[0]
+                annotation = self.get_annotation(False, rows)
+                metadata['annotation'] = annotation
+                self.annotated_examples.append(list([fname, slice_ind, metadata.copy()]))
+
+            else:
+                # only use the first annotation
+                if multiple_annotation_policy == 'first':
+                    rows = list(annotations_list)[0]
+                    annotation = self.get_annotation(False, rows)
                     metadata['annotation'] = annotation
-                    self.annotated_examples += [(fname, slice_ind, metadata)]
+                    self.annotated_examples.append(list([fname, slice_ind, metadata.copy()]))
 
-                else:
-                    # only use the first annotation
-                    if multiple_annotation_policy == 'first':
-                        rows = list(annotations_list)[0]
+                # use an annotation at random
+                elif multiple_annotation_policy == 'random':
+                    random_number = torch.randint(len(annotations_df) - 1,(1,))
+                    rows = list(annotations_list)[random_number]
+                    annotation = self.get_annotation(False, rows)
+                    metadata['annotation'] = annotation
+                    self.annotated_examples.append(list([fname, slice_ind, metadata.copy()]))
+
+                # extend examples to have tow copies of the same slice, one for each annotation
+                elif multiple_annotation_policy == 'all':
+                    for rows in annotations_list:
                         annotation = self.get_annotation(False, rows)
                         metadata['annotation'] = annotation
-                        self.annotated_examples += [(fname, slice_ind, metadata)]
+                        self.annotated_examples.append(list([fname, slice_ind, metadata.copy()]))
 
-                    # use an annotation at random
-                    elif multiple_annotation_policy == 'random':
-                        random_number = random.randint(0, len(annotations_df) - 1)
-                        rows = list(annotations_list)[random_number]
-                        annotation = self.get_annotation(False, rows)
-                        metadata['annotation'] = annotation
-                        self.annotated_examples += [(fname, slice_ind, metadata)]
-
-                    # extend examples to have tow copies of the same slice, one for each annotation
-                    elif multiple_annotation_policy == 'all':
-                        for rows in annotations_list:
-                            annotation = self.get_annotation(False, rows)
-                            metadata['annotation'] = annotation
-                            self.annotated_examples += [(fname, slice_ind, metadata)]
-
-    def get_annotation(self, dummy_value, row):
-        if dummy_value is True:
+    def get_annotation(self, empty_value, row):
+        if empty_value is True:
             annotation = {
                 'fname': "",
                 'slice': "",
@@ -450,21 +497,15 @@ class AnnotatedSliceDataset(SliceDataset):
             }
         return annotation
 
-    def download_csv(self, version, mri_type):
+    def download_csv(self, version, mri_type, path):
         # request file by git hash and mri type
         url = f'https://raw.githubusercontent.com/microsoft/fastmri-plus/{version}/Annotations/{mri_type}.csv'
         request = requests.get(url, timeout=10, stream=True)
-        fname = f"{mri_type}{version}.csv"
 
         # create temporary folders
-        if not os.path.isdir('.annotation_cache'):
-            os.system('mkdir .annotation_cache')
+        Path('.annotation_cache').mkdir(parents=True, exist_ok=True)
 
-        annotation_file_name = os.path.join(os.getcwd(), '.annotation_cache', fname)
-        if not os.path.isfile(annotation_file_name):
-            # download csv from github and save it locally
-            with open(annotation_file_name, "wb") as fh:
-                for chunk in request.iter_content(1024 * 1024):
-                    fh.write(chunk)
-
-        return annotation_file_name
+        # download csv from github and save it locally
+        with open(path, "wb") as fh:
+            for chunk in request.iter_content(1024 * 1024):
+                fh.write(chunk)

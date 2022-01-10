@@ -8,7 +8,7 @@ LICENSE file in the root directory of this source tree.
 import numpy as np
 import pytest
 import torch
-from .create_temp_data import create_temp_data
+from .create_temp_data import create_temp_data, create_temp_annotation
 
 # these are really slow - skip by default
 SKIP_INTEGRATIONS = True
@@ -26,6 +26,12 @@ def fastmri_mock_dataset(tmp_path_factory):
     path = tmp_path_factory.mktemp("fastmri_data")
 
     return create_temp_data(path)
+
+@pytest.fixture
+def fastmri_mock_annotation(tmp_path_factory):
+    path = tmp_path_factory.mktemp("fastmri_annotation")
+
+    return create_temp_annotation(path)
 
 
 @pytest.fixture

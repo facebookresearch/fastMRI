@@ -426,7 +426,7 @@ class AnnotatedSliceDataset(SliceDataset):
         annotation_name = f"{mri_type}{annotation_version}.csv"
         annotation_path = Path(os.getcwd(),'.annotation_cache', annotation_name)
         if not annotation_path.is_file():
-            self.download_csv(annotation_version, mri_type, annotation_path)
+            annotation_path = self.download_csv(annotation_version, mri_type, annotation_path)
         annotations_csv = pd.read_csv(annotation_path)
 
         for example in self.examples:
@@ -509,3 +509,4 @@ class AnnotatedSliceDataset(SliceDataset):
         with open(path, "wb") as fh:
             for chunk in request.iter_content(1024 * 1024):
                 fh.write(chunk)
+        return path

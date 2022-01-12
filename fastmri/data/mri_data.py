@@ -23,9 +23,9 @@ import yaml
 
 
 def et_query(
-        root: etree.Element,
-        qlist: Sequence[str],
-        namespace: str = "http://www.ismrm.org/ISMRMRD",
+    root: etree.Element,
+    qlist: Sequence[str],
+    namespace: str = "http://www.ismrm.org/ISMRMRD",
 ) -> str:
     """
     ElementTree query function.
@@ -58,7 +58,7 @@ def et_query(
 
 
 def fetch_dir(
-        key: str, data_config_file: Union[str, Path, os.PathLike] = "fastmri_dirs.yaml"
+    key: str, data_config_file: Union[str, Path, os.PathLike] = "fastmri_dirs.yaml"
 ) -> Path:
     """
     Data directory fetcher.
@@ -106,15 +106,15 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
     """
 
     def __init__(
-            self,
-            roots: Sequence[Path],
-            challenges: Sequence[str],
-            transforms: Optional[Sequence[Optional[Callable]]] = None,
-            sample_rates: Optional[Sequence[Optional[float]]] = None,
-            volume_sample_rates: Optional[Sequence[Optional[float]]] = None,
-            use_dataset_cache: bool = False,
-            dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
-            num_cols: Optional[Tuple[int]] = None,
+        self,
+        roots: Sequence[Path],
+        challenges: Sequence[str],
+        transforms: Optional[Sequence[Optional[Callable]]] = None,
+        sample_rates: Optional[Sequence[Optional[float]]] = None,
+        volume_sample_rates: Optional[Sequence[Optional[float]]] = None,
+        use_dataset_cache: bool = False,
+        dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
+        num_cols: Optional[Tuple[int]] = None,
     ):
         """
         Args:
@@ -154,11 +154,11 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
         if volume_sample_rates is None:
             volume_sample_rates = [None] * len(roots)
         if not (
-                len(roots)
-                == len(transforms)
-                == len(challenges)
-                == len(sample_rates)
-                == len(volume_sample_rates)
+            len(roots)
+            == len(transforms)
+            == len(challenges)
+            == len(sample_rates)
+            == len(volume_sample_rates)
         ):
             raise ValueError(
                 "Lengths of roots, transforms, challenges, sample_rates do not match"
@@ -199,15 +199,15 @@ class SliceDataset(torch.utils.data.Dataset):
     """
 
     def __init__(
-            self,
-            root: Union[str, Path, os.PathLike],
-            challenge: str,
-            transform: Optional[Callable] = None,
-            use_dataset_cache: bool = False,
-            sample_rate: Optional[float] = None,
-            volume_sample_rate: Optional[float] = None,
-            dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
-            num_cols: Optional[Tuple[int]] = None,
+        self,
+        root: Union[str, Path, os.PathLike],
+        challenge: str,
+        transform: Optional[Callable] = None,
+        use_dataset_cache: bool = False,
+        sample_rate: Optional[float] = None,
+        volume_sample_rate: Optional[float] = None,
+        dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
+        num_cols: Optional[Tuple[int]] = None,
     ):
         """
         Args:

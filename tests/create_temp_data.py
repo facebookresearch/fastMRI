@@ -113,53 +113,100 @@ def create_temp_annotation(path):
     annotations_knee = []
     annotations_brain = []
     label_knee = [
-        "Meniscus Tear","Displaced Meniscal Tissue","Bone-Subchondral Edema","Bone Lesion",
-        "Bone-Fracture/Contusion/Dislocation","ACL High Grade Sprain","ACL Low-Mod Grade Sprain",
-        "MCL High Grade Sprain","MCL Low-Mod Grade Sprain","PCL High Grade Sprain",
-        "PCL Low-Mod Grade Sprain","LCL Complex High Grade Sprain","LCL Complex Low-Mod Grade Sprain",
-        "Cartilage Full Thickness Loss/Defect","Cartilage Partial Thickness Loss/Defect",
-        "Joint Effusion","Joint Bodies","Periarticular Cysts","Muscle Strain","Soft Tissue Lesion",
-        "Patellar Retinaculum High Grade Sprain","Artifact"]
+        "Meniscus Tear",
+        "Displaced Meniscal Tissue",
+        "Bone-Subchondral Edema",
+        "Bone Lesion",
+        "Bone-Fracture/Contusion/Dislocation",
+        "ACL High Grade Sprain",
+        "ACL Low-Mod Grade Sprain",
+        "MCL High Grade Sprain",
+        "MCL Low-Mod Grade Sprain",
+        "PCL High Grade Sprain",
+        "PCL Low-Mod Grade Sprain",
+        "LCL Complex High Grade Sprain",
+        "LCL Complex Low-Mod Grade Sprain",
+        "Cartilage Full Thickness Loss/Defect",
+        "Cartilage Partial Thickness Loss/Defect",
+        "Joint Effusion",
+        "Joint Bodies",
+        "Periarticular Cysts",
+        "Muscle Strain",
+        "Soft Tissue Lesion",
+        "Patellar Retinaculum High Grade Sprain",
+        "Artifact",
+    ]
 
     label_brain = [
-        "Absent Septum Pellucidum","Craniectomy","Craniotomy","Craniotomy with Cranioplasty",
-        "Dural Thickening","Edema","Encephalomalacia","Enlarged Ventricles","Extra-Axial Mass",
-        "Intraventricular Substance","Likely Cysts","Lacunar Infarct","Mass","Nonspecific Lesion",
-        "Nonspecific White Matter Lesion","Normal Variant","Paranasal Sinus Opacification",
-        "Pineal Cyst","Possible Artifact","Posttreatment Change","Resection Cavity","Global Ischemia",
-        "Small Vessel Chronic White Matter Ischemic Change","Motion Artifact","Possible Demyelinating Disease",
-        "Colpocephaly","White Matter Disease","Innumerable Bilateral Focal Brain Lesions",
-        "Extra-Axial Collection","Normal for Age"]
+        "Absent Septum Pellucidum",
+        "Craniectomy",
+        "Craniotomy",
+        "Craniotomy with Cranioplasty",
+        "Dural Thickening",
+        "Edema",
+        "Encephalomalacia",
+        "Enlarged Ventricles",
+        "Extra-Axial Mass",
+        "Intraventricular Substance",
+        "Likely Cysts",
+        "Lacunar Infarct",
+        "Mass",
+        "Nonspecific Lesion",
+        "Nonspecific White Matter Lesion",
+        "Normal Variant",
+        "Paranasal Sinus Opacification",
+        "Pineal Cyst",
+        "Possible Artifact",
+        "Posttreatment Change",
+        "Resection Cavity",
+        "Global Ischemia",
+        "Small Vessel Chronic White Matter Ischemic Change",
+        "Motion Artifact",
+        "Possible Demyelinating Disease",
+        "Colpocephaly",
+        "White Matter Disease",
+        "Innumerable Bilateral Focal Brain Lesions",
+        "Extra-Axial Collection",
+        "Normal for Age",
+    ]
 
-    for i in range(17000):
-        annotations_knee.append({
-            "file": "file" + str(1000000+rg.integers(1,2546)),
-            "slice": str(rg.integers(0,45)),
-            "study_level": rg.choice(["Yes","No"],1)[0],
-            "x": str(rg.integers(0,255)),
-            "y" : str(rg.integers(0,255)),
-            "width": str(rg.integers(0,255)),
-            "height": str(rg.integers(0,255)),
-            "label": rg.choice(label_knee,1)[0]
-        })
+    for i in range(10000):
+        annotations_knee.append(
+            {
+                "file": "file" + str(1000000 + rg.integers(1, 2546)),
+                "slice": str(rg.integers(0, 45)),
+                "study_level": rg.choice(["Yes", "No"], 1)[0],
+                "x": str(rg.integers(0, 255)),
+                "y": str(rg.integers(0, 255)),
+                "width": str(rg.integers(0, 255)),
+                "height": str(rg.integers(0, 255)),
+                "label": rg.choice(label_knee, 1)[0],
+            }
+        )
 
-    annotations_knee_df = pd.DataFrame(annotations_knee,columns=annotations_knee[0].keys())
+    annotations_knee_df = pd.DataFrame(
+        annotations_knee, columns=annotations_knee[0].keys()
+    )
     annotation_knee_csv = f"{path}/knee_annotation.csv"
     annotations_knee_df.to_csv(annotation_knee_csv)
-    
-    for i in range(17000):
-        annotations_brain.append({
-            "file": "file" + str(1000000+rg.integers(1,2546)),
-            "slice": str(rg.integers(0,45)),
-            "study_level": rg.choice(["Yes","No"],1)[0],
-            "x": str(rg.integers(0,255)),
-            "y" : str(rg.integers(0,255)),
-            "width": str(rg.integers(0,255)),
-            "height": str(rg.integers(0,255)),
-            "label": rg.choice(label_brain,1)[0]
-        })
-    
-    annotations_brain_df = pd.DataFrame(annotations_brain,columns=annotations_brain[0].keys())
+
+    for i in range(10000):
+        annotations_brain.append(
+            {
+                "file": "file" + str(1000000 + rg.integers(1, 2546)),
+                "slice": str(rg.integers(0, 45)),
+                "study_level": rg.choice(["Yes", "No"], 1)[0],
+                "x": str(rg.integers(0, 255)),
+                "y": str(rg.integers(0, 255)),
+                "width": str(rg.integers(0, 255)),
+                "height": str(rg.integers(0, 255)),
+                "label": rg.choice(label_brain, 1)[0],
+            }
+        )
+
+    annotations_brain_df = pd.DataFrame(
+        annotations_brain, columns=annotations_brain[0].keys()
+    )
     annotation_brain_csv = f"{path}/brain_annotation.csv"
     annotations_brain_df.to_csv(annotation_brain_csv)
 

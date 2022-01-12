@@ -27,7 +27,8 @@ def fastmri_mock_dataset(tmp_path_factory):
 
     return create_temp_data(path)
 
-@pytest.fixture
+
+@pytest.fixture(scope="session")
 def fastmri_mock_annotation(tmp_path_factory):
     path = tmp_path_factory.mktemp("fastmri_annotation")
 

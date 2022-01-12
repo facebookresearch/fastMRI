@@ -5,3 +5,4 @@ mypy==0.910
 black==21.9b0
 flake8==3.9.0
 types-pyyaml==5.4.10
+pandas-stubs==1.2.0.40

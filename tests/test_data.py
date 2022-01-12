@@ -2,7 +2,7 @@
 Copyright (c) Facebook, Inc. and its affiliates.
 
 This source code is licensed under the MIT license found in the
-LICENSE file in the root directory of this source tree. 
+LICENSE file in the root directory of this source tree.
 """
 
 from fastmri.data.mri_data import (
@@ -92,7 +92,7 @@ def test_annotated_slice_dataset(
     knee_path, brain_path, metadata = fastmri_mock_dataset
     annotation_knee_csv, annotation_brain_csv = fastmri_mock_annotation
 
-    def download_csv_mock(a,version,subsplit,path):
+    def download_csv_mock(a, version, subsplit, path):
         if subsplit == "knee":
             return annotation_knee_csv
         else:

@@ -1,5 +1,13 @@
+"""
+Copyright (c) Facebook, Inc. and its affiliates.
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.
+"""
+
 import functools
 import operator
+from typing import List
 from typing import Tuple
 
 import torch
@@ -429,7 +437,7 @@ class LineConvSampler(nn.Module):
             operator.mul, list(self.feature_extractor(torch.rand(1, *input_dim)).shape)
         )
 
-        fc_out = []
+        fc_out: List[nn.Module] = []
         for layer in range(self.num_fc_layers):
             in_features = fc_size
             out_features = fc_size
@@ -440,6 +448,7 @@ class LineConvSampler(nn.Module):
             fc_out.append(nn.Linear(in_features=in_features, out_features=out_features))
 
             if layer + 1 < self.num_fc_layers:
+                act: nn.Module
                 if activation == "leakyrelu":
                     act = nn.LeakyReLU()
                 elif activation == "elu":

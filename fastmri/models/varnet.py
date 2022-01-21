@@ -6,13 +6,12 @@ LICENSE file in the root directory of this source tree.
 """
 
 import math
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
+import fastmri
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-import fastmri
 from fastmri.data import transforms
 
 from .unet import Unet

@@ -286,19 +286,9 @@ class FastMriDataModule(pl.LightningDataModule):
         return self._create_data_loader(self.train_transform, data_partition="train")
 
     def val_dataloader(self):
-        # NOTE: Fixed so that val and test use correct sample rates
-        # return self._create_data_loader(
-        #     self.val_transform, data_partition="val", sample_rate=1.0
-        # )
         return self._create_data_loader(self.val_transform, data_partition="val")
 
     def test_dataloader(self):
-        # NOTE: Fixed so that val and test use correct sample rates
-        # return self._create_data_loader(
-        #     self.test_transform,
-        #     data_partition=self.test_split,
-        #     sample_rate=1.0,
-        # )
         return self._create_data_loader(
             self.test_transform, data_partition=self.test_split
         )

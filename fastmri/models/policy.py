@@ -36,7 +36,11 @@ class LOUPEPolicy(nn.Module):
 
         if use_softplus:
             # Softplus will be applied
-            self.sampler = nn.Parameter(torch.normal(torch.ones((1, num_actions)), torch.ones((1, num_actions)) / 10))
+            self.sampler = nn.Parameter(
+                torch.normal(
+                    torch.ones((1, num_actions)), torch.ones((1, num_actions)) / 10
+                )
+            )
         else:
             # Sigmoid will be applied
             self.sampler = nn.Parameter(torch.zeros((1, num_actions)))
@@ -53,7 +57,8 @@ class LOUPEPolicy(nn.Module):
             # Softplus to make positive
             prob_mask = F.softplus(sampler_out, beta=self.slope)
             prob_mask = prob_mask / torch.max(
-                (1 - mask.reshape(prob_mask.shape[0], prob_mask.shape[1])) * prob_mask, dim=1
+                (1 - mask.reshape(prob_mask.shape[0], prob_mask.shape[1])) * prob_mask,
+                dim=1,
             )[0].reshape(-1, 1)
         else:
             # Sigmoid to make positive
@@ -71,7 +76,9 @@ class LOUPEPolicy(nn.Module):
         # Reassign to original array
         masked_prob_mask[nonzero_idcs] = normed_probs.flatten()
         # Binarize the mask
-        flat_bin_mask = self.binarizer(masked_prob_mask, self.straight_through_slope, self.st_clamp)
+        flat_bin_mask = self.binarizer(
+            masked_prob_mask, self.straight_through_slope, self.st_clamp
+        )
         # BCHW --> BW --> B11W1
         acquisitions = flat_bin_mask.reshape(B, 1, 1, W, 1)
         final_prob_mask = masked_prob_mask.reshape(B, 1, 1, W, 1)
@@ -84,7 +91,7 @@ class LOUPEPolicy(nn.Module):
         # Note that since masked_kspace = mask * kspace, this kspace_pred will leak sign information
         if self.fix_sign_leakage:
             fix_sign_leakage_mask = torch.where(
-                torch.bitwise_and(kspace < 0., mask == 0.), -1., 1.
+                torch.bitwise_and(kspace < 0.0, mask == 0.0), -1.0, 1.0
             )
             masked_kspace = masked_kspace * fix_sign_leakage_mask
         return mask, masked_kspace, final_prob_mask
@@ -134,7 +141,7 @@ class StraightThroughPolicy(nn.Module):
         fc_size: int = 256,
         drop_prob: float = 0.0,
         num_fc_layers: int = 3,
-        activation: str = 'leakyrelu',
+        activation: str = "leakyrelu",
     ):
         super().__init__()
 
@@ -161,9 +168,7 @@ class StraightThroughPolicy(nn.Module):
         self.num_fc_layers = num_fc_layers
         self.activation = activation
 
-    def forward(
-        self, kspace_pred: torch.Tensor, mask: torch.Tensor
-    ):
+    def forward(self, kspace_pred: torch.Tensor, mask: torch.Tensor):
         B, C, H, W = kspace_pred.shape
         flat_prob_mask = self.sampler(kspace_pred, mask)
         # Take out zero (masked) probabilities, since we don't want to include
@@ -175,7 +180,9 @@ class StraightThroughPolicy(nn.Module):
         # Reassign to original array
         flat_prob_mask[nonzero_idcs] = normed_probs.flatten()
         # Binarize the mask
-        flat_bin_mask = self.binarizer(flat_prob_mask, self.straight_through_slope, self.st_clamp)
+        flat_bin_mask = self.binarizer(
+            flat_prob_mask, self.straight_through_slope, self.st_clamp
+        )
         return flat_bin_mask, flat_prob_mask
 
     def do_acquisition(
@@ -205,7 +212,7 @@ class StraightThroughPolicy(nn.Module):
         # Note that since masked_kspace = mask * kspace, this kspace_pred will leak sign information.
         if self.fix_sign_leakage:
             fix_sign_leakage_mask = torch.where(
-                torch.bitwise_and(kspace < 0., mask == 0.), -1., 1.
+                torch.bitwise_and(kspace < 0.0, mask == 0.0), -1.0, 1.0
             )
             masked_kspace = masked_kspace * fix_sign_leakage_mask
         return mask, masked_kspace, prob_mask
@@ -246,9 +253,9 @@ class StraightThroughPolicy(nn.Module):
 class ThresholdSigmoidMask(Function):
     def __init__(self):
         """
-            Straight through estimator.
-            The forward step stochastically binarizes the probability mask.
-            The backward step estimate the non differentiable > operator using sigmoid with large slope (10).
+        Straight through estimator.
+        The forward step stochastically binarizes the probability mask.
+        The backward step estimate the non differentiable > operator using sigmoid with large slope (10).
         """
         super(ThresholdSigmoidMask, self).__init__()
 
@@ -259,7 +266,7 @@ class ThresholdSigmoidMask(Function):
         results = []
 
         for i in range(batch_size):
-            x = inputs[i:i + 1]
+            x = inputs[i : i + 1]
             count = 0
             while True:
                 prob = x.new(x.size()).uniform_()
@@ -269,9 +276,11 @@ class ThresholdSigmoidMask(Function):
                 count += 1
                 if count > 1000:
                     print(torch.mean(prob), torch.mean(result), torch.mean(x))
-                    raise RuntimeError("Rejection sampled exceeded number of tries. Probably this means all "
-                                       "sampling probabilities are 1 or 0 for some reason, leading to divide "
-                                       "by zero in rescale_probs().")
+                    raise RuntimeError(
+                        "Rejection sampled exceeded number of tries. Probably this means all "
+                        "sampling probabilities are 1 or 0 for some reason, leading to divide "
+                        "by zero in rescale_probs()."
+                    )
             probs.append(prob)
             results.append(result)
         results = torch.cat(results, dim=0)
@@ -288,8 +297,11 @@ class ThresholdSigmoidMask(Function):
         if ctx.clamp:
             grad_output = F.hardtanh(grad_output)
         # derivative of sigmoid function
-        current_grad = slope * torch.exp(-slope * (input - prob)) / \
-            torch.pow((torch.exp(-slope * (input - prob)) + 1), 2)
+        current_grad = (
+            slope
+            * torch.exp(-slope * (input - prob))
+            / torch.pow((torch.exp(-slope * (input - prob)) + 1), 2)
+        )
         return current_grad * grad_output, None, None
 
 
@@ -355,7 +367,7 @@ class LineConvSampler(nn.Module):
         slope: float = 10,
         use_softplus: bool = True,
         num_fc_layers: int = 3,
-        activation: str = 'leakyrelu',
+        activation: str = "leakyrelu",
     ):
         """
         Args:
@@ -429,7 +441,9 @@ class LineConvSampler(nn.Module):
                 elif activation == "elu":
                     act = nn.ELU()
                 else:
-                    raise RuntimeError(f"Invalid activation function {activation}. Should be leakyrelu or elu.")
+                    raise RuntimeError(
+                        f"Invalid activation function {activation}. Should be leakyrelu or elu."
+                    )
                 fc_out.append(act)
 
         self.fc_out = nn.Sequential(*fc_out)
@@ -455,7 +469,9 @@ class LineConvSampler(nn.Module):
             out = F.softplus(out, beta=self.slope)
             # Make sure max probability is 1, but ignore already sampled rows for this normalisation, since
             #  those get masked out later anyway.
-            prob_mask = out / torch.max((1 - mask.reshape(out.shape[0], out.shape[1])) * out, dim=1)[0].reshape(-1, 1)
+            prob_mask = out / torch.max(
+                (1 - mask.reshape(out.shape[0], out.shape[1])) * out, dim=1
+            )[0].reshape(-1, 1)
         else:
             prob_mask = torch.sigmoid(self.slope * out)
         # Mask out already sampled rows

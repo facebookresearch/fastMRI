@@ -17,11 +17,6 @@ from scipy.ndimage import gaussian_filter
 import torch.nn as nn
 import torch.nn.functional as F
 from fastmri.data import transforms
-from fastmri.utils import (
-    count_parameters,
-    count_trainable_parameters,
-    count_untrainable_parameters,
-)
 
 from .unet import Unet
 from .policy import (
@@ -82,9 +77,12 @@ class NormUnet(nn.Module):
         # Real and imag are normed independently regardless.
         assert c % 2 == 0
         x = x.view(b, 2, c // 2 * h * w)
+
         mean = x.mean(dim=2).view(b, c, 1, 1)
         std = x.std(dim=2).view(b, c, 1, 1)
+
         x = x.view(b, c, h, w)
+
         return (x - mean) / std, mean, std
 
     def unnorm(
@@ -118,9 +116,7 @@ class NormUnet(nn.Module):
     ) -> torch.Tensor:
         return x[..., h_pad[0] : h_mult - h_pad[1], w_pad[0] : w_mult - w_pad[1]]
 
-    def forward(
-        self, x: torch.Tensor,
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         if not x.shape[-1] == 2:
             raise ValueError("Last dimension must be 2 for complex.")
 
@@ -240,7 +236,6 @@ class SensitivityModel(nn.Module):
 class VarNet(nn.Module):
     """
     A full variational network model.
-
     This model applies a combination of soft data consistency with a U-Net
     regularizer. To use non-U-Net regularizers, use VarNetBlock.
     """
@@ -252,10 +247,7 @@ class VarNet(nn.Module):
         sens_pools: int = 4,
         chans: int = 18,
         pools: int = 4,
-        num_sense_lines: Optional[int] = None,
-        hard_dc: bool = False,
-        dc_mode: str = "simul",
-        sparse_dc_gradients: bool = True,
+        mask_center: bool = True,
     ):
         """
         Args:
@@ -267,86 +259,76 @@ class VarNet(nn.Module):
             chans: Number of channels for cascade U-Net.
             pools: Number of downsampling and upsampling layers for cascade
                 U-Net.
-            num_sense_lines: Number of low-frequency lines to use for sensitivity map
-                computation, must be even or `None`. Default `None` will automatically
-                compute the number from masks. Default behaviour may cause some slices to
-                use more low-frequency lines than others, when used in conjunction with
-                e.g. the EquispacedMaskFunc defaults.
-            hard_dc: Whether to do hard DC layers instead of soft (learned).
-            dc_mode: str, whether to do DC before ('first'), after ('last') or
-                simultaneously ('simul') with Refinement step. Default 'simul'.
-            sparse_dc_gradients: Whether to sparsify the gradients in DC by using torch.where()
-                with the mask: this essentially removes gradients for the policy on unsampled rows. This should
-                change nothing for the non-active VarNet.
+            mask_center: Whether to mask center of k-space for sensitivity map
+                calculation.
         """
         super().__init__()
 
-        self.num_sense_lines = num_sense_lines
-        self.hard_dc = hard_dc
-        self.dc_mode = dc_mode
-
-        self.sparse_dc_gradients = sparse_dc_gradients
-
         self.sens_net = SensitivityModel(
-            sens_chans, sens_pools, num_sense_lines=num_sense_lines
+            chans=sens_chans,
+            num_pools=sens_pools,
+            mask_center=mask_center,
         )
         self.cascades = nn.ModuleList(
-            [
-                VarNetBlock(
-                    NormUnet(
-                        chans,
-                        pools,
-                    ),
-                    hard_dc,
-                    dc_mode,
-                    sparse_dc_gradients=sparse_dc_gradients,
-                )
-                for _ in range(num_cascades)
-            ]
+            [VarNetBlock(NormUnet(chans, pools)) for _ in range(num_cascades)]
         )
 
     def forward(
         self,
-        kspace: torch.Tensor,
         masked_kspace: torch.Tensor,
-        mask: torch.Tensor
+        mask: torch.Tensor,
+        num_low_frequencies: Optional[int] = None,
     ) -> torch.Tensor:
-
-        extra_outputs = defaultdict(list)
-
-        sens_maps = self.sens_net(masked_kspace, mask)
-        extra_outputs["sense"].append(sens_maps.detach().cpu())
-
+        sens_maps = self.sens_net(masked_kspace, mask, num_low_frequencies)
         kspace_pred = masked_kspace.clone()
 
-        extra_outputs["masks"].append(mask.detach().cpu())
-        # Store current reconstruction
-        current_recon = fastmri.complex_abs(
-            self.sens_reduce(masked_kspace, sens_maps)
-        ).squeeze(1)
-        extra_outputs["recons"].append(current_recon.detach().cpu())
-
         for cascade in self.cascades:
-            kspace_pred = cascade(kspace_pred, masked_kspace, mask, sens_maps, kspace=kspace)
+            kspace_pred = cascade(kspace_pred, masked_kspace, mask, sens_maps)
 
-            # Store current reconstruction
-            current_recon = fastmri.complex_abs(
-                self.sens_reduce(masked_kspace, sens_maps)
-            ).squeeze(1)
+        return fastmri.rss(fastmri.complex_abs(fastmri.ifft2c(kspace_pred)), dim=1)
 
-            extra_outputs["recons"].append(current_recon.detach().cpu())
 
-        # Could presumably do complex_abs(complex_rss()) instead and get same result?
-        output = fastmri.rss(
-            fastmri.complex_abs(fastmri.ifft2c(kspace_pred)), dim=1
-        )
-        return output, extra_outputs
+class VarNetBlock(nn.Module):
+    """
+    Model block for end-to-end variational network.
+    This model applies a combination of soft data consistency with the input
+    model as a regularizer. A series of these blocks can be stacked to form
+    the full variational network.
+    """
+
+    def __init__(self, model: nn.Module):
+        """
+        Args:
+            model: Module for "regularization" component of variational
+                network.
+        """
+        super().__init__()
+
+        self.model = model
+        self.dc_weight = nn.Parameter(torch.ones(1))
+
+    def sens_expand(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
+        return fastmri.fft2c(fastmri.complex_mul(x, sens_maps))
 
     def sens_reduce(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
-        x = fastmri.ifft2c(x)
-        return fastmri.complex_mul(x, fastmri.complex_conj(sens_maps)).sum(
-            dim=1, keepdim=True
+        return fastmri.complex_mul(
+            fastmri.ifft2c(x), fastmri.complex_conj(sens_maps)
+        ).sum(dim=1, keepdim=True)
+
+    def forward(
+        self,
+        current_kspace: torch.Tensor,
+        ref_kspace: torch.Tensor,
+        mask: torch.Tensor,
+        sens_maps: torch.Tensor,
+    ) -> torch.Tensor:
+        zero = torch.zeros(1, 1, 1, 1, 1).to(current_kspace)
+        soft_dc = torch.where(mask, current_kspace - ref_kspace, zero) * self.dc_weight
+        model_term = self.sens_expand(
+            self.model(self.sens_reduce(current_kspace, sens_maps)), sens_maps
         )
+
+        return current_kspace - soft_dc - model_term
 
 
 class ActiveVarNet(nn.Module):
@@ -394,36 +376,45 @@ class ActiveVarNet(nn.Module):
             chans: Number of channels for cascade U-Net.
             pools: Number of downsampling and upsampling layers for cascade
                 U-Net.
-            cascades_per_policy: How many cascades to use per policy step. Policies will
-                be applied starting after first cascade, and then every cascades_per_policy
-                cascades after. Note that num_cascades % cascades_per_policy should equal 1.
-                There is an option to set cascades_per_policy equal to num_cascades as well,
-                in which case the policy will be applied before the first cascade only.
-            loupe_mask: Whether to use LOUPE-like mask instead of equispaced (still keeps
-                center lines).
+            cascades_per_policy: How many cascades to use per policy step.
+                Policies will be applied starting after first cascade, and then
+                every cascades_per_policy cascades after. Note that
+                num_cascades % cascades_per_policy should equal 1. There is an
+                option to set cascades_per_policy equal to num_cascades as well,
+                in which case the policy will be applied before the first
+                cascade only.
+            loupe_mask: Whether to use LOUPE-like mask instead of equispaced
+                (still keeps center lines).
             use_softplus: Whether to use softplus or sigmoid in LOUPE.
             crop_size: tuple, crop size of MR images.
-            num_actions: Number of possible actions to sample (=image width). Used only
-                when loupe_mask is True.
-            num_sense_lines: Number of low-frequency lines to use for sensitivity map
-                computation, must be even or `None`. Default `None` will automatically
-                compute the number from masks. Default behaviour may cause some slices to
-                use more low-frequency lines than others, when used in conjunction with
+            num_actions: Number of possible actions to sample (=image width).
+                Used only when loupe_mask is True.
+            num_sense_lines: Number of low-frequency lines to use for
+                sensitivity map computation, must be even or `None`. Default
+                `None` will automatically compute the number from masks.
+                Default behaviour may cause some slices to use more
+                low-frequency lines than others, when used in conjunction with
                 e.g. the EquispacedMaskFunc defaults.
             hard_dc: Whether to do hard DC layers instead of soft (learned).
             dc_mode: Whether to do DC before ('first'), after ('last') or
                 simultaneously ('simul') with Refinement step. Default 'simul'.
-            slope: Slope to use for sigmoid in LOUPE and Policy forward, or beta to use in softplus.
-            sparse_dc_gradients: Whether to sparsify the gradients in DC by using torch.where()
-                with the mask: this essentially removes gradients for the policy on unsampled rows.
+            slope: Slope to use for sigmoid in LOUPE and Policy forward, or
+                beta to use in softplus.
+            sparse_dc_gradients: Whether to sparsify the gradients in DC by
+                using torch.where() with the mask: this essentially removes
+                gradients for the policy on unsampled rows.
             straight_through_slope: Slope to use in Straight Through estimator.
-            st_clamp: Whether to clamp gradients between -1 and 1 in straight through estimator.
-            policy_fc_size: int, size of fully connected layers in Policy architecture.
-            policy_drop_prob: float, dropout probability of convolutional layers in Policy.
-            policy_num_fc_layers: int, number of fully-connected layers to apply after the convolutional layers in the
-                policy.
-            policy_activation: str, "leakyrelu" or "elu". Activation function to use between fully-connected layers in
-                the policy. Only used if policy_num_fc_layers > 1.
+            st_clamp: Whether to clamp gradients between -1 and 1 in straight
+                through estimator.
+            policy_fc_size: int, size of fully connected layers in Policy
+                architecture.
+            policy_drop_prob: float, dropout probability of convolutional
+                layers in Policy.
+            policy_num_fc_layers: int, number of fully-connected layers to
+                apply after the convolutional layers in the policy.
+            policy_activation: str, "leakyrelu" or "elu". Activation function
+                to use between fully-connected layers in the policy. Only used
+                if policy_num_fc_layers > 1.
         """
         super().__init__()
 
@@ -442,7 +433,7 @@ class ActiveVarNet(nn.Module):
         self.straight_through_slope = straight_through_slope
 
         self.st_clamp = st_clamp
-        
+
         self.policy_fc_size = policy_fc_size
         self.policy_drop_prob = policy_drop_prob
         self.policy_num_fc_layers = policy_num_fc_layers
@@ -451,17 +442,9 @@ class ActiveVarNet(nn.Module):
         self.sens_net = SensitivityModel(
             sens_chans, sens_pools, num_sense_lines=num_sense_lines
         )
-        print(
-            "Sensitivity net, parameters: {}. Of which {} trainable and {} untrainable.".format(
-                count_parameters(self.sens_net),
-                count_trainable_parameters(self.sens_net),
-                count_untrainable_parameters(self.sens_net),
-            )
-        )
-
         self.cascades = nn.ModuleList(
             [
-                VarNetBlock(
+                AdaptiveVarNetBlock(
                     NormUnet(
                         chans,
                         pools,
@@ -474,15 +457,6 @@ class ActiveVarNet(nn.Module):
             ]
         )
 
-        print(
-            "{} cascades, total parameters: {}. Of which {} trainable and {} untrainable.".format(
-                len(self.cascades),
-                count_parameters(self.cascades),
-                count_trainable_parameters(self.cascades),
-                count_untrainable_parameters(self.cascades),
-            )
-        )
-
         # LOUPE or active policies
         if self.loupe_mask:
             self.loupe = LOUPEPolicy(
@@ -493,18 +467,9 @@ class ActiveVarNet(nn.Module):
                 straight_through_slope=self.straight_through_slope,
                 st_clamp=self.st_clamp,
             )
-
-            print(
-                "LOUPE, total parameters: {}. Of which {} trainable and {} untrainable.".format(
-                    count_parameters(self.loupe),
-                    count_trainable_parameters(self.loupe),
-                    count_untrainable_parameters(self.loupe),
-                )
-            )
-
         else:
-            # Define policies. If budget is not cleanly divided by num_cascades - 1, then
-            #  put all remaining acquisitions in last cascade.
+            # Define policies. If budget is not cleanly divided by num_cascades - 1,
+            # then put all remaining acquisitions in last cascade.
             remaining_budget = self.budget
             if cascades_per_policy > num_cascades:
                 raise RuntimeError(
@@ -569,14 +534,6 @@ class ActiveVarNet(nn.Module):
                 ]
 
             self.policies = nn.ModuleList(policies)
-            print(
-                "{} policies, total parameters: {}. Of which {} trainable and {} untrainable.".format(
-                    len(self.policies),
-                    count_parameters(self.policies),
-                    count_trainable_parameters(self.policies),
-                    count_untrainable_parameters(self.policies),
-                )
-            )
 
     def forward(
         self,
@@ -619,8 +576,9 @@ class ActiveVarNet(nn.Module):
             # Special setting: do policy once before any cascade only.
             if len(self.policies) != 1:
                 raise ValueError(
-                    f"Must have only one policy when number of cascades {len(self.cascades)} "
-                    f"equals the number of cascades_per_policy {self.cascades_per_policy}."
+                    "Must have only one policy when number of cascades "
+                    f"{len(self.cascades)} equals the number of cascades_per_policy "
+                    f"{self.cascades_per_policy}."
                 )
             kspace_pred = masked_kspace.clone()
             mask, masked_kspace, prob_mask = self.policies[0].do_acquisition(
@@ -633,7 +591,9 @@ class ActiveVarNet(nn.Module):
 
         j = 0  # Keep track of policy number
         for i, cascade in enumerate(self.cascades):
-            kspace_pred = cascade(kspace_pred, masked_kspace, mask, sens_maps, kspace=kspace)
+            kspace_pred = cascade(
+                kspace_pred, masked_kspace, mask, sens_maps, kspace=kspace
+            )
 
             # Store current reconstruction
             current_recon = fastmri.complex_abs(
@@ -659,17 +619,15 @@ class ActiveVarNet(nn.Module):
                 extra_outputs["prob_masks"].append(prob_mask)
 
         # Could presumably do complex_abs(complex_rss()) instead and get same result?
-        output = fastmri.rss(
-            fastmri.complex_abs(fastmri.ifft2c(kspace_pred)), dim=1
-        )
+        output = fastmri.rss(fastmri.complex_abs(fastmri.ifft2c(kspace_pred)), dim=1)
         # Add final reconstruction image
         extra_outputs["recons"].append(output.detach().cpu())
         return output, extra_outputs
 
     def extract_low_freq_mask(self, mask: torch.Tensor, masked_kspace: torch.Tensor):
         """
-        Extracts low frequency components that are used by sensitivity map computation.
-        This serves as the starting point for active acquisition.
+        Extracts low frequency components that are used by sensitivity map
+        computation. This serves as the starting point for active acquisition.
         """
         pad, num_low_freqs = self.sens_net.get_pad_and_num_low_freqs(
             mask, self.num_sense_lines
@@ -689,9 +647,9 @@ class ActiveVarNet(nn.Module):
         )
 
 
-class VarNetBlock(nn.Module):
+class AdaptiveVarNetBlock(nn.Module):
     """
-    Model block for end-to-end variational network.
+    Model block for adaptive end-to-end variational network.
 
     This model applies a combination of soft data consistency with the input
     model as a regularizer. A series of these blocks can be stacked to form
@@ -715,8 +673,9 @@ class VarNetBlock(nn.Module):
             hard_dc: boolean, whether to do hard DC layer instead of soft.
             dc_mode: str, whether to do DC before ('first'), after ('last') or
                 simultaneously ('simul') with Refinement step. Default 'simul'.
-            sparse_dc_gradients: Whether to sparsify the gradients in DC by using torch.where()
-                with the mask: this essentially removes gradients for the policy on unsampled rows.
+            sparse_dc_gradients: Whether to sparsify the gradients in DC by
+                using torch.where() with the mask: this essentially removes
+                gradients for the policy on unsampled rows.
         """
         super().__init__()
 
@@ -766,10 +725,14 @@ class VarNetBlock(nn.Module):
                     * self.dc_weight
                 )
             else:
-                # Values in current_kspace that should be replaced by actual sampled information
+                # Values in current_kspace that should be replaced by actual sampled
+                # information
                 dc_kspace = current_kspace * mask
-                # don't need to multiply ref_kspace by mask because ref_kspace is 0 where mask is 0
-                current_kspace = current_kspace - (dc_kspace - ref_kspace) * self.dc_weight
+                # don't need to multiply ref_kspace by mask because ref_kspace is 0
+                # where mask is 0
+                current_kspace = (
+                    current_kspace - (dc_kspace - ref_kspace) * self.dc_weight
+                )
 
         model_term = self.sens_expand(
             self.model(self.sens_reduce(current_kspace, sens_maps)),
@@ -786,7 +749,8 @@ class VarNetBlock(nn.Module):
                     * self.dc_weight
                 )
             else:
-                # Values in current_kspace that should be replaced by actual sampled information
+                # Values in current_kspace that should be replaced by actual sampled
+                # information
                 dc_kspace = current_kspace * mask
                 soft_dc = (dc_kspace - ref_kspace) * self.dc_weight
             return current_kspace - soft_dc - model_term
@@ -800,10 +764,14 @@ class VarNetBlock(nn.Module):
                     * self.dc_weight
                 )
             else:
-                # Values in combined_kspace that should be replaced by actual sampled information
+                # Values in combined_kspace that should be replaced by actual sampled
+                # information
                 dc_kspace = combined_kspace * mask
-                # don't need to multiply ref_kspace by mask because ref_kspace is 0 where mask is 0
-                combined_kspace = combined_kspace - (dc_kspace - ref_kspace) * self.dc_weight
+                # don't need to multiply ref_kspace by mask because ref_kspace is 0
+                # where mask is 0
+                combined_kspace = (
+                    combined_kspace - (dc_kspace - ref_kspace) * self.dc_weight
+                )
 
             return combined_kspace
         else:

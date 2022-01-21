@@ -362,7 +362,7 @@ class FastMriDataModule(pl.LightningDataModule):
             ),
         )
         parser.add_argument(
-            "--val_sample_rate",
+            "--val_volume_sample_rate",
             default=None,
             type=float,
             help=(
@@ -371,7 +371,7 @@ class FastMriDataModule(pl.LightningDataModule):
             ),
         )
         parser.add_argument(
-            "--test_sample_rate",
+            "--test_volume_sample_rate",
             default=None,
             type=float,
             help=(

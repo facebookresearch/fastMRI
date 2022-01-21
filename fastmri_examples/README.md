@@ -14,3 +14,4 @@ further details.
 * **fastMRI Models**
 
   * [End-to-End Variational Networks for Accelerated MRI Reconstruction ({A. Sriram*, J. Zbontar*} et al., 2020)](varnet/)
+  * [On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction (T. Bakker et al., 2021)](adaptive_varnet/)

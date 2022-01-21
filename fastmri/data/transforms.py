@@ -554,6 +554,7 @@ class MiniCoilTransform:
             attrs: Acquisition related information stored in the HDF5 object.
             fname: File name.
             slice_num: Serial number of the slice.
+
         Returns:
             tuple containing:
                 kspace: original kspace (used for active acquisition only)

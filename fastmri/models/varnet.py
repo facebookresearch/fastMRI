@@ -322,6 +322,105 @@ class VarNetBlock(nn.Module):
         return current_kspace - soft_dc - model_term
 
 
+class _AdaptiveSensitivityModel(nn.Module):
+    """
+    Model for learning sensitivity estimation from k-space data.
+
+    This model applies an IFFT to multichannel k-space data and then a U-Net
+    to the coil images to estimate coil sensitivities. It can be used with the
+    end-to-end variational network.
+    """
+
+    def __init__(
+        self,
+        chans: int,
+        num_pools: int,
+        in_chans: int = 2,
+        out_chans: int = 2,
+        drop_prob: float = 0.0,
+        num_sense_lines: Optional[int] = None,
+    ):
+        """
+        Args:
+            chans: Number of output channels of the first convolution layer.
+            num_pools: Number of down-sampling and up-sampling layers.
+            in_chans: Number of channels in the input to the U-Net model.
+            out_chans: Number of channels in the output to the U-Net model.
+            drop_prob: Dropout probability.
+            num_sense_lines: Number of low-frequency lines to use for sensitivity map
+                computation, must be even or `None`. Default `None` will automatically
+                compute the number from masks. Default behaviour may cause some slices to
+                use more low-frequency lines than others, when used in conjunction with
+                e.g. the EquispacedMaskFunc defaults.
+        """
+        super().__init__()
+
+        self.num_sense_lines = num_sense_lines
+        self.norm_unet = NormUnet(
+            chans,
+            num_pools,
+            in_chans=in_chans,
+            out_chans=out_chans,
+            drop_prob=drop_prob,
+        )
+
+    def chans_to_batch_dim(self, x: torch.Tensor) -> Tuple[torch.Tensor, int]:
+        b, c, h, w, comp = x.shape
+
+        return x.view(b * c, 1, h, w, comp), b
+
+    def batch_chans_to_chan_dim(self, x: torch.Tensor, batch_size: int) -> torch.Tensor:
+        bc, _, h, w, comp = x.shape
+        c = bc // batch_size
+
+        return x.view(batch_size, c, h, w, comp)
+
+    def divide_root_sum_of_squares(self, x: torch.Tensor) -> torch.Tensor:
+        return x / fastmri.rss_complex(x, dim=1).unsqueeze(-1).unsqueeze(1)
+
+    def get_pad_and_num_low_freqs(
+        self, mask: torch.Tensor, num_sense_lines: Optional[int] = None
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        # get low frequency line locations and mask them out
+        squeezed_mask = mask[:, 0, 0, :, 0]
+        cent = squeezed_mask.shape[1] // 2
+        # running argmin returns the first non-zero
+        left = torch.argmin(squeezed_mask[:, :cent].flip(1), dim=1)
+        right = torch.argmin(squeezed_mask[:, cent:], dim=1)
+        num_low_freqs = torch.max(
+            2 * torch.min(left, right), torch.ones_like(left)
+        )  # force a symmetric center unless 1
+
+        if self.num_sense_lines is not None:  # Use pre-specified number instead
+            if (num_low_freqs < num_sense_lines).all():
+                raise RuntimeError(
+                    "`num_sense_lines` cannot be greater than the actual number of "
+                    "low-frequency lines in the mask: {}".format(num_low_freqs)
+                )
+            num_low_freqs = num_sense_lines * torch.ones(
+                mask.shape[0], dtype=mask.dtype, device=mask.device
+            )
+
+        pad = (mask.shape[-2] - num_low_freqs + 1) // 2
+        return pad, num_low_freqs
+
+    def forward(self, masked_kspace: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        pad, num_low_freqs = self.get_pad_and_num_low_freqs(mask, self.num_sense_lines)
+        x = transforms.batched_mask_center(masked_kspace, pad, pad + num_low_freqs)
+
+        # convert to image space
+        x = fastmri.ifft2c(x)
+        x, b = self.chans_to_batch_dim(x)
+        # NOTE: Channel dimensions have been converted to batch dimensions, so this
+        #  acts like a UNet that treats every coil as a separate image!
+        # estimate sensitivities
+        x = self.norm_unet(x)
+        x = self.batch_chans_to_chan_dim(x, b)
+        x = self.divide_root_sum_of_squares(x)
+
+        return x
+
+
 class ActiveVarNet(nn.Module):
     """
     A full active variational network model. This model uses a policy to do
@@ -430,7 +529,7 @@ class ActiveVarNet(nn.Module):
         self.policy_num_fc_layers = policy_num_fc_layers
         self.policy_activation = policy_activation
 
-        self.sens_net = SensitivityModel(
+        self.sens_net = _AdaptiveSensitivityModel(
             sens_chans, sens_pools, num_sense_lines=num_sense_lines
         )
         self.cascades = nn.ModuleList(

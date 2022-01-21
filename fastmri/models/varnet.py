@@ -7,22 +7,14 @@ LICENSE file in the root directory of this source tree.
 
 import math
 from typing import List, Tuple, Optional
-from collections import defaultdict
 
 import fastmri
 import torch
-import warnings
-import numpy as np
-from scipy.ndimage import gaussian_filter
 import torch.nn as nn
 import torch.nn.functional as F
 from fastmri.data import transforms
 
 from .unet import Unet
-from .policy import (
-    StraightThroughPolicy,
-    LOUPEPolicy,
-)
 
 
 class NormUnet(nn.Module):
@@ -74,12 +66,10 @@ class NormUnet(nn.Module):
     def norm(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # group norm
         b, c, h, w = x.shape
-        # Real and imag are normed independently regardless.
-        assert c % 2 == 0
         x = x.view(b, 2, c // 2 * h * w)
 
-        mean = x.mean(dim=2).view(b, c, 1, 1)
-        std = x.std(dim=2).view(b, c, 1, 1)
+        mean = x.mean(dim=2).view(b, 2, 1, 1)
+        std = x.std(dim=2).view(b, 2, 1, 1)
 
         x = x.view(b, c, h, w)
 
@@ -131,6 +121,7 @@ class NormUnet(nn.Module):
         x = self.unpad(x, *pad_sizes)
         x = self.unnorm(x, mean, std)
         x = self.chan_complex_to_last_dim(x)
+
         return x
 
 
@@ -150,7 +141,7 @@ class SensitivityModel(nn.Module):
         in_chans: int = 2,
         out_chans: int = 2,
         drop_prob: float = 0.0,
-        num_sense_lines: Optional[int] = None,
+        mask_center: bool = True,
     ):
         """
         Args:
@@ -159,15 +150,11 @@ class SensitivityModel(nn.Module):
             in_chans: Number of channels in the input to the U-Net model.
             out_chans: Number of channels in the output to the U-Net model.
             drop_prob: Dropout probability.
-            num_sense_lines: Number of low-frequency lines to use for sensitivity map
-                computation, must be even or `None`. Default `None` will automatically
-                compute the number from masks. Default behaviour may cause some slices to
-                use more low-frequency lines than others, when used in conjunction with
-                e.g. the EquispacedMaskFunc defaults.
+            mask_center: Whether to mask center of k-space for sensitivity map
+                calculation.
         """
         super().__init__()
-
-        self.num_sense_lines = num_sense_lines
+        self.mask_center = mask_center
         self.norm_unet = NormUnet(
             chans,
             num_pools,
@@ -191,51 +178,54 @@ class SensitivityModel(nn.Module):
         return x / fastmri.rss_complex(x, dim=1).unsqueeze(-1).unsqueeze(1)
 
     def get_pad_and_num_low_freqs(
-        self, mask: torch.Tensor, num_sense_lines: Optional[int] = None
+        self, mask: torch.Tensor, num_low_frequencies: Optional[int] = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # get low frequency line locations and mask them out
-        squeezed_mask = mask[:, 0, 0, :, 0]
-        cent = squeezed_mask.shape[1] // 2
-        # running argmin returns the first non-zero
-        left = torch.argmin(squeezed_mask[:, :cent].flip(1), dim=1)
-        right = torch.argmin(squeezed_mask[:, cent:], dim=1)
-        num_low_freqs = torch.max(
-            2 * torch.min(left, right), torch.ones_like(left)
-        )  # force a symmetric center unless 1
-
-        if self.num_sense_lines is not None:  # Use pre-specified number instead
-            if (num_low_freqs < num_sense_lines).all():
-                raise RuntimeError(
-                    "`num_sense_lines` cannot be greater than the actual number of "
-                    "low-frequency lines in the mask: {}".format(num_low_freqs)
-                )
-            num_low_freqs = num_sense_lines * torch.ones(
+        if num_low_frequencies is None or num_low_frequencies == 0:
+            # get low frequency line locations and mask them out
+            squeezed_mask = mask[:, 0, 0, :, 0].to(torch.int8)
+            cent = squeezed_mask.shape[1] // 2
+            # running argmin returns the first non-zero
+            left = torch.argmin(squeezed_mask[:, :cent].flip(1), dim=1)
+            right = torch.argmin(squeezed_mask[:, cent:], dim=1)
+            num_low_frequencies_tensor = torch.max(
+                2 * torch.min(left, right), torch.ones_like(left)
+            )  # force a symmetric center unless 1
+        else:
+            num_low_frequencies_tensor = num_low_frequencies * torch.ones(
                 mask.shape[0], dtype=mask.dtype, device=mask.device
             )
 
-        pad = (mask.shape[-2] - num_low_freqs + 1) // 2
-        return pad, num_low_freqs
+        pad = (mask.shape[-2] - num_low_frequencies_tensor + 1) // 2
 
-    def forward(self, masked_kspace: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        pad, num_low_freqs = self.get_pad_and_num_low_freqs(mask, self.num_sense_lines)
-        x = transforms.batched_mask_center(masked_kspace, pad, pad + num_low_freqs)
+        return pad, num_low_frequencies_tensor
+
+    def forward(
+        self,
+        masked_kspace: torch.Tensor,
+        mask: torch.Tensor,
+        num_low_frequencies: Optional[int] = None,
+    ) -> torch.Tensor:
+        if self.mask_center:
+            pad, num_low_freqs = self.get_pad_and_num_low_freqs(
+                mask, num_low_frequencies
+            )
+            masked_kspace = transforms.batched_mask_center(
+                masked_kspace, pad, pad + num_low_freqs
+            )
 
         # convert to image space
-        x = fastmri.ifft2c(x)
-        x, b = self.chans_to_batch_dim(x)
-        # NOTE: Channel dimensions have been converted to batch dimensions, so this
-        #  acts like a UNet that treats every coil as a separate image!
-        # estimate sensitivities
-        x = self.norm_unet(x)
-        x = self.batch_chans_to_chan_dim(x, b)
-        x = self.divide_root_sum_of_squares(x)
+        images, batches = self.chans_to_batch_dim(fastmri.ifft2c(masked_kspace))
 
-        return x
+        # estimate sensitivities
+        return self.divide_root_sum_of_squares(
+            self.batch_chans_to_chan_dim(self.norm_unet(images), batches)
+        )
 
 
 class VarNet(nn.Module):
     """
     A full variational network model.
+
     This model applies a combination of soft data consistency with a U-Net
     regularizer. To use non-U-Net regularizers, use VarNetBlock.
     """
@@ -291,6 +281,7 @@ class VarNet(nn.Module):
 class VarNetBlock(nn.Module):
     """
     Model block for end-to-end variational network.
+
     This model applies a combination of soft data consistency with the input
     model as a regularizer. A series of these blocks can be stacked to form
     the full variational network.

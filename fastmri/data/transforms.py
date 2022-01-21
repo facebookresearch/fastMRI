@@ -1,5 +1,6 @@
 """
 Copyright (c) Facebook, Inc. and its affiliates.
+
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
@@ -16,10 +17,13 @@ from .subsample import MaskFunc
 def to_tensor(data: np.ndarray) -> torch.Tensor:
     """
     Convert numpy array to PyTorch tensor.
+
     For complex arrays, the real and imaginary parts are stacked along the last
     dimension.
+
     Args:
         data: Input numpy array.
+
     Returns:
         PyTorch version of data.
     """
@@ -32,8 +36,10 @@ def to_tensor(data: np.ndarray) -> torch.Tensor:
 def tensor_to_complex_np(data: torch.Tensor) -> np.ndarray:
     """
     Converts a complex torch tensor to numpy array.
+
     Args:
         data: Input data to be converted to numpy.
+
     Returns:
         Complex numpy version of data.
     """
@@ -49,6 +55,7 @@ def apply_mask(
 ) -> Tuple[torch.Tensor, torch.Tensor, int]:
     """
     Subsample given k-space by multiplying with a mask.
+
     Args:
         data: The input k-space data. This should have at least 3 dimensions,
             where dimensions -3 and -2 are the spatial dimensions, and the
@@ -57,6 +64,7 @@ def apply_mask(
             number seed and returns a mask.
         seed: Seed for the random number generator.
         padding: Padding value to apply for mask.
+
     Returns:
         tuple containing:
             masked data: Subsampled k-space data.
@@ -78,9 +86,11 @@ def apply_mask(
 def mask_center(x: torch.Tensor, mask_from: int, mask_to: int) -> torch.Tensor:
     """
     Initializes a mask with the center filled in.
+
     Args:
         mask_from: Part of center to start filling.
         mask_to: Part of center to end filling.
+
     Returns:
         A mask with the center filled.
     """
@@ -95,10 +105,13 @@ def batched_mask_center(
 ) -> torch.Tensor:
     """
     Initializes a mask with the center filled in.
+
     Can operate with different masks for each batch element.
+
     Args:
         mask_from: Part of center to start filling.
         mask_to: Part of center to end filling.
+
     Returns:
         A mask with the center filled.
     """
@@ -125,12 +138,14 @@ def batched_mask_center(
 def center_crop(data: torch.Tensor, shape: Tuple[int, int]) -> torch.Tensor:
     """
     Apply a center crop to the input real image or batch of real images.
+
     Args:
         data: The input tensor to be center cropped. It should
             have at least 2 dimensions and the cropping is applied along the
             last two dimensions.
         shape: The output shape. The shape should be smaller
             than the corresponding dimensions of data.
+
     Returns:
         The center cropped image.
     """
@@ -148,12 +163,14 @@ def center_crop(data: torch.Tensor, shape: Tuple[int, int]) -> torch.Tensor:
 def complex_center_crop(data: torch.Tensor, shape: Tuple[int, int]) -> torch.Tensor:
     """
     Apply a center crop to the input image or batch of complex images.
+
     Args:
         data: The complex input tensor to be center cropped. It should have at
             least 3 dimensions and the cropping is applied along dimensions -3
             and -2 and the last dimensions should have a size of 2.
         shape: The output shape. The shape should be smaller than the
             corresponding dimensions of data.
+
     Returns:
         The center cropped image
     """
@@ -173,12 +190,15 @@ def center_crop_to_smallest(
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Apply a center crop on the larger image to the size of the smaller.
+
     The minimum is taken over dim=-1 and dim=-2. If x is smaller than y at
     dim=-1 and y is smaller than x at dim=-2, then the returned dimension will
     be a mixture of the two.
+
     Args:
         x: The first image.
         y: The second image.
+
     Returns:
         tuple of tensors x and y, each cropped to the minimim size.
     """
@@ -198,12 +218,15 @@ def normalize(
 ) -> torch.Tensor:
     """
     Normalize the given tensor.
+
     Applies the formula (data - mean) / (stddev + eps).
+
     Args:
         data: Input data to be normalized.
         mean: Mean value.
         stddev: Standard deviation.
         eps: Added to stddev to prevent dividing by zero.
+
     Returns:
         Normalized tensor.
     """
@@ -215,11 +238,14 @@ def normalize_instance(
 ) -> Tuple[torch.Tensor, Union[torch.Tensor], Union[torch.Tensor]]:
     """
     Normalize the given tensor  with instance norm/
+
     Applies the formula (data - mean) / (stddev + eps), where mean and stddev
     are computed from the data itself.
+
     Args:
         data: Input data to be normalized
         eps: Added to stddev to prevent dividing by zero.
+
     Returns:
         torch.Tensor: Normalized tensor
     """
@@ -232,6 +258,7 @@ def normalize_instance(
 class UnetSample(NamedTuple):
     """
     A subsampled image for U-Net reconstruction.
+
     Args:
         image: Subsampled image after inverse FFT.
         target: The target image (if applicable).
@@ -296,6 +323,7 @@ class UnetDataTransform:
             attrs: Acquisition related information stored in the HDF5 object.
             fname: File name.
             slice_num: Serial number of the slice.
+
         Returns:
             A tuple containing, zero-filled input image, the reconstruction
             target, the mean used for normalization, the standard deviations
@@ -363,6 +391,7 @@ class UnetDataTransform:
 class VarNetSample(NamedTuple):
     """
     A sample of masked k-space for variational network reconstruction.
+
     Args:
         masked_kspace: k-space after applying sampling mask.
         mask: The applied sampling mask.
@@ -420,6 +449,7 @@ class VarNetDataTransform:
             attrs: Acquisition related information stored in the HDF5 object.
             fname: File name.
             slice_num: Serial number of the slice.
+
         Returns:
             A VarNetSample with the masked k-space, sampling mask, target
             image, the filename, the slice number, the maximum image value

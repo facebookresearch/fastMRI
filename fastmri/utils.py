@@ -12,6 +12,64 @@ import h5py
 import numpy as np
 
 
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters()) if model is not None else 0
+
+
+def count_trainable_parameters(model):
+    return (
+        sum(p.numel() for p in model.parameters() if p.requires_grad)
+        if model is not None
+        else 0
+    )
+
+
+def count_untrainable_parameters(model):
+    return (
+        sum(p.numel() for p in model.parameters() if not p.requires_grad)
+        if model is not None
+        else 0
+    )
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ("yes", "true", "t", "y", "1"):
+        return True
+    elif v.lower() in ("no", "false", "f", "n", "0"):
+        return False
+    else:
+        raise ValueError("Boolean value expected.")
+
+
+def str2none(v):
+    if v is None:
+        return v
+    if v.lower() == "none":
+        return None
+    else:
+        return v
+
+
+def int2none(v):
+    if v is None:
+        return v
+    if v.lower() == "none":
+        return None
+    else:
+        return int(v)
+
+
+def float2none(v):
+    if v is None:
+        return v
+    if v.lower() == "none":
+        return None
+    else:
+        return float(v)
+
+
 def save_reconstructions(reconstructions: Dict[str, np.ndarray], out_dir: Path):
     """
     Save reconstruction images.

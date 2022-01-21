@@ -13,6 +13,7 @@ import fastmri
 import pytorch_lightning as pl
 import torch
 from fastmri.data import CombinedSliceDataset, SliceDataset
+from fastmri.utils import float2none
 
 
 def worker_init_fn(worker_id):
@@ -155,8 +156,15 @@ class FastMriDataModule(pl.LightningDataModule):
             )
         else:
             is_train = False
-            sample_rate = 1.0
-            volume_sample_rate = None  # default case, no subsampling
+            # NOTE: Fixed so that val and test use corrent sample rates
+            sample_rate = self.sample_rate if sample_rate is None else sample_rate
+            volume_sample_rate = (
+                self.volume_sample_rate
+                if volume_sample_rate is None
+                else volume_sample_rate
+            )
+            # sample_rate = 1.0
+            # volume_sample_rate = None  # default case, no subsampling
 
         # if desired, combine train and val together for the train split
         dataset: Union[SliceDataset, CombinedSliceDataset]
@@ -197,6 +205,7 @@ class FastMriDataModule(pl.LightningDataModule):
 
         # ensure that entire volumes go to the same GPU in the ddp setting
         sampler = None
+
         if self.distributed_sampler:
             if is_train:
                 sampler = torch.utils.data.DistributedSampler(dataset)
@@ -235,8 +244,9 @@ class FastMriDataModule(pl.LightningDataModule):
             for i, (data_path, data_transform) in enumerate(
                 zip(data_paths, data_transforms)
             ):
-                sample_rate = self.sample_rate if i == 0 else 1.0
-                volume_sample_rate = self.volume_sample_rate if i == 0 else None
+                # NOTE: Fixed so that val and test use correct sample rates
+                sample_rate = self.sample_rate  # if i == 0 else 1.0
+                volume_sample_rate = self.volume_sample_rate  # if i == 0 else None
                 _ = SliceDataset(
                     root=data_path,
                     transform=data_transform,
@@ -250,15 +260,21 @@ class FastMriDataModule(pl.LightningDataModule):
         return self._create_data_loader(self.train_transform, data_partition="train")
 
     def val_dataloader(self):
-        return self._create_data_loader(
-            self.val_transform, data_partition="val", sample_rate=1.0
-        )
+        # NOTE: Fixed so that val and test use correct sample rates
+        # return self._create_data_loader(
+        #     self.val_transform, data_partition="val", sample_rate=1.0
+        # )
+        return self._create_data_loader(self.val_transform, data_partition="val")
 
     def test_dataloader(self):
+        # NOTE: Fixed so that val and test use correct sample rates
+        # return self._create_data_loader(
+        #     self.test_transform,
+        #     data_partition=self.test_split,
+        #     sample_rate=1.0,
+        # )
         return self._create_data_loader(
-            self.test_transform,
-            data_partition=self.test_split,
-            sample_rate=1.0,
+            self.test_transform, data_partition=self.test_split
         )
 
     @staticmethod
@@ -290,7 +306,7 @@ class FastMriDataModule(pl.LightningDataModule):
         )
         parser.add_argument(
             "--test_split",
-            choices=("test", "challenge"),
+            choices=("val", "test", "challenge"),
             default="test",
             type=str,
             help="Which data split to use as test split",
@@ -298,14 +314,16 @@ class FastMriDataModule(pl.LightningDataModule):
         parser.add_argument(
             "--sample_rate",
             default=None,
-            type=float,
-            help="Fraction of slices in the dataset to use (train split only). If not given all will be used. Cannot set together with volume_sample_rate.",
+            type=float2none,
+            help=("Fraction of slices in the dataset to use (train split only). If not given all will be used. "
+                  "Cannot set together with volume_sample_rate."),
         )
         parser.add_argument(
             "--volume_sample_rate",
             default=None,
-            type=float,
-            help="Fraction of volumes of the dataset to use (train split only). If not given all will be used. Cannot set together with sample_rate.",
+            type=float2none,
+            help=("Fraction of volumes of the dataset to use (train split only). If not given all will be used. "
+                  "Cannot set together with sample_rate."),
         )
         parser.add_argument(
             "--use_dataset_cache_file",

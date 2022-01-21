@@ -48,7 +48,7 @@ def ssim(
 
     maxval = gt.max() if maxval is None else maxval
 
-    ssim = np.array([0])
+    ssim = 0
     for slice_num in range(gt.shape[0]):
         ssim = ssim + structural_similarity(
             gt[slice_num], pred[slice_num], data_range=maxval

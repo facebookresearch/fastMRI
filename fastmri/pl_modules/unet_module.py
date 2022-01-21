@@ -81,36 +81,39 @@ class UnetModule(MriModule):
         return self.unet(image.unsqueeze(1)).squeeze(1)
 
     def training_step(self, batch, batch_idx):
-        output = self(batch.image)
-        loss = F.l1_loss(output, batch.target)
+        image, target, _, _, _, _, _ = batch
+        output = self(image)
+        loss = F.l1_loss(output, target)
 
         self.log("loss", loss.detach())
 
         return loss
 
     def validation_step(self, batch, batch_idx):
-        output = self(batch.image)
-        mean = batch.mean.unsqueeze(1).unsqueeze(2)
-        std = batch.std.unsqueeze(1).unsqueeze(2)
+        image, target, mean, std, fname, slice_num, max_value = batch
+        output = self(image)
+        mean = mean.unsqueeze(1).unsqueeze(2)
+        std = std.unsqueeze(1).unsqueeze(2)
 
         return {
             "batch_idx": batch_idx,
-            "fname": batch.fname,
-            "slice_num": batch.slice_num,
-            "max_value": batch.max_value,
+            "fname": fname,
+            "slice_num": slice_num,
+            "max_value": max_value,
             "output": output * std + mean,
-            "target": batch.target * std + mean,
-            "val_loss": F.l1_loss(output, batch.target),
+            "target": target * std + mean,
+            "val_loss": F.l1_loss(output, target),
         }
 
     def test_step(self, batch, batch_idx):
-        output = self.forward(batch.image)
-        mean = batch.mean.unsqueeze(1).unsqueeze(2)
-        std = batch.std.unsqueeze(1).unsqueeze(2)
+        image, _, mean, std, fname, slice_num, _ = batch
+        output = self.forward(image)
+        mean = mean.unsqueeze(1).unsqueeze(2)
+        std = std.unsqueeze(1).unsqueeze(2)
 
         return {
-            "fname": batch.fname,
-            "slice": batch.slice_num,
+            "fname": fname,
+            "slice": slice_num,
             "output": (output * std + mean).cpu().numpy(),
         }
 

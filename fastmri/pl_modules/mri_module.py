@@ -8,16 +8,32 @@ LICENSE file in the root directory of this source tree.
 import pathlib
 from argparse import ArgumentParser
 from collections import defaultdict
+from typing import Optional
 
-import fastmri
 import numpy as np
 import pytorch_lightning as pl
 import torch
+
+import fastmri
 from fastmri import evaluate
-from torchmetrics.metric import Metric
 
 
-class DistributedMetricSum(Metric):
+class DistributedArraySum(pl.metrics.Metric):
+    def __init__(self, dist_sync_on_step=True):
+        super().__init__(dist_sync_on_step=dist_sync_on_step)
+
+        self.add_state("quantity", default=torch.zeros(1), dist_reduce_fx="sum")
+
+    def update(self, batch: torch.Tensor):  # type: ignore
+        if self.quantity.shape == torch.Size([1]):  # still at init
+            self.quantity = self.quantity.expand(batch.shape[0]).clone()
+        self.quantity += batch.to(self.quantity.device)
+
+    def compute(self):
+        return self.quantity
+
+
+class DistributedMetricSum(pl.metrics.Metric):
     def __init__(self, dist_sync_on_step=True):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
 
@@ -50,7 +66,7 @@ class MriModule(pl.LightningModule):
     Other methods from LightningModule can be overridden as needed.
     """
 
-    def __init__(self, num_log_images: int = 16):
+    def __init__(self, num_log_images: int = 16, budget: Optional[int] = None):
         """
         Args:
             num_log_images: Number of images to log. Defaults to 16.
@@ -59,6 +75,7 @@ class MriModule(pl.LightningModule):
 
         self.num_log_images = num_log_images
         self.val_log_indices = None
+        self.budget = budget
 
         self.NMSE = DistributedMetricSum()
         self.SSIM = DistributedMetricSum()
@@ -66,89 +83,88 @@ class MriModule(pl.LightningModule):
         self.ValLoss = DistributedMetricSum()
         self.TotExamples = DistributedMetricSum()
         self.TotSliceExamples = DistributedMetricSum()
+        self.ValMargDist = DistributedArraySum()
+        self.ValCondEnt = DistributedMetricSum()
 
-    def validation_step_end(self, val_logs):
-        # check inputs
-        for k in (
-            "batch_idx",
-            "fname",
-            "slice_num",
-            "max_value",
-            "output",
-            "target",
-            "val_loss",
-        ):
-            if k not in val_logs.keys():
-                raise RuntimeError(
-                    f"Expected key {k} in dict returned by validation_step."
-                )
-        if val_logs["output"].ndim == 2:
-            val_logs["output"] = val_logs["output"].unsqueeze(0)
-        elif val_logs["output"].ndim != 3:
-            raise RuntimeError("Unexpected output size from validation_step.")
-        if val_logs["target"].ndim == 2:
-            val_logs["target"] = val_logs["target"].unsqueeze(0)
-        elif val_logs["target"].ndim != 3:
-            raise RuntimeError("Unexpected output size from validation_step.")
+        self.TrainNMSE = DistributedMetricSum()
+        self.TrainSSIM = DistributedMetricSum()
+        self.TrainPSNR = DistributedMetricSum()
+        self.TrainLoss = DistributedMetricSum()
+        self.TrainTotExamples = DistributedMetricSum()
+        self.TrainTotSliceExamples = DistributedMetricSum()
+        self.TrainMargDist = DistributedArraySum()
+        self.TrainCondEnt = DistributedMetricSum()
 
-        # pick a set of images to log if we don't have one already
-        if self.val_log_indices is None:
-            self.val_log_indices = list(
-                np.random.permutation(len(self.trainer.val_dataloaders[0]))[
-                    : self.num_log_images
-                ]
-            )
-
-        # log images to tensorboard
-        if isinstance(val_logs["batch_idx"], int):
-            batch_indices = [val_logs["batch_idx"]]
-        else:
-            batch_indices = val_logs["batch_idx"]
-        for i, batch_idx in enumerate(batch_indices):
-            if batch_idx in self.val_log_indices:
-                key = f"val_images_idx_{batch_idx}"
-                target = val_logs["target"][i].unsqueeze(0)
-                output = val_logs["output"][i].unsqueeze(0)
-                error = torch.abs(target - output)
-                output = output / output.max()
-                target = target / target.max()
-                error = error / error.max()
-                self.log_image(f"{key}/target", target)
-                self.log_image(f"{key}/reconstruction", output)
-                self.log_image(f"{key}/error", error)
-
-        # compute evaluation metrics
+    def training_epoch_end(self, train_logs):
+        # Used for both active and non-active VarNet
+        # Although aggregation per volume might not work exactly the same?
+        # aggregate losses
+        losses = []
         mse_vals = defaultdict(dict)
         target_norms = defaultdict(dict)
         ssim_vals = defaultdict(dict)
         max_vals = dict()
-        for i, fname in enumerate(val_logs["fname"]):
-            slice_num = int(val_logs["slice_num"][i].cpu())
-            maxval = val_logs["max_value"][i].cpu().numpy()
-            output = val_logs["output"][i].cpu().numpy()
-            target = val_logs["target"][i].cpu().numpy()
 
-            mse_vals[fname][slice_num] = torch.tensor(
-                evaluate.mse(target, output)
-            ).view(1)
-            target_norms[fname][slice_num] = torch.tensor(
-                evaluate.mse(target, np.zeros_like(target))
-            ).view(1)
-            ssim_vals[fname][slice_num] = torch.tensor(
-                evaluate.ssim(target[None, ...], output[None, ...], maxval=maxval)
-            ).view(1)
-            max_vals[fname] = maxval
+        # use dict updates to handle duplicate slices
+        for train_log in train_logs:
+            losses.append(train_log["loss"].data.view(-1))
 
-        return {
-            "val_loss": val_logs["val_loss"],
-            "mse_vals": dict(mse_vals),
-            "target_norms": dict(target_norms),
-            "ssim_vals": dict(ssim_vals),
-            "max_vals": max_vals,
-        }
+            for k in train_log["mse_vals"].keys():
+                mse_vals[k].update(train_log["mse_vals"][k])
+            for k in train_log["target_norms"].keys():
+                target_norms[k].update(train_log["target_norms"][k])
+            for k in train_log["ssim_vals"].keys():
+                ssim_vals[k].update(train_log["ssim_vals"][k])
+            for k in train_log["max_vals"]:
+                max_vals[k] = train_log["max_vals"][k]
 
-    def log_image(self, name, image):
-        self.logger.experiment.add_image(name, image, global_step=self.global_step)
+        # check to make sure we have all files in all metrics
+        assert (
+            mse_vals.keys()
+            == target_norms.keys()
+            == ssim_vals.keys()
+            == max_vals.keys()
+        )
+
+        # apply means across image volumes
+        metrics = {"nmse": 0, "ssim": 0, "psnr": 0}
+        local_examples = 0
+        for fname in mse_vals.keys():
+            local_examples = local_examples + 1
+            mse_val = torch.mean(
+                torch.cat([v.view(-1) for _, v in mse_vals[fname].items()])
+            )
+            target_norm = torch.mean(
+                torch.cat([v.view(-1) for _, v in target_norms[fname].items()])
+            )
+            metrics["nmse"] = metrics["nmse"] + mse_val / target_norm
+            metrics["psnr"] = (
+                metrics["psnr"]
+                + 20
+                * torch.log10(
+                    torch.tensor(
+                        max_vals[fname], dtype=mse_val.dtype, device=mse_val.device
+                    )
+                )
+                - 10 * torch.log10(mse_val)
+            )
+            metrics["ssim"] = metrics["ssim"] + torch.mean(
+                torch.cat([v.view(-1) for _, v in ssim_vals[fname].items()])
+            )
+
+        # reduce across ddp via sum
+        metrics["nmse"] = self.TrainNMSE(metrics["nmse"])
+        metrics["ssim"] = self.TrainSSIM(metrics["ssim"])
+        metrics["psnr"] = self.TrainPSNR(metrics["psnr"])
+        tot_examples = self.TrainTotExamples(torch.tensor(local_examples))
+        train_loss = self.TrainLoss(torch.sum(torch.cat(losses)))
+        tot_slice_examples = self.TrainTotSliceExamples(
+            torch.tensor(len(losses), dtype=torch.float)
+        )
+
+        self.log("training_loss", train_loss / tot_slice_examples, prog_bar=True)
+        for metric, value in metrics.items():
+            self.log(f"train_metrics/{metric}", value / tot_examples)
 
     def validation_epoch_end(self, val_logs):
         # aggregate losses
@@ -214,10 +230,12 @@ class MriModule(pl.LightningModule):
         tot_slice_examples = self.TotSliceExamples(
             torch.tensor(len(losses), dtype=torch.float)
         )
-
         self.log("validation_loss", val_loss / tot_slice_examples, prog_bar=True)
         for metric, value in metrics.items():
             self.log(f"val_metrics/{metric}", value / tot_examples)
+
+    def log_image(self, name, image):
+        self.logger.experiment.add_image(name, image, global_step=self.global_step)
 
     def test_epoch_end(self, test_logs):
         outputs = defaultdict(dict)

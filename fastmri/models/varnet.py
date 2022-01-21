@@ -6,7 +6,6 @@ LICENSE file in the root directory of this source tree.
 """
 
 import math
-from collections import defaultdict
 from typing import List, Optional, Tuple
 
 import fastmri
@@ -15,7 +14,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from fastmri.data import transforms
 
-from .policy import LOUPEPolicy, StraightThroughPolicy
 from .unet import Unet
 
 

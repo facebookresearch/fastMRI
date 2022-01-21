@@ -56,10 +56,14 @@ class LOUPEPolicy(nn.Module):
         if self.use_softplus:
             # Softplus to make positive
             prob_mask = F.softplus(sampler_out, beta=self.slope)
-            prob_mask = prob_mask / torch.max(
-                (1 - mask.reshape(prob_mask.shape[0], prob_mask.shape[1])) * prob_mask,
-                dim=1,
-            )[0].reshape(-1, 1)
+            prob_mask = (
+                prob_mask
+                / torch.max(
+                    (1 - mask.reshape(prob_mask.shape[0], prob_mask.shape[1]))
+                    * prob_mask,
+                    dim=1,
+                )[0].reshape(-1, 1)
+            )
         else:
             # Sigmoid to make positive
             prob_mask = torch.sigmoid(self.slope * sampler_out)

@@ -14,7 +14,6 @@ import torch
 
 import fastmri
 from fastmri.data import CombinedSliceDataset, SliceDataset
-from fastmri.utils import float2none
 
 
 def worker_init_fn(worker_id):

@@ -1,5 +1,6 @@
 """
 Copyright (c) Facebook, Inc. and its affiliates.
+
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
@@ -13,11 +14,13 @@ import torch.fft
 def fft2c_new(data: torch.Tensor, norm: str = "ortho") -> torch.Tensor:
     """
     Apply centered 2 dimensional Fast Fourier Transform.
+
     Args:
         data: Complex valued input data containing at least 3 dimensions:
             dimensions -3 & -2 are spatial dimensions and dimension -1 has size
             2. All other dimensions are assumed to be batch dimensions.
         norm: Normalization mode. See ``torch.fft.fft``.
+
     Returns:
         The FFT of the input.
     """
@@ -38,11 +41,13 @@ def fft2c_new(data: torch.Tensor, norm: str = "ortho") -> torch.Tensor:
 def ifft2c_new(data: torch.Tensor, norm: str = "ortho") -> torch.Tensor:
     """
     Apply centered 2-dimensional Inverse Fast Fourier Transform.
+
     Args:
         data: Complex valued input data containing at least 3 dimensions:
             dimensions -3 & -2 are spatial dimensions and dimension -1 has size
             2. All other dimensions are assumed to be batch dimensions.
         norm: Normalization mode. See ``torch.fft.ifft``.
+
     Returns:
         The IFFT of the input.
     """
@@ -66,10 +71,12 @@ def ifft2c_new(data: torch.Tensor, norm: str = "ortho") -> torch.Tensor:
 def roll_one_dim(x: torch.Tensor, shift: int, dim: int) -> torch.Tensor:
     """
     Similar to roll but for only one dim.
+
     Args:
         x: A PyTorch tensor.
         shift: Amount to roll.
         dim: Which dimension to roll.
+
     Returns:
         Rolled version of x.
     """
@@ -90,10 +97,12 @@ def roll(
 ) -> torch.Tensor:
     """
     Similar to np.roll but applies to PyTorch Tensors.
+
     Args:
         x: A PyTorch tensor.
         shift: Amount to roll.
         dim: Which dimension to roll.
+
     Returns:
         Rolled version of x.
     """
@@ -109,9 +118,11 @@ def roll(
 def fftshift(x: torch.Tensor, dim: Optional[List[int]] = None) -> torch.Tensor:
     """
     Similar to np.fft.fftshift but applies to PyTorch Tensors
+
     Args:
         x: A PyTorch tensor.
         dim: Which dimension to fftshift.
+
     Returns:
         fftshifted version of x.
     """
@@ -132,9 +143,11 @@ def fftshift(x: torch.Tensor, dim: Optional[List[int]] = None) -> torch.Tensor:
 def ifftshift(x: torch.Tensor, dim: Optional[List[int]] = None) -> torch.Tensor:
     """
     Similar to np.fft.ifftshift but applies to PyTorch Tensors
+
     Args:
         x: A PyTorch tensor.
         dim: Which dimension to ifftshift.
+
     Returns:
         ifftshifted version of x.
     """

@@ -7,10 +7,9 @@ LICENSE file in the root directory of this source tree.
 
 from typing import Dict, NamedTuple, Optional, Sequence, Tuple, Union
 
+import fastmri
 import numpy as np
 import torch
-
-import fastmri
 
 from .subsample import MaskFunc
 

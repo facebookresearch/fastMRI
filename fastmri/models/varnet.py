@@ -6,7 +6,7 @@ LICENSE file in the root directory of this source tree.
 """
 
 import math
-from typing import List, Optional, Tuple
+from typing import List, Tuple, Optional
 
 import torch
 import torch.nn as nn

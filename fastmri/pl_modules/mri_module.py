@@ -9,13 +9,12 @@ import pathlib
 from argparse import ArgumentParser
 from collections import defaultdict
 
+import fastmri
 import numpy as np
 import pytorch_lightning as pl
 import torch
-from torchmetrics.metric import Metric
-
-import fastmri
 from fastmri import evaluate
+from torchmetrics.metric import Metric
 
 
 class DistributedMetricSum(Metric):

@@ -9,10 +9,9 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Callable, Optional, Union
 
+import fastmri
 import pytorch_lightning as pl
 import torch
-
-import fastmri
 from fastmri.data import CombinedSliceDataset, SliceDataset
 
 

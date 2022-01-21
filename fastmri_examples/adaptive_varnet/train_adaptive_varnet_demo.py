@@ -25,6 +25,64 @@ from fastmri.data.transforms import VarNetDataTransform, MiniCoilTransform
 from fastmri.pl_modules import FastMriDataModule, VarNetModule, ActiveVarNetModule
 
 
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters()) if model is not None else 0
+
+
+def count_trainable_parameters(model):
+    return (
+        sum(p.numel() for p in model.parameters() if p.requires_grad)
+        if model is not None
+        else 0
+    )
+
+
+def count_untrainable_parameters(model):
+    return (
+        sum(p.numel() for p in model.parameters() if not p.requires_grad)
+        if model is not None
+        else 0
+    )
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ("yes", "true", "t", "y", "1"):
+        return True
+    elif v.lower() in ("no", "false", "f", "n", "0"):
+        return False
+    else:
+        raise ValueError("Boolean value expected.")
+
+
+def str2none(v):
+    if v is None:
+        return v
+    if v.lower() == "none":
+        return None
+    else:
+        return v
+
+
+def int2none(v):
+    if v is None:
+        return v
+    if v.lower() == "none":
+        return None
+    else:
+        return int(v)
+
+
+def float2none(v):
+    if v is None:
+        return v
+    if v.lower() == "none":
+        return None
+    else:
+        return float(v)
+
+
 def make_wandb_run_name(args):
     name = ""
 
@@ -68,7 +126,7 @@ def make_wandb_run_name(args):
         if args.straight_through_slope != 10:
             name += f"stslope{args.straight_through_slope}-"
         if args.hard_dc:
-            if not args.dc_mode == 'first':
+            if not args.dc_mode == "first":
                 name += f"hdc{args.dc_mode}-"
         else:
             name += "sdc-"
@@ -89,10 +147,10 @@ def make_wandb_run_name(args):
 
             if args.policy_activation != "leakyrelu":
                 name += "elu-"
-        else: # LOUPE runs
+        else:  # LOUPE runs
             pass
     else:  # Non-active runs
-        if args.mask_type != 'equispaced':
+        if args.mask_type != "equispaced":
             name += f"{args.mask_type}-"
 
     name += "seed"
@@ -124,9 +182,17 @@ class WandbLoggerCallback(Callback):
             # Get wandb id from file in checkpoint dir
             # resume_from_checkpoint = default_root_dir / checkpoints / model.ckpt
             # wandb_id is stored in default_root_dir / wandb_id.txt
-            with open(pathlib.Path(args.resume_from_checkpoint).parent.parent / "wandb_id.txt", "r") as f:
+            with open(
+                pathlib.Path(args.resume_from_checkpoint).parent.parent
+                / "wandb_id.txt",
+                "r",
+            ) as f:
                 id = f.read()
-            with open(pathlib.Path(args.resume_from_checkpoint).parent.parent / "wandb_dir.txt", "r") as f:
+            with open(
+                pathlib.Path(args.resume_from_checkpoint).parent.parent
+                / "wandb_dir.txt",
+                "r",
+            ) as f:
                 dir = pathlib.Path(f.read())
         else:
             id = wandb.util.generate_id()
@@ -537,8 +603,10 @@ def build_args():
         "--active_acquisition",
         default=False,
         type=str2bool,
-        help=("Whether to do mask design (e.g. LOUPE, Policy) or not. Note that this argument is technically named "
-              "incorrectly, since these learned subsampling methods are not active."),
+        help=(
+            "Whether to do mask design (e.g. LOUPE, Policy) or not. Note that this argument is technically named "
+            "incorrectly, since these learned subsampling methods are not active."
+        ),
     )
     parser.add_argument(
         "--budget",
@@ -598,8 +666,10 @@ def build_args():
         "--dc_mode",
         default="first",
         type=str,
-        help=("Whether to do DC before ('first'), after ('last') or simultaneously "
-              "('simul') with Refinement step. Default 'first'."),
+        help=(
+            "Whether to do DC before ('first'), after ('last') or simultaneously "
+            "('simul') with Refinement step. Default 'first'."
+        ),
     )
 
     # Gradient arguments
@@ -613,8 +683,10 @@ def build_args():
         "--sparse_dc_gradients",
         default=True,
         type=str2bool,
-        help=("Whether to sparsify the gradients in DC by using torch.where() "
-              "with the mask: this essentially removes gradients for the policy on unsampled rows."),
+        help=(
+            "Whether to sparsify the gradients in DC by using torch.where() "
+            "with the mask: this essentially removes gradients for the policy on unsampled rows."
+        ),
     )
 
     parser.add_argument(
@@ -733,7 +805,7 @@ def run_cli():
 
     # Prevent Lightning pre-emption
     for fname in pathlib.Path(args.default_root_dir).iterdir():
-        if fname.name[:len("hpc_ckpt")] == "hpc_ckpt" and fname.suffix == ".ckpt":
+        if fname.name[: len("hpc_ckpt")] == "hpc_ckpt" and fname.suffix == ".ckpt":
             fname.unlink()
 
     # ---------------------

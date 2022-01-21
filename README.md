@@ -115,7 +115,7 @@ in another repository.
 * **Active Acquisition** (external repository)
   * (external repository) [Reducing uncertainty in undersampled MRI reconstruction with active acquisition (Z. Zhang et al., 2019)](https://github.com/facebookresearch/active-mri-acquisition/tree/master/activemri/experimental/cvpr19_models)
   * (external repository) [Active MR k-space Sampling with Reinforcement Learning (L. Pineda et al., 2020)](https://github.com/facebookresearch/active-mri-acquisition)
-  * [On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction (T. Bakker et al., 2021)](https://openreview.net/forum?id=eAkOp9Oet5y)
+  * [On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction (T. Bakker et al., 2021)](https://github.com/facebookresearch/fastMRI/tree/main/fastmri_examples/active_varnet/)
 
 ## Testing
 

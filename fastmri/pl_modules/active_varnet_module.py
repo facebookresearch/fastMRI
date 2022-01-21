@@ -9,15 +9,16 @@ from argparse import ArgumentParser
 from collections import defaultdict
 from typing import Tuple
 
-import fastmri
 import numpy as np
 import pytorch_lightning as pl
 import torch
+
+import fastmri
 from fastmri import evaluate
 from fastmri.data import transforms
 from fastmri.models import ActiveVarNet
 
-from .mri_module import MriModule, DistributedMetricSum
+from .mri_module import DistributedMetricSum, MriModule
 
 
 class DistributedArraySum(pl.metrics.Metric):

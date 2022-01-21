@@ -8,9 +8,10 @@ LICENSE file in the root directory of this source tree.
 from collections import defaultdict
 from typing import Optional, Tuple
 
-import fastmri
 import torch
 import torch.nn as nn
+
+import fastmri
 from fastmri.data import transforms
 
 from .policy import LOUPEPolicy, StraightThroughPolicy

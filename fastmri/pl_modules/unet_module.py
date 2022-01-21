@@ -8,8 +8,9 @@ LICENSE file in the root directory of this source tree.
 from argparse import ArgumentParser
 
 import torch
-from fastmri.models import Unet
 from torch.nn import functional as F
+
+from fastmri.models import Unet
 
 from .mri_module import MriModule
 

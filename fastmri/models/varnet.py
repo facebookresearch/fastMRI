@@ -6,7 +6,8 @@ LICENSE file in the root directory of this source tree.
 """
 
 import math
-from typing import List, Tuple, Optional
+from collections import defaultdict
+from typing import List, Optional, Tuple
 
 import fastmri
 import torch
@@ -14,6 +15,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from fastmri.data import transforms
 
+from .policy import LOUPEPolicy, StraightThroughPolicy
 from .unet import Unet
 
 
@@ -535,12 +537,9 @@ class ActiveVarNet(nn.Module):
         self.cascades = nn.ModuleList(
             [
                 AdaptiveVarNetBlock(
-                    NormUnet(
-                        chans,
-                        pools,
-                    ),
-                    hard_dc,
-                    dc_mode,
+                    NormUnet(chans, pools),
+                    hard_dc=hard_dc,
+                    dc_mode=dc_mode,
                     sparse_dc_gradients=sparse_dc_gradients,
                 )
                 for _ in range(num_cascades)
@@ -549,6 +548,7 @@ class ActiveVarNet(nn.Module):
 
         # LOUPE or active policies
         if self.loupe_mask:
+            assert isinstance(self.num_actions, int)
             self.loupe = LOUPEPolicy(
                 self.num_actions,
                 self.budget,
@@ -775,7 +775,7 @@ class AdaptiveVarNetBlock(nn.Module):
         self.dc_mode = dc_mode
         self.sparse_dc_gradients = sparse_dc_gradients
 
-        if not dc_mode in ["first", "last", "simul"]:
+        if dc_mode not in ["first", "last", "simul"]:
             raise ValueError(
                 "`dc_mode` must be one of 'first', 'last', or 'simul'. "
                 "Not {}".format(dc_mode)
@@ -784,7 +784,7 @@ class AdaptiveVarNetBlock(nn.Module):
         if hard_dc:
             self.dc_weight = 1
         else:
-            self.dc_weight = nn.Parameter(torch.ones(1))
+            self.dc_weight = nn.Parameter(torch.ones(1))  # type: ignore
 
     def sens_expand(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
         return fastmri.fft2c(fastmri.complex_mul(x, sens_maps))
@@ -800,7 +800,7 @@ class AdaptiveVarNetBlock(nn.Module):
         current_kspace: torch.Tensor,
         ref_kspace: torch.Tensor,
         mask: torch.Tensor,
-        sens_maps: Optional[torch.Tensor],
+        sens_maps: torch.Tensor,
         kspace: Optional[torch.Tensor],
     ) -> torch.Tensor:
         zero = torch.zeros(1, 1, 1, 1, 1).to(current_kspace)

@@ -10,15 +10,29 @@ from collections import defaultdict
 from typing import Tuple
 
 import fastmri
-
-import torch
 import numpy as np
-
+import pytorch_lightning as pl
+import torch
+from fastmri import evaluate
 from fastmri.data import transforms
 from fastmri.models import ActiveVarNet
-from fastmri import evaluate
 
-from .mri_module import MriModule
+from .mri_module import MriModule, DistributedMetricSum
+
+
+class DistributedArraySum(pl.metrics.Metric):
+    def __init__(self, dist_sync_on_step=True):
+        super().__init__(dist_sync_on_step=dist_sync_on_step)
+
+        self.add_state("quantity", default=torch.zeros(1), dist_reduce_fx="sum")
+
+    def update(self, batch: torch.Tensor):  # type: ignore
+        if self.quantity.shape == torch.Size([1]):  # still at init
+            self.quantity = self.quantity.expand(batch.shape[0]).clone()
+        self.quantity += batch.to(self.quantity.device)
+
+    def compute(self):
+        return self.quantity
 
 
 class ActiveVarNetModule(MriModule):
@@ -100,7 +114,7 @@ class ActiveVarNetModule(MriModule):
             policy_activation: str, "leakyrelu" or "elu". Activation function to use between fully-connected layers in
                 the policy. Only used if policy_num_fc_layers > 1.
         """
-        super().__init__(budget=budget)
+        super().__init__()
         self.save_hyperparameters()
 
         self.num_cascades = num_cascades
@@ -131,6 +145,18 @@ class ActiveVarNetModule(MriModule):
         self.policy_drop_prob = policy_drop_prob
         self.policy_num_fc_layers = policy_num_fc_layers
         self.policy_activation = policy_activation
+
+        # logging functions
+        self.ValMargDist = DistributedArraySum()
+        self.ValCondEnt = DistributedMetricSum()
+        self.TrainNMSE = DistributedMetricSum()
+        self.TrainSSIM = DistributedMetricSum()
+        self.TrainPSNR = DistributedMetricSum()
+        self.TrainLoss = DistributedMetricSum()
+        self.TrainTotExamples = DistributedMetricSum()
+        self.TrainTotSliceExamples = DistributedMetricSum()
+        self.TrainMargDist = DistributedArraySum()
+        self.TrainCondEnt = DistributedMetricSum()
 
         self.varnet = ActiveVarNet(
             num_cascades=self.num_cascades,
@@ -173,9 +199,7 @@ class ActiveVarNetModule(MriModule):
 
         target, output = transforms.center_crop_to_smallest(target, output)
 
-        loss = self.compute_loss(
-            output, target, max_value
-        )
+        loss = self.compute_loss(output, target, max_value)
 
         self.log("train_loss", loss)
 
@@ -271,9 +295,7 @@ class ActiveVarNetModule(MriModule):
 
         target, output = transforms.center_crop_to_smallest(target, output)
 
-        loss = self.compute_loss(
-            output, target, max_value
-        )
+        loss = self.compute_loss(output, target, max_value)
 
         return {
             "batch_idx": batch_idx,

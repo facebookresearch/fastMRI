@@ -28,8 +28,8 @@ class DistributedArraySum(pl.metrics.Metric):
         self.add_state("quantity", default=torch.zeros(1), dist_reduce_fx="sum")
 
     def update(self, batch: torch.Tensor):  # type: ignore
-        if self.quantity.shape == torch.Size([1]):  # still at init
-            self.quantity = self.quantity.expand(batch.shape[0]).clone()
+        if self.quantity.shape == torch.Size([1]):  # type: ignore
+            self.quantity = self.quantity.expand(batch.shape[0]).clone()  # type: ignore
         self.quantity += batch.to(self.quantity.device)
 
     def compute(self):

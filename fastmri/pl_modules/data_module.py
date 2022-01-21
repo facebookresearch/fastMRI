@@ -87,7 +87,11 @@ class FastMriDataModule(pl.LightningDataModule):
         test_split: str = "test",
         test_path: Optional[Path] = None,
         sample_rate: Optional[float] = None,
+        val_sample_rate: Optional[float] = None,
+        test_sample_rate: Optional[float] = None,
         volume_sample_rate: Optional[float] = None,
+        val_volume_sample_rate: Optional[float] = None,
+        test_volume_sample_rate: Optional[float] = None,
         use_dataset_cache_file: bool = True,
         batch_size: int = 1,
         num_workers: int = 4,
@@ -107,14 +111,22 @@ class FastMriDataModule(pl.LightningDataModule):
             test_split: Name of test split from ("test", "challenge").
             test_path: An optional test path. Passing this overwrites data_path
                 and test_split.
-            sample_rate: Fraction of slices of the training data split to use. Can be
-                set to less than 1.0 for rapid prototyping. If not set, it defaults to 1.0.
-                To subsample the dataset either set sample_rate (sample by slice) or
-                volume_sample_rate (sample by volume), but not both.
-            volume_sample_rate: Fraction of volumes of the training data split to use. Can be
-                set to less than 1.0 for rapid prototyping. If not set, it defaults to 1.0.
-                To subsample the dataset either set sample_rate (sample by slice) or
-                volume_sample_rate (sample by volume), but not both.
+            sample_rate: Fraction of slices of the training data split to use.
+                Can be set to less than 1.0 for rapid prototyping. If not set,
+                it defaults to 1.0. To subsample the dataset either set
+                sample_rate (sample by slice) or volume_sample_rate (sample by
+                volume), but not both.
+            val_sample_rate: Same as sample_rate, but for val split.
+            test_sample_rate: Same as sample_rate, but for test split.
+            volume_sample_rate: Fraction of volumes of the training data split
+                to use. Can be set to less than 1.0 for rapid prototyping. If
+                not set, it defaults to 1.0. To subsample the dataset either
+                set sample_rate (sample by slice) or volume_sample_rate (sample
+                by volume), but not both.
+            val_volume_sample_rate: Same as volume_sample_rate, but for val
+                split.
+            test_volume_sample_rate: Same as volume_sample_rate, but for val
+                split.
             use_dataset_cache_file: Whether to cache dataset metadata. This is
                 very useful for large datasets like the brain data.
             batch_size: Batch size.
@@ -133,7 +145,11 @@ class FastMriDataModule(pl.LightningDataModule):
         self.test_split = test_split
         self.test_path = test_path
         self.sample_rate = sample_rate
+        self.val_sample_rate = val_sample_rate
+        self.test_sample_rate = test_sample_rate
         self.volume_sample_rate = volume_sample_rate
+        self.val_volume_sample_rate = val_volume_sample_rate
+        self.test_volume_sample_rate = test_volume_sample_rate
         self.use_dataset_cache_file = use_dataset_cache_file
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -156,15 +172,24 @@ class FastMriDataModule(pl.LightningDataModule):
             )
         else:
             is_train = False
-            # NOTE: Fixed so that val and test use corrent sample rates
-            sample_rate = self.sample_rate if sample_rate is None else sample_rate
-            volume_sample_rate = (
-                self.volume_sample_rate
-                if volume_sample_rate is None
-                else volume_sample_rate
-            )
-            # sample_rate = 1.0
-            # volume_sample_rate = None  # default case, no subsampling
+            if data_partition == "val":
+                sample_rate = (
+                    self.val_sample_rate if sample_rate is None else sample_rate
+                )
+                volume_sample_rate = (
+                    self.val_volume_sample_rate
+                    if volume_sample_rate is None
+                    else volume_sample_rate
+                )
+            elif data_partition == "test":
+                sample_rate = (
+                    self.test_sample_rate if sample_rate is None else sample_rate
+                )
+                volume_sample_rate = (
+                    self.test_volume_sample_rate
+                    if volume_sample_rate is None
+                    else volume_sample_rate
+                )
 
         # if desired, combine train and val together for the train split
         dataset: Union[SliceDataset, CombinedSliceDataset]
@@ -314,16 +339,56 @@ class FastMriDataModule(pl.LightningDataModule):
         parser.add_argument(
             "--sample_rate",
             default=None,
-            type=float2none,
-            help=("Fraction of slices in the dataset to use (train split only). If not given all will be used. "
-                  "Cannot set together with volume_sample_rate."),
+            type=float,
+            help=(
+                "Fraction of slices in the dataset to use (train split only). If not "
+                "given all will be used. Cannot set together with volume_sample_rate."
+            ),
+        )
+        parser.add_argument(
+            "--val_sample_rate",
+            default=None,
+            type=float,
+            help=(
+                "Fraction of slices in the dataset to use (val split only). If not "
+                "given all will be used. Cannot set together with volume_sample_rate."
+            ),
+        )
+        parser.add_argument(
+            "--test_sample_rate",
+            default=None,
+            type=float,
+            help=(
+                "Fraction of slices in the dataset to use (test split only). If not "
+                "given all will be used. Cannot set together with volume_sample_rate."
+            ),
         )
         parser.add_argument(
             "--volume_sample_rate",
             default=None,
-            type=float2none,
-            help=("Fraction of volumes of the dataset to use (train split only). If not given all will be used. "
-                  "Cannot set together with sample_rate."),
+            type=float,
+            help=(
+                "Fraction of volumes of the dataset to use (train split only). If not "
+                "given all will be used. Cannot set together with sample_rate."
+            ),
+        )
+        parser.add_argument(
+            "--val_sample_rate",
+            default=None,
+            type=float,
+            help=(
+                "Fraction of volumes of the dataset to use (val split only). If not "
+                "given all will be used. Cannot set together with sample_rate."
+            ),
+        )
+        parser.add_argument(
+            "--test_sample_rate",
+            default=None,
+            type=float,
+            help=(
+                "Fraction of volumes of the dataset to use (test split only). If not "
+                "given all will be used. Cannot set together with sample_rate."
+            ),
         )
         parser.add_argument(
             "--use_dataset_cache_file",

@@ -544,7 +544,7 @@ class MiniCoilTransform:
         Args:
             kspace: Input k-space of shape (num_coils, rows, cols) for
                 multi-coil data.
-            mask: Mask from the test dataset.
+            mask: Mask from the test dataset. Not used if mask_func is defined.
             target: Target image.
             attrs: Acquisition related information stored in the HDF5 object.
             fname: File name.
@@ -552,10 +552,12 @@ class MiniCoilTransform:
 
         Returns:
             tuple containing:
-                kspace: original kspace (used for active acquisition only)
-                masked_kspace: k-space after applying sampling mask.
+                kspace: original kspace (used for active acquisition only).
+                masked_kspace: k-space after applying sampling mask. If there
+                    is no mask or mask_func, returns same as kspace.
                 mask: The applied sampling mask
-                target: The target image (if applicable).
+                target: The target image (if applicable). The target is built
+                    from the RSS opp of all coils pre-compression.
                 fname: File name.
                 slice_num: The slice index.
                 max_value: Maximum image value.

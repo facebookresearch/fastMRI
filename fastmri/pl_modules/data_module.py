@@ -385,7 +385,7 @@ class FastMriDataModule(pl.LightningDataModule):
             type=float,
             help=(
                 "Fraction of volumes of the dataset to use (val split only). If not "
-                "given all will be used. Cannot set together with sample_rate."
+                "given all will be used. Cannot set together with val_sample_rate."
             ),
         )
         parser.add_argument(
@@ -394,7 +394,7 @@ class FastMriDataModule(pl.LightningDataModule):
             type=float,
             help=(
                 "Fraction of volumes of the dataset to use (test split only). If not "
-                "given all will be used. Cannot set together with sample_rate."
+                "given all will be used. Cannot set together with test_sample_rate."
             ),
         )
         parser.add_argument(

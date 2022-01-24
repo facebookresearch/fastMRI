@@ -5,7 +5,7 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-from .active_varnet_module import ActiveVarNetModule
+from .adaptive_varnet_module import ActiveVarNetModule
 from .data_module import FastMriDataModule
 from .mri_module import MriModule
 from .unet_module import UnetModule

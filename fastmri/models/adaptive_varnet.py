@@ -142,7 +142,7 @@ class ActiveVarNet(nn.Module):
         num_sense_lines: Optional[int] = None,
         hard_dc: bool = False,
         dc_mode: str = "simul",
-        slope: float = 10,  # Slope for LOUPE sigmoid and general straight through estimator,
+        slope: float = 10,
         sparse_dc_gradients: bool = True,
         straight_through_slope: float = 10,
         st_clamp: bool = False,

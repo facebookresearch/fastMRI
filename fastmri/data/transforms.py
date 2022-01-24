@@ -522,7 +522,6 @@ class MiniCoilTransform:
         use_seed: Optional[bool] = True,
         crop_size: Optional[tuple] = None,
         num_compressed_coils: Optional[int] = None,
-        active_acquisition: Optional[bool] = False,
     ):
         """
         Args:
@@ -534,15 +533,11 @@ class MiniCoilTransform:
             crop_size: Image dimensions for mini MR images.
             num_compressed_coils: Number of coils to output from coil
                 compression.
-            active_acquisition: Whether the transformation is used for active
-                acquisition. If `True` will also return full kspace.
-                DEPRECATED.
         """
         self.mask_func = mask_func
         self.use_seed = use_seed
         self.crop_size = crop_size
         self.num_compressed_coils = num_compressed_coils
-        self.active_acquistion = active_acquisition
 
     def __call__(self, kspace, mask, target, attrs, fname, slice_num):
         """

@@ -284,7 +284,7 @@ class EquiSpacedMaskFunc(MaskFunc):
 
 class EquispacedMaskFractionFunc(MaskFunc):
     """
-    Equispaced mask with exact acceleration matching.
+    Equispaced mask with approximate acceleration matching.
 
     The mask selects a subset of columns from the input k-space data. If the
     k-space data has N columns, the mask picks out:

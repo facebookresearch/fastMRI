@@ -5,22 +5,22 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import torch
 import json
 import os
-import wandb
 import pathlib
-import matplotlib.pyplot as plt
 from argparse import ArgumentParser
 from datetime import datetime
 
+import matplotlib.pyplot as plt
 import pytorch_lightning as pl
+import torch
+import wandb
+from fastmri.data.mri_data import fetch_dir
+from fastmri.data.transforms import MiniCoilTransform, VarNetDataTransform
+from fastmri.pl_modules import ActiveVarNetModule, FastMriDataModule, VarNetModule
 from pytorch_lightning.callbacks import Callback
 
-from fastmri.data.mri_data import fetch_dir
-from fastmri.data.subsample import create_mask_for_mask_type
-from fastmri.data.transforms import VarNetDataTransform, MiniCoilTransform
-from fastmri.pl_modules import FastMriDataModule, VarNetModule, ActiveVarNetModule
+from subsample import create_mask_for_mask_type
 
 
 def count_parameters(model):
@@ -148,7 +148,7 @@ def make_wandb_run_name(args):
         else:  # LOUPE runs
             pass
     else:  # Non-active runs
-        if args.mask_type != "equispaced":
+        if args.mask_type != "adaptive_equispaced_fraction":
             name += f"{args.mask_type}-"
 
     name += "seed"
@@ -535,8 +535,8 @@ def build_args():
     # data transform params
     parser.add_argument(
         "--mask_type",
-        choices=("random", "equispaced"),
-        default="equispaced",
+        choices=("random", "adaptive_equispaced_fraction"),
+        default="adaptive_equispaced_fraction",
         type=str,
         help="Type of k-space mask",
     )
@@ -730,7 +730,7 @@ def build_args():
     parser = FastMriDataModule.add_data_specific_args(parser)
     parser.set_defaults(
         data_path=data_path,  # path to fastMRI data
-        mask_type="equispaced_fraction",  # VarNet uses equispaced mask
+        mask_type="adaptive_equispaced_fraction",  # VarNet uses equispaced mask
         challenge="multicoil",  # only multicoil implemented for VarNet
         batch_size=1,  # number of samples per batch
         test_path=None,  # path for test split, overwrites data_path

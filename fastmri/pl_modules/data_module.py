@@ -61,6 +61,13 @@ def worker_init_fn(worker_id):
         data.transform.mask_func.rng.seed(seed % (2 ** 32 - 1))
 
 
+def _check_both_not_none(val1, val2):
+    if (val1 is not None) and (val2 is not None):
+        return True
+
+    return False
+
+
 class FastMriDataModule(pl.LightningDataModule):
     """
     Data module class for fastMRI data sets.
@@ -134,6 +141,17 @@ class FastMriDataModule(pl.LightningDataModule):
                 should be set to True if training with ddp.
         """
         super().__init__()
+
+        if _check_both_not_none(sample_rate, volume_sample_rate):
+            raise ValueError("Can set sample_rate or volume_sample_rate, but not both.")
+        if _check_both_not_none(val_sample_rate, val_volume_sample_rate):
+            raise ValueError(
+                "Can set val_sample_rate or val_volume_sample_rate, but not both."
+            )
+        if _check_both_not_none(test_sample_rate, test_volume_sample_rate):
+            raise ValueError(
+                "Can set test_sample_rate or test_volume_sample_rate, but not both."
+            )
 
         self.data_path = data_path
         self.challenge = challenge

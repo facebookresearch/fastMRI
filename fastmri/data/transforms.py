@@ -624,7 +624,7 @@ class MiniCoilTransform:
 
         # Mask kspace
         if self.mask_func:
-            masked_kspace, mask = apply_mask(
+            masked_kspace, mask, _ = apply_mask(
                 kspace, self.mask_func, seed, (acq_start, acq_end)
             )
             mask = mask.byte()

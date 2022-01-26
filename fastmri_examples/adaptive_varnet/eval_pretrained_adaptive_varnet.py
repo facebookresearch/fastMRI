@@ -31,14 +31,6 @@ def entropy(prob_mask: torch.Tensor):
     return ent
 
 
-def save_images(recon):
-    for i, tensor in enumerate(recon):
-        plt.imshow(tensor.detach().cpu().numpy(), cmap="gist_gray")
-        plt.colorbar()
-        plt.savefig(f"/scratch/lep/active_acq/recon_{i}.png")
-        plt.close()
-
-
 def cli_main(args):
     pl.seed_everything(0)
 
@@ -76,7 +68,7 @@ def cli_main(args):
     # ------------
     # model
     # ------------
-    device = "cuda:0"
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
     model = ActiveVarNetModule.load_from_checkpoint(args.load_checkpoint)
     model.to(device)
 
@@ -95,8 +87,6 @@ def cli_main(args):
                 break
             kspace, masked_kspace, mask, target, fname, slice_num, max_value, _ = batch
 
-            # import pdb
-            # pdb.set_trace()
             output, extra_outputs = model(
                 kspace.to(device),
                 masked_kspace.to(device),
@@ -105,9 +95,6 @@ def cli_main(args):
                 slice_num,
             )
             prob_masks_list = extra_outputs["prob_masks"]
-
-            # import pdb
-            # pdb.set_trace()
 
             assert (
                 len(prob_masks_list) == 1

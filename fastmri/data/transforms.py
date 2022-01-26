@@ -511,6 +511,33 @@ class VarNetDataTransform:
         return sample
 
 
+class MiniCoilSample(NamedTuple):
+    """
+    A sample of masked coil-compressed k-space for reconstruction.
+
+    Args:
+        kspace: the original k-space before masking.
+        masked_kspace: k-space after applying sampling mask.
+        mask: The applied sampling mask.
+        num_low_frequencies: The number of samples for the densely-sampled
+            center.
+        target: The target image (if applicable).
+        fname: File name.
+        slice_num: The slice index.
+        max_value: Maximum image value.
+        crop_size: The size to crop the final image.
+    """
+
+    kspace: torch.Tensor
+    masked_kspace: torch.Tensor
+    mask: torch.Tensor
+    target: torch.Tensor
+    fname: str
+    slice_num: int
+    max_value: float
+    crop_size: Tuple[int, int]
+
+
 class MiniCoilTransform:
     """
     Multi-coil compressed transform, for faster prototyping.
@@ -643,13 +670,6 @@ class MiniCoilTransform:
             shape = np.array(kspace.shape)
             num_cols = shape[-2]
 
-        return (
-            kspace,
-            masked_kspace,
-            mask,
-            target,
-            fname,
-            slice_num,
-            max_value,
-            crop_size,
+        return MiniCoilSample(
+            kspace, masked_kspace, mask, target, fname, slice_num, max_value, crop_size
         )

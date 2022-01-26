@@ -17,7 +17,7 @@ import torch
 import wandb
 from fastmri.data.mri_data import fetch_dir
 from fastmri.data.transforms import MiniCoilTransform, VarNetDataTransform
-from fastmri.pl_modules import ActiveVarNetModule, FastMriDataModule, VarNetModule
+from fastmri.pl_modules import AdaptiveVarNetModule, FastMriDataModule, VarNetModule
 from pytorch_lightning.callbacks import Callback
 
 from subsample import create_mask_for_mask_type
@@ -434,7 +434,7 @@ def cli_main(args):
     # model
     # ------------
     if args.active_acquisition:
-        model = ActiveVarNetModule(
+        model = AdaptiveVarNetModule(
             num_cascades=args.num_cascades,
             pools=args.pools,
             chans=args.chans,

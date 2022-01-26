@@ -8,7 +8,7 @@ import torch
 from fastmri import evaluate
 from fastmri.data.mri_data import fetch_dir
 from fastmri.data.transforms import MiniCoilTransform
-from fastmri.pl_modules import ActiveVarNetModule, FastMriDataModule
+from fastmri.pl_modules import AdaptiveVarNetModule, FastMriDataModule
 from subsample import create_mask_for_mask_type
 
 
@@ -68,7 +68,7 @@ def cli_main(args):
     # model
     # ------------
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    model = ActiveVarNetModule.load_from_checkpoint(args.load_checkpoint)
+    model = AdaptiveVarNetModule.load_from_checkpoint(args.load_checkpoint)
     model.to(device)
 
     ssim_loss = fastmri.SSIMLoss()
@@ -203,7 +203,7 @@ def build_args():
         help="Whether skip low-frequency lines when computing equispaced mask.",
     )
 
-    parser = ActiveVarNetModule.add_model_specific_args(parser)
+    parser = AdaptiveVarNetModule.add_model_specific_args(parser)
 
     # basic args
     path_config = pathlib.Path("../../fastmri_dirs.yaml")

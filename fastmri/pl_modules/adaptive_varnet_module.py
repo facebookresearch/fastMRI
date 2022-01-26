@@ -16,7 +16,7 @@ import torch
 import fastmri
 from fastmri import evaluate
 from fastmri.data import transforms
-from fastmri.models import ActiveVarNet
+from fastmri.models import AdaptiveVarNet
 
 from .mri_module import DistributedMetricSum, MriModule
 
@@ -36,11 +36,11 @@ class DistributedArraySum(pl.metrics.Metric):
         return self.quantity
 
 
-class ActiveVarNetModule(MriModule):
+class AdaptiveVarNetModule(MriModule):
     """
-    Active VarNet training module.
+    Adaptive VarNet training module.
 
-    This can be used to train active variational models.
+    This can be used to train adaptive variational models.
     """
 
     def __init__(
@@ -87,33 +87,41 @@ class ActiveVarNetModule(MriModule):
             lr_step_size: Learning rate step size.
             lr_gamma: Learning rate gamma decay.
             weight_decay: Parameter for penalizing weights norm.
-            budget: Number of active acquisitions to perform, if doing active acquisition.
+            budget: Number of adaptive acquisitions to perform, if doing adaptive
+                acquisition.
             cascades_per_policy: How many cascades to use per policy step.
-            loupe_mask: Whether to use LOUPE-like mask instead of equispaced (still keeps
-                center lines).
+            loupe_mask: Whether to use LOUPE-like mask instead of equispaced
+                (still keeps center lines).
             use_softplus: Whether to use softplus or sigmoid in LOUPE.
             crop_size: tuple, crop size of MR images.
-            num_actions: Number of possible actions to sample (=image width). Used only
-                when loupe_mask is True.
-            num_sense_lines: Number of low-frequency lines to use for sensitivity map
-                computation, must be even or `None`. Default `None` will automatically
-                compute the number from masks. Default behaviour may cause some slices to
-                use more low-frequency lines than others, when used in conjunction with
+            num_actions: Number of possible actions to sample (=image width). Used
+                only when loupe_mask is True.
+            num_sense_lines: Number of low-frequency lines to use for
+                sensitivity map computation, must be even or `None`. Default
+                `None` will automatically compute the number from masks.
+                Default behaviour may cause some slices to use more
+                low-frequency lines than others, when used in conjunction with
                 e.g. the EquispacedMaskFunc defaults.
             hard_dc: Whether to do hard DC layers instead of soft (learned).
             dc_mode: str, whether to do DC before ('first'), after ('last') or
                 simultaneously ('simul') with Refinement step. Default 'simul'.
-            slope: Slope to use for sigmoid in LOUPE and Policy forward, or beta to use in softplus.
-            sparse_dc_gradients: Whether to sparsify the gradients in DC by using torch.where()
-                with the mask: this essentially removes gradients for the policy on unsampled rows.
+            slope: Slope to use for sigmoid in LOUPE and Policy forward, or
+                beta to use in softplus.
+            sparse_dc_gradients: Whether to sparsify the gradients in DC by
+                using torch.where() with the mask: this essentially removes
+                gradients for the policy on unsampled rows.
             straight_through_slope: Slope to use in Straight Through estimator.
-            st_clamp: Whether to clamp gradients between -1 and 1 in straight through estimator.
-            policy_fc_size: int, size of fully connected layers in Policy architecture.
-            policy_drop_prob: float, dropout probability of convolutional layers in Policy.
-            policy_num_fc_layers: int, number of fully-connected layers to apply after the convolutional layers in the
-                policy.
-            policy_activation: str, "leakyrelu" or "elu". Activation function to use between fully-connected layers in
-                the policy. Only used if policy_num_fc_layers > 1.
+            st_clamp: Whether to clamp gradients between -1 and 1 in straight
+                through estimator.
+            policy_fc_size: int, size of fully connected layers in Policy
+                architecture.
+            policy_drop_prob: float, dropout probability of convolutional
+                layers in Policy.
+            policy_num_fc_layers: int, number of fully-connected layers to
+                apply after the convolutional layers in the policy.
+            policy_activation: str, "leakyrelu" or "elu". Activation function
+                to use between fully-connected layers in the policy. Only used
+                if policy_num_fc_layers > 1.
         """
         super().__init__()
         self.save_hyperparameters()
@@ -159,7 +167,7 @@ class ActiveVarNetModule(MriModule):
         self.TrainMargDist = DistributedArraySum()
         self.TrainCondEnt = DistributedMetricSum()
 
-        self.varnet = ActiveVarNet(
+        self.varnet = AdaptiveVarNet(
             num_cascades=self.num_cascades,
             sens_chans=self.sens_chans,
             sens_pools=self.sens_pools,

@@ -18,7 +18,7 @@ from .policy import LOUPEPolicy, StraightThroughPolicy
 from .varnet import NormUnet
 
 
-class ActiveSensitivityModel(nn.Module):
+class AdaptiveSensitivityModel(nn.Module):
     """
     Model for learning sensitivity estimation from k-space data.
 
@@ -117,10 +117,10 @@ class ActiveSensitivityModel(nn.Module):
         return x
 
 
-class ActiveVarNet(nn.Module):
+class AdaptiveVarNet(nn.Module):
     """
-    A full active variational network model. This model uses a policy to do
-    end-to-end active acquisition and reconstruction.
+    A full adaptive variational network model. This model uses a policy to do
+    end-to-end adaptive acquisition and reconstruction.
 
     This model applies a combination of soft data consistency with a U-Net
     regularizer. To use non-U-Net regularizers, use VarNetBlock.
@@ -225,12 +225,12 @@ class ActiveVarNet(nn.Module):
         self.policy_num_fc_layers = policy_num_fc_layers
         self.policy_activation = policy_activation
 
-        self.sens_net = ActiveSensitivityModel(
+        self.sens_net = AdaptiveSensitivityModel(
             sens_chans, sens_pools, num_sense_lines=num_sense_lines
         )
         self.cascades = nn.ModuleList(
             [
-                ActiveVarNetBlock(
+                AdaptiveVarNetBlock(
                     NormUnet(chans, pools),
                     hard_dc=hard_dc,
                     dc_mode=dc_mode,
@@ -240,7 +240,7 @@ class ActiveVarNet(nn.Module):
             ]
         )
 
-        # LOUPE or active policies
+        # LOUPE or adaptive policies
         if self.loupe_mask:
             assert isinstance(self.num_actions, int)
             self.loupe = LOUPEPolicy(
@@ -431,7 +431,7 @@ class ActiveVarNet(nn.Module):
         )
 
 
-class ActiveVarNetBlock(nn.Module):
+class AdaptiveVarNetBlock(nn.Module):
     """
     Model block for adaptive end-to-end variational network.
 

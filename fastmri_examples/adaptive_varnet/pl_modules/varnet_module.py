@@ -16,8 +16,7 @@ import torch.nn as nn
 from fastmri import evaluate
 from fastmri.data import transforms
 from fastmri.data.transforms import VarNetSample
-from fastmri.models.adaptive_varnet import (AdaptiveSensitivityModel,
-                                            AdaptiveVarNetBlock)
+from fastmri.models.adaptive_varnet import AdaptiveSensitivityModel, AdaptiveVarNetBlock
 from fastmri.models.varnet import NormUnet
 from fastmri.pl_modules.mri_module import DistributedMetricSum, MriModule
 

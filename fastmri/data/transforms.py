@@ -235,7 +235,7 @@ def normalize(
 
 def normalize_instance(
     data: torch.Tensor, eps: Union[float, torch.Tensor] = 0.0
-) -> Tuple[torch.Tensor, Union[torch.Tensor], Union[torch.Tensor]]:
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Normalize the given tensor  with instance norm/
 

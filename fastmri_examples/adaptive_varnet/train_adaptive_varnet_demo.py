@@ -17,9 +17,10 @@ import torch
 import wandb
 from fastmri.data.mri_data import fetch_dir
 from fastmri.data.transforms import MiniCoilTransform, VarNetDataTransform
-from fastmri.pl_modules import AdaptiveVarNetModule, FastMriDataModule, VarNetModule
+from fastmri.pl_modules import FastMriDataModule
 from pytorch_lightning.callbacks import Callback
 
+from pl_modules import AdaptiveVarNetModule, VarNetModule
 from subsample import create_mask_for_mask_type
 
 

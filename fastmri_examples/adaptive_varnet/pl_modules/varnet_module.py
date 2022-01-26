@@ -7,40 +7,144 @@ LICENSE file in the root directory of this source tree.
 
 from argparse import ArgumentParser
 from collections import defaultdict
-from typing import Tuple
-
-import numpy as np
-import pytorch_lightning as pl
-import torch
+from typing import Optional
 
 import fastmri
+import numpy as np
+import torch
+import torch.nn as nn
 from fastmri import evaluate
 from fastmri.data import transforms
-from fastmri.models import AdaptiveVarNet
+from fastmri.data.transforms import VarNetSample
+from fastmri.models.adaptive_varnet import (AdaptiveSensitivityModel,
+                                            AdaptiveVarNetBlock)
+from fastmri.models.varnet import NormUnet
+from fastmri.pl_modules.mri_module import DistributedMetricSum, MriModule
 
-from .mri_module import DistributedMetricSum, MriModule
-
-
-class DistributedArraySum(pl.metrics.Metric):
-    def __init__(self, dist_sync_on_step=True):
-        super().__init__(dist_sync_on_step=dist_sync_on_step)
-
-        self.add_state("quantity", default=torch.zeros(1), dist_reduce_fx="sum")
-
-    def update(self, batch: torch.Tensor):  # type: ignore
-        if self.quantity.shape == torch.Size([1]):  # type: ignore
-            self.quantity = self.quantity.expand(batch.shape[0]).clone()  # type: ignore
-        self.quantity += batch.to(self.quantity.device)
-
-    def compute(self):
-        return self.quantity
+from .metrics import DistributedArraySum
 
 
-class AdaptiveVarNetModule(MriModule):
+class VarNet(nn.Module):
     """
-    Adaptive VarNet training module.
+    A full variational network model.
+    This model applies a combination of soft data consistency with a U-Net
+    regularizer. To use non-U-Net regularizers, use VarNetBlock.
+    """
 
-    This can be used to train adaptive variational models.
+    def __init__(
+        self,
+        num_cascades: int = 12,
+        sens_chans: int = 8,
+        sens_pools: int = 4,
+        chans: int = 18,
+        pools: int = 4,
+        num_sense_lines: Optional[int] = None,
+        hard_dc: bool = False,
+        dc_mode: str = "simul",
+        sparse_dc_gradients: bool = True,
+    ):
+        """
+        Args:
+            num_cascades: Number of cascades (i.e., layers) for variational
+                network.
+            sens_chans: Number of channels for sensitivity map U-Net.
+            sens_pools Number of downsampling and upsampling layers for
+                sensitivity map U-Net.
+            chans: Number of channels for cascade U-Net.
+            pools: Number of downsampling and upsampling layers for cascade
+                U-Net.
+            num_sense_lines: Number of low-frequency lines to use for
+                sensitivity map computation, must be even or `None`. Default
+                `None` will automatically compute the number from masks.
+                Default behaviour may cause some slices to use more
+                low-frequency lines than others, when used in conjunction with
+                e.g. the EquispacedMaskFunc defaults.
+            hard_dc: Whether to do hard DC layers instead of soft (learned).
+            dc_mode: str, whether to do DC before ('first'), after ('last') or
+                simultaneously ('simul') with Refinement step. Default 'simul'.
+            sparse_dc_gradients: Whether to sparsify the gradients in DC by
+                using torch.where() with the mask: this essentially removes
+                gradients for the policy on unsampled rows. This should change
+                nothing for the non-active VarNet.
+        """
+        super().__init__()
+
+        self.num_sense_lines = num_sense_lines
+        self.hard_dc = hard_dc
+        self.dc_mode = dc_mode
+
+        self.sparse_dc_gradients = sparse_dc_gradients
+
+        self.sens_net = AdaptiveSensitivityModel(
+            sens_chans, sens_pools, num_sense_lines=num_sense_lines
+        )
+        self.cascades = nn.ModuleList(
+            [
+                AdaptiveVarNetBlock(
+                    NormUnet(chans, pools),
+                    hard_dc=hard_dc,
+                    dc_mode=dc_mode,
+                    sparse_dc_gradients=sparse_dc_gradients,
+                )
+                for _ in range(num_cascades)
+            ]
+        )
+
+    def forward(
+        self, kspace: torch.Tensor, masked_kspace: torch.Tensor, mask: torch.Tensor
+    ):
+
+        extra_outputs = defaultdict(list)
+
+        sens_maps = self.sens_net(masked_kspace, mask)
+        extra_outputs["sense"].append(sens_maps.detach().cpu())
+
+        kspace_pred = masked_kspace.clone()
+
+        extra_outputs["masks"].append(mask.detach().cpu())
+        # Store current reconstruction
+        current_recon = fastmri.complex_abs(
+            self.sens_reduce(masked_kspace, sens_maps)
+        ).squeeze(1)
+        extra_outputs["recons"].append(current_recon.detach().cpu())
+
+        for cascade in self.cascades:
+            kspace_pred = cascade(
+                kspace_pred, masked_kspace, mask, sens_maps, kspace=kspace
+            )
+
+            # Store current reconstruction
+            current_recon = fastmri.complex_abs(
+                self.sens_reduce(masked_kspace, sens_maps)
+            ).squeeze(1)
+
+            extra_outputs["recons"].append(current_recon.detach().cpu())
+
+        # Could presumably do complex_abs(complex_rss()) instead and get same result?
+        output = fastmri.rss(fastmri.complex_abs(fastmri.ifft2c(kspace_pred)), dim=1)
+        return output, extra_outputs
+
+    def sens_reduce(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
+        x = fastmri.ifft2c(x)
+        return fastmri.complex_mul(x, fastmri.complex_conj(sens_maps)).sum(
+            dim=1, keepdim=True
+        )
+
+
+class VarNetModule(MriModule):
+    """
+    VarNet training module.
+
+    This can be used to train variational networks from the paper:
+
+    A. Sriram et al. End-to-end variational networks for accelerated MRI
+    reconstruction. In International Conference on Medical Image Computing and
+    Computer-Assisted Intervention, 2020.
+
+    which was inspired by the earlier paper:
+
+    K. Hammernik et al. Learning a variational network for reconstruction of
+    accelerated MRI data. Magnetic Resonance inMedicine, 79(6):3055–3071, 2018.
     """
 
     def __init__(
@@ -54,23 +158,10 @@ class AdaptiveVarNetModule(MriModule):
         lr_step_size: int = 40,
         lr_gamma: float = 0.1,
         weight_decay: float = 0.0,
-        budget: int = 22,
-        cascades_per_policy: int = 1,
-        loupe_mask: bool = False,
-        use_softplus: bool = True,
-        crop_size: Tuple[int, int] = (128, 128),
-        num_actions: int = None,
         num_sense_lines: int = None,
         hard_dc: bool = False,
         dc_mode: str = "simul",
-        slope: float = 10,
         sparse_dc_gradients: bool = True,
-        straight_through_slope: float = 10,
-        st_clamp: bool = False,
-        policy_fc_size: int = 256,
-        policy_drop_prob: float = 0.0,
-        policy_num_fc_layers: int = 3,
-        policy_activation: str = "leakyrelu",
         **kwargs,
     ):
         """
@@ -87,41 +178,17 @@ class AdaptiveVarNetModule(MriModule):
             lr_step_size: Learning rate step size.
             lr_gamma: Learning rate gamma decay.
             weight_decay: Parameter for penalizing weights norm.
-            budget: Number of adaptive acquisitions to perform, if doing adaptive
-                acquisition.
-            cascades_per_policy: How many cascades to use per policy step.
-            loupe_mask: Whether to use LOUPE-like mask instead of equispaced
-                (still keeps center lines).
-            use_softplus: Whether to use softplus or sigmoid in LOUPE.
-            crop_size: tuple, crop size of MR images.
-            num_actions: Number of possible actions to sample (=image width). Used
-                only when loupe_mask is True.
-            num_sense_lines: Number of low-frequency lines to use for
-                sensitivity map computation, must be even or `None`. Default
-                `None` will automatically compute the number from masks.
-                Default behaviour may cause some slices to use more
-                low-frequency lines than others, when used in conjunction with
+            num_sense_lines: Number of low-frequency lines to use for sensitivity map
+                computation, must be even or `None`. Default `None` will automatically
+                compute the number from masks. Default behaviour may cause some slices to
+                use more low-frequency lines than others, when used in conjunction with
                 e.g. the EquispacedMaskFunc defaults.
             hard_dc: Whether to do hard DC layers instead of soft (learned).
             dc_mode: str, whether to do DC before ('first'), after ('last') or
                 simultaneously ('simul') with Refinement step. Default 'simul'.
-            slope: Slope to use for sigmoid in LOUPE and Policy forward, or
-                beta to use in softplus.
-            sparse_dc_gradients: Whether to sparsify the gradients in DC by
-                using torch.where() with the mask: this essentially removes
-                gradients for the policy on unsampled rows.
-            straight_through_slope: Slope to use in Straight Through estimator.
-            st_clamp: Whether to clamp gradients between -1 and 1 in straight
-                through estimator.
-            policy_fc_size: int, size of fully connected layers in Policy
-                architecture.
-            policy_drop_prob: float, dropout probability of convolutional
-                layers in Policy.
-            policy_num_fc_layers: int, number of fully-connected layers to
-                apply after the convolutional layers in the policy.
-            policy_activation: str, "leakyrelu" or "elu". Activation function
-                to use between fully-connected layers in the policy. Only used
-                if policy_num_fc_layers > 1.
+            sparse_dc_gradients: Whether to sparsify the gradients in DC by using torch.where()
+                with the mask: this essentially removes gradients for the policy on unsampled rows. This should
+                change nothing for the non-active VarNet.
         """
         super().__init__()
         self.save_hyperparameters()
@@ -135,25 +202,10 @@ class AdaptiveVarNetModule(MriModule):
         self.lr_step_size = lr_step_size
         self.lr_gamma = lr_gamma
         self.weight_decay = weight_decay
-        self.budget = budget
-        self.cascades_per_policy = cascades_per_policy
-        self.loupe_mask = loupe_mask
-        self.use_softplus = use_softplus
-        self.crop_size = crop_size
-        self.num_actions = num_actions
         self.num_sense_lines = num_sense_lines
         self.hard_dc = hard_dc
         self.dc_mode = dc_mode
-
-        self.slope = slope
         self.sparse_dc_gradients = sparse_dc_gradients
-        self.straight_through_slope = straight_through_slope
-        self.st_clamp = st_clamp
-
-        self.policy_fc_size = policy_fc_size
-        self.policy_drop_prob = policy_drop_prob
-        self.policy_num_fc_layers = policy_num_fc_layers
-        self.policy_activation = policy_activation
 
         # logging functions
         self.ValMargDist = DistributedArraySum()
@@ -167,57 +219,40 @@ class AdaptiveVarNetModule(MriModule):
         self.TrainMargDist = DistributedArraySum()
         self.TrainCondEnt = DistributedMetricSum()
 
-        self.varnet = AdaptiveVarNet(
+        self.varnet = VarNet(
             num_cascades=self.num_cascades,
             sens_chans=self.sens_chans,
             sens_pools=self.sens_pools,
             chans=self.chans,
             pools=self.pools,
-            budget=self.budget,
-            cascades_per_policy=self.cascades_per_policy,
-            loupe_mask=self.loupe_mask,
-            use_softplus=self.use_softplus,
-            num_actions=self.num_actions,
             num_sense_lines=self.num_sense_lines,
             hard_dc=self.hard_dc,
             dc_mode=self.dc_mode,
-            slope=self.slope,
             sparse_dc_gradients=self.sparse_dc_gradients,
-            st_clamp=self.st_clamp,
-            policy_fc_size=self.policy_fc_size,
-            policy_drop_prob=self.policy_drop_prob,
-            policy_num_fc_layers=self.policy_num_fc_layers,
-            policy_activation=self.policy_activation,
         )
 
         self.loss = fastmri.SSIMLoss()
 
-    def forward(self, kspace, masked_kspace, mask, fname, slice_num):
-        return self.varnet(kspace, masked_kspace, mask, fname, slice_num)
-
-    def compute_loss(self, output, target, max_value):
-        base_loss = self.loss(
-            output.unsqueeze(1), target.unsqueeze(1), data_range=max_value
-        )
-        return base_loss
+    def forward(self, kspace, masked_kspace, mask):
+        return self.varnet(kspace, masked_kspace, mask)
 
     def training_step(self, batch, batch_idx):
-        kspace, masked_kspace, mask, target, fname, slice_num, max_value, _ = batch
+        output, extra_outputs = self(batch.kspace, batch.masked_kspace, batch.mask)
 
-        output, extra_outputs = self(kspace, masked_kspace, mask, fname, slice_num)
-
-        target, output = transforms.center_crop_to_smallest(target, output)
-
-        loss = self.compute_loss(output, target, max_value)
+        target, output = transforms.center_crop_to_smallest(batch.target, output)
+        # NOTE: Using max value here...
+        loss = self.loss(
+            output.unsqueeze(1), target.unsqueeze(1), data_range=batch.max_value
+        )
 
         self.log("train_loss", loss)
 
         # Return same stuff as on validation step here
         return {
             "batch_idx": batch_idx,
-            "fname": fname,
-            "slice_num": slice_num,
-            "max_value": max_value,
+            "fname": batch.fname,
+            "slice_num": batch.slice_num,
+            "max_value": batch.max_value,
             "output": output,
             "target": target,
             "loss": loss,
@@ -248,24 +283,6 @@ class AdaptiveVarNetModule(MriModule):
             train_logs["target"] = train_logs["target"].unsqueeze(0)
         elif train_logs["target"].ndim != 3:
             raise RuntimeError("Unexpected output size from training_step.")
-
-        # Get marginal and conditional distribution
-        # Doing this here will probably lead to overcounting some
-        #  slice wrt to others, but the only way to solve this is to
-        #  do it at epoch end, which requires storing a lot of results.
-        if "prob_masks" in train_logs["extra_outputs"]:
-            assert self.budget is not None
-            # Only log last prob_mask
-            # N11W1
-            prob_masks = train_logs["extra_outputs"]["prob_masks"][-1]
-            if len(train_logs["extra_outputs"]["prob_masks"]) == 1:
-                budget = self.budget
-            else:  # multiple policies use only last budget for normalisation
-                budget = self.varnet.policies[-1].budget
-            prob_masks = prob_masks[:, 0, 0, :, 0] / budget
-            self.TrainMargDist(prob_masks.sum(dim=0))
-            cond_ents = torch.sum(-1 * prob_masks * torch.log(prob_masks + 1e-8), dim=1)
-            self.TrainCondEnt(cond_ents.sum(dim=0))
 
         # compute evaluation metrics
         mse_vals = defaultdict(dict)
@@ -298,22 +315,22 @@ class AdaptiveVarNetModule(MriModule):
         }
 
     def validation_step(self, batch, batch_idx):
-        kspace, masked_kspace, mask, target, fname, slice_num, max_value, _ = batch
-
-        output, extra_outputs = self(kspace, masked_kspace, mask, fname, slice_num)
-
-        target, output = transforms.center_crop_to_smallest(target, output)
-
-        loss = self.compute_loss(output, target, max_value)
-
+        batch: VarNetSample
+        output, extra_outputs = self.forward(
+            batch.kspace, batch.masked_kspace, batch.mask
+        )
+        target, output = transforms.center_crop_to_smallest(batch.target, output)
+        # NOTE: Using max value here...
         return {
             "batch_idx": batch_idx,
-            "fname": fname,
-            "slice_num": slice_num,
-            "max_value": max_value,
+            "fname": batch.fname,
+            "slice_num": batch.slice_num,
+            "max_value": batch.max_value,
             "output": output,
             "target": target,
-            "val_loss": loss,
+            "val_loss": self.loss(
+                output.unsqueeze(1), target.unsqueeze(1), data_range=batch.max_value
+            ),
             "extra_outputs": extra_outputs,
         }
 
@@ -327,7 +344,6 @@ class AdaptiveVarNetModule(MriModule):
             "output",
             "target",
             "val_loss",
-            "extra_outputs",
         ):
             if k not in val_logs.keys():
                 raise RuntimeError(
@@ -368,24 +384,6 @@ class AdaptiveVarNetModule(MriModule):
                 self.log_image(f"{key}/reconstruction", output)
                 self.log_image(f"{key}/error", error)
 
-        # Get marginal and conditional distribution
-        # Doing this here will probably lead to overcounting some
-        #  slice wrt to others, but the only way to solve this is to
-        #  do it at epoch end, which requires storing a lot of results.
-        if "prob_masks" in val_logs["extra_outputs"]:
-            assert self.budget is not None
-            # Only log last prob_mask
-            # N11W1
-            prob_masks = val_logs["extra_outputs"]["prob_masks"][-1]
-            if len(val_logs["extra_outputs"]["prob_masks"]) == 1:
-                budget = self.budget
-            else:  # multiple policies use only last budget for normalisation
-                budget = self.varnet.policies[-1].budget
-            prob_masks = prob_masks[:, 0, 0, :, 0] / budget
-            self.ValMargDist(prob_masks.sum(dim=0))
-            cond_ents = torch.sum(-1 * prob_masks * torch.log(prob_masks + 1e-8), dim=1)
-            self.ValCondEnt(cond_ents.sum(dim=0))
-
         # compute evaluation metrics
         mse_vals = defaultdict(dict)
         target_norms = defaultdict(dict)
@@ -417,11 +415,10 @@ class AdaptiveVarNetModule(MriModule):
         }
 
     def test_step(self, batch, batch_idx):
-        kspace, masked_kspace, mask, target, fname, slice_num, _, crop_size = batch
-
-        output, extra_outputs = self(kspace, masked_kspace, mask, fname, slice_num)
-
+        kspace, masked_kspace, mask, _, fname, slice_num, _, crop_size = batch
         crop_size = crop_size[0]  # always have a batch size of 1 for varnet
+
+        output, extra_outputs = self(kspace, masked_kspace, mask)
 
         # check for FLAIR 203
         if output.shape[-1] < crop_size[1]:

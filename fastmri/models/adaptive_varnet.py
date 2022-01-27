@@ -324,8 +324,6 @@ class AdaptiveVarNet(nn.Module):
         kspace: torch.Tensor,
         masked_kspace: torch.Tensor,
         mask: torch.Tensor,
-        fname: torch.Tensor,
-        slice_id: torch.Tensor,
     ):
 
         extra_outputs = defaultdict(list)

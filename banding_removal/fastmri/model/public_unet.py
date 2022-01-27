@@ -16,17 +16,7 @@ class ConvBlock(nn.Module):
     instance normalization, relu activation and dropout.
     """
 
-    def __init__(
-        self,
-        in_chans,
-        out_chans,
-        drop_prob,
-        variant=None,
-        ks=3,
-        pad=1,
-        dil=1,
-        num_group=1,
-    ):
+    def __init__(self, in_chans, out_chans, drop_prob, variant=None, ks=3, pad=1, dil=1, num_group=1):
         """
         Args:
             in_chans (int): Number of channels in the input.
@@ -44,38 +34,24 @@ class ConvBlock(nn.Module):
         self.drop_prob = drop_prob
         self.variant = variant
 
-        if variant == "dense":
-            self.out_chans1 = out_chans // 2
-            self.out_chans2 = out_chans - out_chans // 2
-        elif variant == "res":
-            self.out_chans2 = out_chans - min(in_chans, out_chans // 2)
+        if variant == 'dense':
+            self.out_chans1 = out_chans//2
+            self.out_chans2 = out_chans - out_chans//2
+        elif variant == 'res':
+            self.out_chans2 = out_chans - min(in_chans, out_chans//2)
 
         self.layer1 = nn.Sequential(
-            nn.Conv2d(
-                in_chans,
-                self.out_chans1,
-                kernel_size=ks,
-                padding=pad,
-                dilation=dil,
-                groups=num_group,
-            ),
+            nn.Conv2d(in_chans, self.out_chans1, kernel_size=ks, padding=pad, dilation=dil, groups=num_group),
             nn.InstanceNorm2d(out_chans),
             nn.ReLU(),
-            nn.Dropout2d(drop_prob),
+            nn.Dropout2d(drop_prob)
         )
 
         self.layer2 = nn.Sequential(
-            nn.Conv2d(
-                self.out_chans1,
-                self.out_chans2,
-                kernel_size=ks,
-                padding=pad,
-                dilation=dil,
-                groups=num_group,
-            ),
+            nn.Conv2d(self.out_chans1, self.out_chans2, kernel_size=ks, padding=pad, dilation=dil, groups=num_group),
             nn.InstanceNorm2d(out_chans),
             nn.ReLU(),
-            nn.Dropout2d(drop_prob),
+            nn.Dropout2d(drop_prob)
         )
 
     def forward(self, input):
@@ -88,20 +64,16 @@ class ConvBlock(nn.Module):
         x1 = self.layer1(input)
         x2 = self.layer2(x1)
 
-        if self.variant == "dense":
+        if self.variant == 'dense':
             return torch.cat((x2, x1), 1)
-        elif self.variant == "res":
-            return torch.cat(
-                (x2, input[:, : min(self.in_chans, self.out_chans1 // 2)]), 1
-            )
+        elif self.variant == 'res':
+            return torch.cat((x2, input[:, :min(self.in_chans, self.out_chans1//2)]), 1)
         else:
             return x2
 
     def __repr__(self):
-        return (
-            f"ConvBlock(in_chans={self.in_chans}, out_chans1={self.out_chans1}, out_chans2={self.out_chans2} "
-            f"drop_prob={self.drop_prob}, variant={self.variant})"
-        )
+        return f'ConvBlock(in_chans={self.in_chans}, out_chans1={self.out_chans1}, out_chans2={self.out_chans2} ' \
+               f'drop_prob={self.drop_prob}, variant={self.variant})'
 
 
 class UnetModel(nn.Module):
@@ -114,19 +86,7 @@ class UnetModel(nn.Module):
         computing and computer-assisted intervention, pages 234–241. Springer, 2015.
     """
 
-    def __init__(
-        self,
-        in_chans,
-        out_chans,
-        chans,
-        num_pool_layers,
-        drop_prob,
-        variant=None,
-        kernel_size=3,
-        padding=1,
-        dilation=1,
-        groups=1,
-    ):
+    def __init__(self, in_chans, out_chans, chans, num_pool_layers, drop_prob, variant=None, kernel_size=3, padding=1, dilation=1, groups=1):
         """
         Args:
             in_chans (int): Number of channels in the input to the U-Net model.
@@ -143,73 +103,18 @@ class UnetModel(nn.Module):
         self.num_pool_layers = num_pool_layers
         self.drop_prob = drop_prob
 
-        self.down_sample_layers = nn.ModuleList(
-            [
-                ConvBlock(
-                    in_chans,
-                    chans,
-                    drop_prob,
-                    variant=variant,
-                    ks=kernel_size,
-                    pad=padding,
-                    dil=dilation,
-                    num_group=groups,
-                )
-            ]
-        )
+        self.down_sample_layers = nn.ModuleList([ConvBlock(in_chans, chans, drop_prob, variant=variant, ks=kernel_size, pad=padding, dil=dilation, num_group=groups)])
         ch = chans
         for i in range(num_pool_layers - 1):
-            self.down_sample_layers += [
-                ConvBlock(
-                    ch,
-                    ch * 2,
-                    drop_prob,
-                    variant=variant,
-                    ks=kernel_size,
-                    pad=padding,
-                    dil=dilation,
-                    num_group=groups,
-                )
-            ]
+            self.down_sample_layers += [ConvBlock(ch, ch * 2, drop_prob, variant=variant, ks=kernel_size, pad=padding, dil=dilation, num_group=groups)]
             ch *= 2
-        self.conv = ConvBlock(
-            ch,
-            ch,
-            drop_prob,
-            variant=variant,
-            ks=kernel_size,
-            pad=padding,
-            dil=dilation,
-            num_group=groups,
-        )
+        self.conv = ConvBlock(ch, ch, drop_prob, variant=variant, ks=kernel_size, pad=padding, dil=dilation, num_group=groups)
 
         self.up_sample_layers = nn.ModuleList()
         for i in range(num_pool_layers - 1):
-            self.up_sample_layers += [
-                ConvBlock(
-                    ch * 2,
-                    ch // 2,
-                    drop_prob,
-                    variant=variant,
-                    ks=kernel_size,
-                    pad=padding,
-                    dil=dilation,
-                    num_group=groups,
-                )
-            ]
+            self.up_sample_layers += [ConvBlock(ch * 2, ch // 2, drop_prob, variant=variant, ks=kernel_size, pad=padding, dil=dilation, num_group=groups)]
             ch //= 2
-        self.up_sample_layers += [
-            ConvBlock(
-                ch * 2,
-                ch,
-                drop_prob,
-                variant=variant,
-                ks=kernel_size,
-                pad=padding,
-                dil=dilation,
-                num_group=groups,
-            )
-        ]
+        self.up_sample_layers += [ConvBlock(ch * 2, ch, drop_prob, variant=variant, ks=kernel_size, pad=padding, dil=dilation, num_group=groups)]
         self.conv2 = nn.Sequential(
             nn.Conv2d(ch, ch // 2, kernel_size=1),
             nn.Conv2d(ch // 2, out_chans, kernel_size=1),
@@ -238,9 +143,7 @@ class UnetModel(nn.Module):
         for layer in self.up_sample_layers:
             downsample_layer = stack.pop()
             layer_size = (downsample_layer.shape[-2], downsample_layer.shape[-1])
-            output = F.interpolate(
-                output, size=layer_size, mode="bilinear", align_corners=False
-            )
+            output = F.interpolate(output, size=layer_size, mode='bilinear', align_corners=False)
             output = torch.cat([output, downsample_layer], dim=1)
             output = layer(output)
 
@@ -259,9 +162,7 @@ def conv(in_channels, out_channels, transpose=False, kernel_size=3):
     if transpose:
         yield nn.ConvTranspose2d(in_channels, out_channels, 2, 2, bias=False)
     else:
-        yield nn.Conv2d(
-            in_channels, out_channels, kernel_size, 1, kernel_size // 2, bias=False
-        )
+        yield nn.Conv2d(in_channels, out_channels, kernel_size, 1, kernel_size // 2, bias=False)
     yield nn.InstanceNorm2d(out_channels)
     yield nn.LeakyReLU(0.2, True)
 
@@ -270,45 +171,17 @@ class UnetModel2(nn.Module):
     def __init__(self, in_chans, out_chans, chans):
         super().__init__()
         c = chans
-        self.layers = nn.ModuleList(
-            [
-                *conv(in_chans, 1 * c),
-                *conv(1 * c, 1 * c),
-                Push(),
-                nn.AvgPool2d(2, 2),
-                *conv(1 * c, 2 * c),
-                *conv(2 * c, 2 * c),
-                Push(),
-                nn.AvgPool2d(2, 2),
-                *conv(2 * c, 4 * c),
-                *conv(4 * c, 4 * c),
-                Push(),
-                nn.AvgPool2d(2, 2),
-                *conv(4 * c, 8 * c),
-                *conv(8 * c, 8 * c),
-                Push(),
-                nn.AvgPool2d(2, 2),
-                *conv(8 * c, 16 * c),
-                *conv(16 * c, 16 * c),
-                *conv(16 * c, 8 * c, transpose=True),
-                Pop(),
-                *conv(16 * c, 8 * c),
-                *conv(8 * c, 8 * c),
-                *conv(8 * c, 4 * c, transpose=True),
-                Pop(),
-                *conv(8 * c, 4 * c),
-                *conv(4 * c, 4 * c),
-                *conv(4 * c, 2 * c, transpose=True),
-                Pop(),
-                *conv(4 * c, 2 * c),
-                *conv(2 * c, 2 * c),
-                *conv(2 * c, 1 * c, transpose=True),
-                Pop(),
-                *conv(2 * c, 1 * c),
-                *conv(1 * c, 1 * c),
-                nn.Conv2d(1 * c, out_chans, 1),
-            ]
-        )
+        self.layers = nn.ModuleList([
+            *conv(in_chans, 1 * c), *conv(1 * c, 1 * c), Push(), nn.AvgPool2d(2, 2),
+            *conv(1 * c, 2 * c), *conv(2 * c, 2 * c), Push(), nn.AvgPool2d(2, 2),
+            *conv(2 * c, 4 * c), *conv(4 * c, 4 * c), Push(), nn.AvgPool2d(2, 2),
+            *conv(4 * c, 8 * c), *conv(8 * c, 8 * c), Push(), nn.AvgPool2d(2, 2),
+            *conv(8 * c, 16 * c), *conv(16 * c, 16 * c), *conv(16 * c, 8 * c, transpose=True), Pop(),
+            *conv(16 * c, 8 * c), *conv(8 * c, 8 * c), *conv(8 * c, 4 * c, transpose=True), Pop(),
+            *conv(8 * c, 4 * c), *conv(4 * c, 4 * c), *conv(4 * c, 2 * c, transpose=True), Pop(),
+            *conv(4 * c, 2 * c), *conv(2 * c, 2 * c), *conv(2 * c, 1 * c, transpose=True), Pop(),
+            *conv(2 * c, 1 * c), *conv(1 * c, 1 * c), nn.Conv2d(1 * c, out_chans, 1),
+        ])
 
     def forward(self, input, *args):
         self.stack = []
@@ -329,5 +202,4 @@ def unet(args):
         out_chans=1,
         chans=args.num_chans,
         num_pool_layers=args.num_pools,
-        drop_prob=args.drop_prob,
-    )
+        drop_prob=args.drop_prob)

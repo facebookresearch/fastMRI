@@ -24,7 +24,6 @@ from fastmri.data import transforms
 from fastmri.common import evaluate
 from fastmri.common import utils
 
-
 class TrainingLoopMixin(object):
     def start_of_batch_hook(self, progress, logging_epoch):
         """ Called at the start of each batch """
@@ -92,11 +91,10 @@ class TrainingLoopMixin(object):
 
         for batch_idx, batch in enumerate(self.train_loader):
             self.batch_idx = batch_idx
-            progress = epoch + batch_idx / nbatches
+            progress = epoch + batch_idx/nbatches
 
-            logging_epoch = batch_idx % args.log_interval == 0 or batch_idx == (
-                nbatches - 1
-            )
+            logging_epoch = (batch_idx % args.log_interval == 0
+                             or batch_idx == (nbatches-1))
 
             self.start_of_batch_hook(progress, logging_epoch)
 
@@ -112,12 +110,12 @@ class TrainingLoopMixin(object):
                 if isinstance(result, tuple):
                     result, prediction, target = result
                 else:
-                    prediction = None  # For backwards compatibility
+                    prediction = None # For backwards compatibility
                     target = None
 
                 if isinstance(result, torch.Tensor):
                     # By default self.training_loss() returns a single tensor
-                    loss_dict = {"train_loss": result}
+                    loss_dict = {'train_loss': result}
                 else:
                     # Perceptual loss will return a dict of losses where the main
                     # loss is 'train_loss'. This is for easily logging the parts
@@ -125,14 +123,13 @@ class TrainingLoopMixin(object):
                     loss_dict = result
 
                 loss_dict, _, _, _ = self.additional_training_loss_terms(
-                    loss_dict, subbatch, prediction, target
-                )
+                                        loss_dict, subbatch, prediction, target)
 
-                loss = loss_dict["train_loss"]
+                loss = loss_dict['train_loss']
 
                 # Memory usage is at its maximum right before backprop
                 if logging_epoch and self.args.cuda:
-                    memory_gb = torch.cuda.memory_allocated() / 1000000000
+                    memory_gb = torch.cuda.memory_allocated()/1000000000
 
                 self.midbatch_hook(progress, logging_epoch)
 
@@ -140,10 +137,8 @@ class TrainingLoopMixin(object):
                 self.backwards(loss)
                 return loss, loss_dict
 
-            if hasattr(self.optimizer, "batch_step"):
-                loss, loss_dict = self.optimizer.batch_step(
-                    batch, batch_closure=batch_closure
-                )
+            if hasattr(self.optimizer, 'batch_step'):
+                loss, loss_dict = self.optimizer.batch_step(batch, batch_closure=batch_closure)
             else:
                 closure = lambda: batch_closure(batch)
                 loss, loss_dict = self.optimizer.step(closure=closure)
@@ -160,50 +155,38 @@ class TrainingLoopMixin(object):
                 if batch_idx == 0:
                     avg_losses[name] = loss_cpu
                 elif batch_idx < 50:
-                    avg_losses[name] = (batch_idx * avg_losses[name] + loss_cpu) / (
-                        batch_idx + 1
-                    )
+                    avg_losses[name] = (batch_idx*avg_losses[name] + loss_cpu)/(batch_idx+1)
                 else:
-                    avg_losses[name] = 0.99 * avg_losses[name] + 0.01 * loss_cpu
+                    avg_losses[name] = 0.99*avg_losses[name] + 0.01*loss_cpu
 
             losses = {}
             for name in loss_dict:
-                losses["instantaneous_" + name] = loss_dict[name]
-                losses["average_" + name] = avg_losses[name]
+                losses['instantaneous_' + name] = loss_dict[name]
+                losses['average_' + name] = avg_losses[name]
 
-            self.runinfo["train_fnames"].append(batch["fname"])
+            self.runinfo['train_fnames'].append(batch['fname'])
             self.training_loss_hook(progress, losses, logging_epoch)
 
             del losses
 
             if logging_epoch:
                 mid = timer()
-                new_percent_done = 100.0 * batch_idx / nbatches
+                new_percent_done = 100. * batch_idx / nbatches
                 percent_change = new_percent_done - percent_done
                 percent_done = new_percent_done
                 if percent_done > 0:
-                    inst_estimate = math.ceil((mid - interval) / (percent_change / 100))
+                    inst_estimate =  math.ceil((mid - interval)/(percent_change/100))
                     inst_estimate = str(datetime.timedelta(seconds=inst_estimate))
                 else:
                     inst_estimate = "unknown"
 
-                logging.info(
-                    "Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}, inst: {} Mem: {:2.1f}gb".format(
-                        epoch,
-                        batch_idx,
-                        nbatches,
-                        100.0 * batch_idx / nbatches,
-                        loss.item(),
-                        inst_estimate,
-                        memory_gb,
-                    )
-                )
+                logging.info('Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}, inst: {} Mem: {:2.1f}gb'.format(
+                    epoch, batch_idx, nbatches,
+                    100. * batch_idx / nbatches, loss.item(), inst_estimate,
+                    memory_gb))
                 interval = mid
 
-                if (
-                    self.args.break_early is not None
-                    and percent_done >= self.args.break_early
-                ):
+                if self.args.break_early is not None and percent_done >= self.args.break_early:
                     break
 
             if self.args.debug_epoch:
@@ -213,7 +196,7 @@ class TrainingLoopMixin(object):
         """ Overriden when doing distributed training """
         losses = self.compute_stats(epoch, loader, setname)
         self.test_loss_hook(losses)
-        logging.info(f"Epoch: {epoch}. losses: {losses}")
+        logging.info(f'Epoch: {epoch}. losses: {losses}')
         return losses["NMSE"]
 
     #####################################################
@@ -228,7 +211,7 @@ class TrainingLoopMixin(object):
         acquisition_machine_by_fname = dict()
         with torch.no_grad():
             for batch_idx, batch in enumerate(self.dev_loader):
-                progress = epoch + batch_idx / ndevbatches
+                progress = epoch + batch_idx/ndevbatches
                 logging_epoch = batch_idx % args.log_interval == 0
                 logging_epoch_info = batch_idx % (2 * args.log_interval) == 0
                 log = logging.info if logging_epoch_info else logging.debug
@@ -243,23 +226,17 @@ class TrainingLoopMixin(object):
 
                 for i in range(output.shape[0]):
                     slice_cpu = slice[i].item()
-                    recons[fname[i]].append(
-                        (slice_cpu, output[i].float().cpu().numpy())
-                    )
+                    recons[fname[i]].append((slice_cpu, output[i].float().cpu().numpy()))
                     gts[fname[i]].append((slice_cpu, target[i].float().cpu().numpy()))
 
-                    acquisition_type = batch.attrs_dict["acquisition"][i]
-                    machine_type = batch.attrs_dict["system"][i]
-                    acquisition_machine_by_fname[fname[i]] = (
-                        machine_type + "_" + acquisition_type
-                    )
+                    acquisition_type = batch.attrs_dict['acquisition'][i]
+                    machine_type = batch.attrs_dict['system'][i]
+                    acquisition_machine_by_fname[fname[i]] = machine_type + '_' + acquisition_type
 
-                if logging_epoch or batch_idx == ndevbatches - 1:
-                    gpu_memory_gb = torch.cuda.memory_allocated() / 1000000000
+                if logging_epoch or batch_idx == ndevbatches-1:
+                    gpu_memory_gb = torch.cuda.memory_allocated()/1000000000
                     host_memory_gb = utils.host_memory_usage_in_gb()
-                    log(
-                        f"Evaluated {batch_idx+1} of {ndevbatches} (GPU Mem: {gpu_memory_gb:2.3f}gb Host Mem: {gpu_memory_gb:2.3f}gb)"
-                    )
+                    log(f"Evaluated {batch_idx+1} of {ndevbatches} (GPU Mem: {gpu_memory_gb:2.3f}gb Host Mem: {gpu_memory_gb:2.3f}gb)")
                     sys.stdout.flush()
 
                 if self.args.debug_epoch_stats:
@@ -296,9 +273,9 @@ class TrainingLoopMixin(object):
                 del recons[fname], gts[fname]
 
             if len(nmse) == 0:
-                nmse.append(0)
-                ssims.append(0)
-                psnr.append(0)
+               nmse.append(0)
+               ssims.append(0)
+               psnr.append(0)
 
             min_vol_ssim = np.argmin(ssims)
             min_vol = str(recon_keys[min_vol_ssim])
@@ -307,22 +284,19 @@ class TrainingLoopMixin(object):
 
             del recons, gts
 
-            acquisition_machine_losses = dict.fromkeys(
-                self.dev_data.system_acquisitions, 0
-            )
+            acquisition_machine_losses = dict.fromkeys(self.dev_data.system_acquisitions, 0)
             for key, value in ssim_for_acquisition_machine.items():
                 acquisition_machine_losses[key] = np.mean(value)
 
-            losses = {
-                "NMSE": np.mean(nmse),
-                "PSNR": np.mean(psnr),
-                "SSIM": np.mean(ssims),
-                "SSIM_var": np.var(ssims),
-                "SSIM_min": np.min(ssims),
-                **acquisition_machine_losses,
-            }
+            losses = {'NMSE': np.mean(nmse),
+                      'PSNR': np.mean(psnr),
+                      'SSIM': np.mean(ssims),
+                      'SSIM_var': np.var(ssims),
+                      'SSIM_min': np.min(ssims),
+                      **acquisition_machine_losses}
 
         return losses
+
 
     def check_for_nan(self, loss):
         def check(x, desc):

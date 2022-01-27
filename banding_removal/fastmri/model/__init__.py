@@ -10,7 +10,6 @@ import inspect
 import pdb
 import logging
 
-
 def load(name, args):
     logging.info(f"Loading architecture {name}")
     # Split name into file and method name?

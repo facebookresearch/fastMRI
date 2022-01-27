@@ -18,21 +18,19 @@ class TensorboardHandler(logging.Handler):
         self.writer = writer
         self.tag = tag
         super().__init__()
-
     def emit(self, record):
         log_entry = self.format(record)
-        # tag, text_string, global_step=None, walltime=None
+        #tag, text_string, global_step=None, walltime=None
         if self.writer.file_writer is not None:
             self.writer.add_text(self.tag, log_entry)
-
 
 class LoggerWriter:
     def __init__(self, level, stream):
         self.level = level
-        self._stream = stream
+        self._stream = stream 
 
     def write(self, message):
-        if message != "\n":
+        if message != '\n':
             self.level(message)
         self._stream.write(message)
         self._stream.flush()
@@ -40,11 +38,10 @@ class LoggerWriter:
     def flush(self):
         self.level("")
         self._stream.flush()
-
-
+        
 class LoggingMixin(object):
     def initial_setup(self, args):
-        # print(f"Setting up logging, rank: {args.rank}")
+        #print(f"Setting up logging, rank: {args.rank}")
         root = logging.getLogger()
         root.handlers = []
 
@@ -52,27 +49,27 @@ class LoggingMixin(object):
             root.setLevel(logging.DEBUG)
         else:
             root.setLevel(logging.INFO)
-
-        formatter = logging.Formatter("%(asctime)s | %(message)s")
+        
+        formatter = logging.Formatter('%(asctime)s | %(message)s')
 
         # When using distributed training only send a single process to stdout
         if args.rank == 0:
             ch = logging.StreamHandler(sys.stdout)
             ch.setFormatter(formatter)
             root.addHandler(ch)
-
+        
         # send log to a file as well
-        fh = logging.FileHandler(self.exp_dir / f"stdout_{args.rank}.log", "w")
+        fh = logging.FileHandler(self.exp_dir / f'stdout_{args.rank}.log', 'w')
         fh.setFormatter(formatter)
         root.addHandler(fh)
 
         # For debug messages
-        debugh = logging.FileHandler(self.exp_dir / f"debug_{args.rank}.log", "w")
+        debugh = logging.FileHandler(self.exp_dir / f'debug_{args.rank}.log', 'w')
         debugh.setFormatter(formatter)
         debugh.setLevel(logging.DEBUG)
         root.addHandler(debugh)
 
-        self.tensorboard_dir = self.exp_dir / "tensorboard"
+        self.tensorboard_dir = self.exp_dir / 'tensorboard'
 
         if not args.is_distributed:
             shutil.rmtree(str(self.tensorboard_dir), ignore_errors=True)
@@ -100,7 +97,7 @@ class LoggingMixin(object):
             group_idx += 1
             if len(param.shape) >= 2:
                 nlayers += 1
-
+        
         return nparams, nlayers
 
     def model_setup(self, args):
@@ -114,9 +111,7 @@ class LoggingMixin(object):
 
     def add_losses_to_tensorboard(self, losses):
         for loss_key, loss_value in losses.items():
-            self.tensorboard.add_scalar(
-                loss_key, loss_value, global_step=self.global_step
-            )
+            self.tensorboard.add_scalar(loss_key, loss_value, global_step=self.global_step)
 
     def training_loss_hook(self, progress, losses, logging_epoch):
         super().training_loss_hook(progress, losses, logging_epoch)
@@ -129,7 +124,5 @@ class LoggingMixin(object):
     def postrun(self):
         logging.info(f"Tensorboard logs at {self.tensorboard_dir.resolve()}")
         if self.args.rank == 0:
-            self.tensorboard.export_scalars_to_json(
-                self.exp_dir / "json_tensorboard.json"
-            )
+            self.tensorboard.export_scalars_to_json(self.exp_dir / "json_tensorboard.json")
         self.tensorboard.close()

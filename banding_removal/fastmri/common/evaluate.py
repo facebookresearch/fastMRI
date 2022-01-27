@@ -34,10 +34,7 @@ def psnr(gt, pred):
 def ssim(gt, pred):
     """ Compute Structural Similarity Index Metric (SSIM). """
     return structural_similarity(
-        gt.transpose(1, 2, 0),
-        pred.transpose(1, 2, 0),
-        multichannel=True,
-        data_range=gt.max(),
+        gt.transpose(1, 2, 0), pred.transpose(1, 2, 0), multichannel=True, data_range=gt.max()
     )
 
 
@@ -55,25 +52,30 @@ class Metrics:
     """
 
     def __init__(self, metric_funcs):
-        self.metrics = {metric: Statistics() for metric in metric_funcs}
+        self.metrics = {
+            metric: Statistics() for metric in metric_funcs
+        }
 
     def push(self, target, recons):
         for metric, func in METRIC_FUNCS.items():
             self.metrics[metric].push(func(target, recons))
 
     def means(self):
-        return {metric: stat.mean() for metric, stat in self.metrics.items()}
+        return {
+            metric: stat.mean() for metric, stat in self.metrics.items()
+        }
 
     def stddevs(self):
-        return {metric: stat.stddev() for metric, stat in self.metrics.items()}
+        return {
+            metric: stat.stddev() for metric, stat in self.metrics.items()
+        }
 
     def __repr__(self):
         means = self.means()
         stddevs = self.stddevs()
         metric_names = sorted(list(means))
-        return " ".join(
-            f"{name} = {means[name]:.4g} +/- {2 * stddevs[name]:.4g}"
-            for name in metric_names
+        return ' '.join(
+            f'{name} = {means[name]:.4g} +/- {2 * stddevs[name]:.4g}' for name in metric_names
         )
 
 
@@ -82,56 +84,34 @@ def evaluate(args, recons_key):
 
     for tgt_file in args.target_path.iterdir():
         with h5py.File(tgt_file) as target, h5py.File(
-            args.predictions_path / tgt_file.name
-        ) as recons:
-            if args.acquisition and args.acquisition == target.attrs["acquisition"]:
+                args.predictions_path / tgt_file.name) as recons:
+            if args.acquisition and args.acquisition == target.attrs['acquisition']:
                 continue
-            if args.acceleration and args.acceleration == target.attrs["acceleration"]:
+            if args.acceleration and args.acceleration == target.attrs['acceleration']:
                 continue
             target = target[recons_key].value
-            recons = recons["reconstruction"].value
+            recons = recons['reconstruction'].value
             metrics.push(target, recons)
     return metrics
 
 
-if __name__ == "__main__":
-    parser = ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        "--target-path",
-        type=pathlib.Path,
-        required=True,
-        help="Path to the ground truth data",
-    )
-    parser.add_argument(
-        "--predictions-path",
-        type=pathlib.Path,
-        required=True,
-        help="Path to reconstructions",
-    )
-    parser.add_argument(
-        "--challenge",
-        choices=["singlecoil", "multicoil"],
-        required=True,
-        help="Which challenge",
-    )
-    parser.add_argument(
-        "--acquisition",
-        choices=["PD", "PDFS"],
-        default=None,
-        help="If set, only volumes of the specified acquisition type are used "
-        "for evaluation. By default, all volumes are included.",
-    )
-    parser.add_argument(
-        "--acceleration",
-        choices=[4, 8],
-        default=None,
-        help="If set, only volumes of the specified acceleration rate are used "
-        "for evaluation. By default, all volumes are included.",
-    )
+if __name__ == '__main__':
+    parser = ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--target-path', type=pathlib.Path, required=True,
+                        help='Path to the ground truth data')
+    parser.add_argument('--predictions-path', type=pathlib.Path, required=True,
+                        help='Path to reconstructions')
+    parser.add_argument('--challenge', choices=['singlecoil', 'multicoil'], required=True,
+                        help='Which challenge')
+    parser.add_argument('--acquisition', choices=['PD', 'PDFS'], default=None,
+                        help='If set, only volumes of the specified acquisition type are used '
+                             'for evaluation. By default, all volumes are included.')
+    parser.add_argument('--acceleration', choices=[4, 8], default=None,
+                        help='If set, only volumes of the specified acceleration rate are used '
+                             'for evaluation. By default, all volumes are included.')
     args = parser.parse_args()
 
-    recons_key = (
-        "reconstruction_rss" if args.challenge == "multicoil" else "reconstruction_esc"
-    )
+    recons_key = 'reconstruction_rss' if args.challenge == 'multicoil' else 'reconstruction_esc'
     metrics = evaluate(args, recons_key)
     print(metrics)

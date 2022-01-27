@@ -17,20 +17,14 @@ from scipy.linalg import svd
 
 def complex_to_chans(data):
     batch, chans, rows, cols, dims = data.shape
-    result = (
-        data.permute(0, 1, 4, 2, 3).contiguous().view([batch, chans * dims, rows, cols])
-    )
+    result = data.permute(0, 1, 4, 2, 3).contiguous().view([batch, chans * dims, rows, cols])
     return result
 
 
 def chans_to_complex(data):
     batch, chans, rows, cols = data.shape
     assert chans % 2 == 0
-    result = (
-        data.view([batch, chans // 2, 2, rows, cols])
-        .permute(0, 1, 3, 4, 2)
-        .contiguous()
-    )
+    result = data.view([batch, chans // 2, 2, rows, cols]).permute(0, 1, 3, 4, 2).contiguous()
     return result
 
 
@@ -50,7 +44,6 @@ def kspace_dc(pred_kspace, ref_kspace, mask):
 
 def image_dc(pred_image, ref_kspace, mask):
     return T.ifft2(kspace_dc(T.fft2(pred_image), ref_kspace, mask))
-
 
 def to_tensor(data):
     """
@@ -93,13 +86,12 @@ def apply_mask(data, mask_func, seed=None, offset=None, padding=None):
     mask = mask.to(data.device)
 
     if padding is not None:
-        mask[:, :, : padding[0]] = 0
-        mask[:, :, padding[1] :] = 0  # padding value inclusive on right of zeros
+        mask[:, :, :padding[0]] = 0
+        mask[:, :, padding[1]:] = 0 # padding value inclusive on right of zeros
 
-    masked_data = data * mask + 0.0  # The + 0.0 removes the sign of the zeros
+    masked_data = data * mask + 0.0 # The + 0.0 removes the sign of the zeros
 
     return masked_data, mask, num_low_frequencies
-
 
 def apply_mask_tensor(data, mask):
     """
@@ -170,7 +162,6 @@ def irfft2(data):
     data = fftshift(data, dim=(-2, -1))
     return data
 
-
 def fft2_np(data):
     """
     Numpy version of fft2
@@ -190,7 +181,6 @@ def ifft2_np(data):
     data = np.fft.fftshift(data, axes=(-2, -1))
     return data
 
-
 def complex_abs(data):
     """
     Compute the absolute value of a complex valued input tensor.
@@ -205,7 +195,6 @@ def complex_abs(data):
     assert data.size(-1) == 2
     return ((data ** 2).sum(dim=-1) + 0.0).sqrt()
 
-
 def complex_abs_sq(data):
     """
     Compute the squared absolute value of a complex tensor
@@ -213,11 +202,9 @@ def complex_abs_sq(data):
     assert data.size(-1) == 2
     return (data ** 2).sum(dim=-1)
 
-
 def complex_conj(x):
     assert x.shape[-1] == 2
     return torch.stack((x[..., 0], -x[..., 1]), dim=-1)
-
 
 def root_sum_of_squares(data, dim=0):
     """
@@ -232,9 +219,8 @@ def root_sum_of_squares(data, dim=0):
     """
     if data.shape[dim] == 1:
         raise Exception("BUG: RSS called on a dimension of size 1")
-    # return torch.sqrt((data ** 2).sum(dim))
+    #return torch.sqrt((data ** 2).sum(dim))
     return torch.norm(data, dim=dim)
-
 
 def root_sum_of_squares_complex(data, dim=0):
     """
@@ -250,35 +236,34 @@ def root_sum_of_squares_complex(data, dim=0):
     if data.shape[dim] == 1:
         raise Exception("BUG: RSS called on a dimension of size 1")
     # Pytorches norm is more numerically stable for float16 than squaring/sqrt ops
-    # return data.norm(dim=dim).norm(dim=-1)
+    #return data.norm(dim=dim).norm(dim=-1)
     return torch.sqrt(complex_abs_sq(data).sum(dim))
     # a = data.abs().max()
     # xda = data.div(a)
     # return torch.sqrt(xda.pow(2).sum(dim=(-1, dim))).mul(a)
-    # return data.add(1e-4).norm(dim=dim).norm(dim=-1)
+    #return data.add(1e-4).norm(dim=dim).norm(dim=-1)
     # shape = list(data.shape)[:-1]
     # shape[dim] *= 2
     # data_viewed = data.unsqueeze(dim+1).transpose(dim+1, -1).view(shape)
     # a = data_viewed.abs(dim=dim).max(dim=dim, keep_dim=True)
     # xda = data_viewed.div(a)
     # return xda.norm(dim=dim, keep_dim=True).div(a).squeeze(dim=dim)
-    # return torch.sqrt(complex_abs_sq(data.float()).sum(dim)).type_as(data)
+    #return torch.sqrt(complex_abs_sq(data.float()).sum(dim)).type_as(data)
     # def hook(g):
     #     if torch.any(torch.isnan(g)):
     #         pdb.set_trace()
     #         print(g.shape)
-    #     rss.register_hook(hook)
+        #     rss.register_hook(hook)
 
-    # rss = data.float().norm(dim=dim).norm(dim=-1)
-    # rss_half = rss.type_as(data)
+    #rss = data.float().norm(dim=dim).norm(dim=-1)
+    #rss_half = rss.type_as(data)
 
-    # if rss.requires_grad:
+    #if rss.requires_grad:
     #    print(f"in min: {data.min().item()} max: {data.max().item()} var:{data.var().item()}")
     #    print(f"out min: {rss_half.min().item()} max: {rss_half.max().item()} var:{rss_half.var().item()}")
 
-    # return rss_half
+    #return rss_half
     # xda = data.div(a)
-
 
 def center_crop(data, shape):
     """
@@ -334,9 +319,7 @@ def center_crop_or_pad(data, shape):
     w_indices = crop_or_pad_indices(data.shape[-1], shape[-1])
 
     result = torch.zeros(new_shape).to(data.device)
-    result[..., h_indices[0] : h_indices[1], w_indices[0] : w_indices[1]] = data[
-        ..., h_indices[2] : h_indices[3], w_indices[2] : w_indices[3]
-    ]
+    result[..., h_indices[0]:h_indices[1], w_indices[0]:w_indices[1]] = data[..., h_indices[2]:h_indices[3], w_indices[2]:w_indices[3]]
     return result
 
 
@@ -363,7 +346,7 @@ def complex_center_crop(data, shape):
     return data[..., w_from:w_to, h_from:h_to, :]
 
 
-def normalize(data, mean, stddev, eps=0.0):
+def normalize(data, mean, stddev, eps=0.):
     """
     Normalize the given tensor using:
         (data - mean) / (stddev + eps)
@@ -380,49 +363,45 @@ def normalize(data, mean, stddev, eps=0.0):
     return (data - mean) / (stddev + eps)
 
 
-def normalize_instance(data, eps=0.0):
+def normalize_instance(data, eps=0.):
     """
-    Normalize the given tensor using:
-        (data - mean) / (stddev + eps)
-    where mean and stddev are computed from the data itself.
+        Normalize the given tensor using:
+            (data - mean) / (stddev + eps)
+        where mean and stddev are computed from the data itself.
 
-    Args:
-        data (torch.Tensor): Input data to be normalized
-        eps (float): Added to stddev to prevent dividing by zero
+        Args:
+            data (torch.Tensor): Input data to be normalized
+            eps (float): Added to stddev to prevent dividing by zero
 
-    Returns:
-        torch.Tensor: Normalized tensor
-    """
+        Returns:
+            torch.Tensor: Normalized tensor
+        """
     mean = data.mean()
     std = data.std()
     return normalize(data, mean, std, eps), mean, std
 
-
 def complex_scalar_to_tensor(omega):
     """
-    Converts pythons imaginary type to a pytorch tensor
+        Converts pythons imaginary type to a pytorch tensor
     """
     return torch.tensor([omega.real, omega.imag])
-
 
 def complex_conj(data):
     return torch.stack([data[..., 0], -data[..., 1]], dim=-1)
 
 
 def complex_mult(a, b):
-    return torch.stack(
-        [
-            a[..., 0] * b[..., 0] - a[..., 1] * b[..., 1],
-            a[..., 0] * b[..., 1] + a[..., 1] * b[..., 0],
-        ],
-        dim=-1,
-    )
-
+    return torch.stack([
+        a[..., 0] * b[..., 0] - a[..., 1] * b[..., 1],
+        a[..., 0] * b[..., 1] + a[..., 1] * b[..., 0]
+    ], dim=-1)
 
 def complex_mult_real(a, b):
     """ b matrix is real component only """
-    return torch.stack([a[..., 0] * b, a[..., 1] * b], dim=-1)
-
+    return torch.stack([
+        a[..., 0] * b,
+        a[..., 1] * b
+    ], dim=-1)
 
 def complex_conj_mult_real(a, b):
     """ a * conj(b) but returns real channel only """
@@ -431,45 +410,39 @@ def complex_conj_mult_real(a, b):
 
 def complex_conj_mult(a, b):
     """ a * conj(b) """
-    return torch.stack(
-        [
-            a[..., 0] * b[..., 0] + a[..., 1] * b[..., 1],
-            -a[..., 0] * b[..., 1] + a[..., 1] * b[..., 0],
-        ],
-        dim=-1,
-    )
+    return torch.stack([
+        a[..., 0] * b[..., 0] + a[..., 1] * b[..., 1],
+        - a[..., 0] * b[..., 1] + a[..., 1] * b[..., 0]
+    ], dim=-1)
 
-
-def complex_div(a, b):
+def complex_div(a,b):
     """" a / b """
-    return complex_conj_mult(a, b) / (complex_abs_sq(b)[..., None])
-
+    return complex_conj_mult(a,b)/(complex_abs_sq(b)[..., None])
 
 def complex_pack(x):
     """
-    Expects shape: b x c x height x width x 2
-    Returns shape: b x 2c x height x width
+        Expects shape: b x c x height x width x 2
+        Returns shape: b x 2c x height x width
     """
     b, c, h, w, im = x.shape
     assert im == 2
     return x.permute(0, 1, 4, 2, 3).contiguous().view(b, c * im, h, w)
 
-
 def complex_unpack(x):
     """
-    Expects shape: b x 2c x height x width
-    Returns shape: b x c x height x width x 2
+        Expects shape: b x 2c x height x width
+        Returns shape: b x c x height x width x 2
     """
     b, c, h, w = x.shape
     assert c % 2 == 0
-    newc = c // 2
+    newc = c//2
     return x.view(b, newc, 2, h, w).permute(0, 1, 3, 4, 2).contiguous()
 
 
 def complex_packed_to_planar(data):
     """
-    Expects shape: ... x height x width x 2
-    Returns shape: ... x 2 x height x width
+        Expects shape: ... x height x width x 2
+        Returns shape: ... x 2 x height x width
     """
     assert data.shape[-1] == 2
     real = data[..., 0]
@@ -479,8 +452,8 @@ def complex_packed_to_planar(data):
 
 def complex_planar_to_packed(data):
     """
-    Expects shape: ... x 2 x height x width
-    Returns shape: height x width x 2
+        Expects shape: ... x 2 x height x width
+        Returns shape: height x width x 2
     """
     assert data.shape[-3] == 2
     real = data[..., 0, :, :]
@@ -514,7 +487,6 @@ def complex_whiten(complex_image, eps=1e-10):
 
 # Helper functions
 
-
 def roll(x, shift, dim):
     """
     Similar to np.roll but applies to PyTorch Tensors
@@ -530,7 +502,6 @@ def roll(x, shift, dim):
     left = x.narrow(dim=dim, start=0, length=x.size(dim) - shift)
     right = x.narrow(dim=dim, start=x.size(dim) - shift, length=shift)
     return torch.cat((right, left), dim=dim)
-
 
 def fftshift(x, dim=None):
     """
@@ -550,7 +521,7 @@ def mask_center(x, num_lf):
     b, c, h, w, two = x.shape
     mask = torch.zeros_like(x)
     pad = (w - num_lf + 1) // 2
-    mask[:, :, :, pad : pad + num_lf] = x[:, :, :, pad : pad + num_lf]
+    mask[:, :, :, pad:pad + num_lf] = x[:, :, :, pad:pad + num_lf]
     return mask
 
 
@@ -560,25 +531,23 @@ def ifftshift(x, dim=None):
     """
     if dim is None:
         dim = tuple(range(x.dim()))
-        shift = [(dim + 1) // 2 for dim in x.shape]  # TODO: looks wrong
+        shift = [(dim + 1) // 2 for dim in x.shape] #TODO: looks wrong
     elif isinstance(dim, int):
         shift = (x.shape[dim] + 1) // 2
     else:
         shift = [(x.shape[i] + 1) // 2 for i in dim]
     return roll(x, shift, dim)
 
-
 def topolar(x):
-    dim = x.dim() - 1
+    dim = x.dim()-1
     modulus = torch.norm(x, dim=dim)
-    argument = torch.atan2(x[..., 1], x[..., 0])  # Img, real.
+    argument = torch.atan2(x[..., 1], x[..., 0]) # Img, real.
     return torch.stack((modulus, argument), dim=dim)
 
-
 def frompolar(x):
-    dim = x.dim() - 1
-    real = x[..., 0] * torch.cos(x[..., 1])
-    imag = x[..., 0] * torch.sin(x[..., 1])
+    dim = x.dim()-1
+    real = x[...,0]*torch.cos(x[...,1])
+    imag = x[...,0]*torch.sin(x[...,1])
     return torch.stack((real, imag), dim=dim)
 
 
@@ -599,13 +568,8 @@ def apply_grappa(input_ksp, kernel, ref_ksp, mask, sample_accel=None):
         input_ksp = subsample(input_ksp, sample_accel)
 
     input_ksp_ = complex_to_chans(input_ksp)
-    pad = (
-        kernel.shape[-2] // 2,
-        kernel.shape[-2] // 2,
-        kernel.shape[-1] // 2,
-        kernel.shape[-1] // 2,
-    )
-    input_ksp_ = F.pad(input_ksp_, pad, mode="reflect")
+    pad = (kernel.shape[-2] // 2, kernel.shape[-2] // 2, kernel.shape[-1] // 2, kernel.shape[-1] // 2)
+    input_ksp_ = F.pad(input_ksp_, pad, mode='reflect')
     # input_ksp_ = F.pad(input_ksp_, pad, mode='constant')
     result_ksp = [
         F.conv2d(input_ksp_[b].unsqueeze(0), kernel[b])
@@ -641,11 +605,9 @@ def coil_compress(kspace, out_coils):
         raise e
 
     u = np.transpose(np.conj(u[:, :out_coils]))
-    new_shape = (out_coils,) + start_shape[1:]
+    new_shape = (out_coils, ) + start_shape[1:]
     new_kspace = u @ kspace
     kspace = np.reshape(new_kspace, new_shape)
 
-    kspace = torch.stack(
-        (torch.Tensor(np.real(kspace)), torch.Tensor(np.imag(kspace))), dim=-1
-    )
+    kspace = torch.stack((torch.Tensor(np.real(kspace)), torch.Tensor(np.imag(kspace))), dim=-1)
     return kspace

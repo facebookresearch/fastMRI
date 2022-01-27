@@ -5,7 +5,7 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-# from __future__ import print_function
+#from __future__ import print_function
 import argparse
 import pickle
 import os
@@ -16,7 +16,6 @@ import time
 from time import sleep
 
 import sys
-
 sys.path.append(sys.path[0] + "/..")
 __package__ = "fastmri"
 
@@ -24,16 +23,13 @@ import multiprocessing
 import subprocess
 from .args import Args
 
-
 def work(info):
     rank, ntasks, args = info
     # This must be imported here, in the child process, not globally.
     from .run import run as run_task
-
-    os.environ["RANK"] = str(rank)
-    os.environ["WORLD_SIZE"] = str(ntasks)
+    os.environ['RANK'] = str(rank)
+    os.environ['WORLD_SIZE'] = str(ntasks)
     run_task(args)
-
 
 def run(args=None, ntasks=None):
     if args is None:
@@ -44,8 +40,8 @@ def run(args=None, ntasks=None):
     # Some automatic ntask settings code
     if ntasks is None:
         try:
-            devices = os.environ["CUDA_VISIBLE_DEVICES"]
-            ntasks = len(devices.split(","))
+            devices = os.environ['CUDA_VISIBLE_DEVICES']
+            ntasks = len(devices.split(','))
         except:
             try:
                 ntasks = int(os.popen("nvidia-smi -L | wc -l").read())
@@ -54,15 +50,13 @@ def run(args=None, ntasks=None):
 
     args.is_distributed = True
     # Temp ignore for bug in pytorch dataloader, it leaks semaphores
-    os.environ[
-        "PYTHONWARNINGS"
-    ] = "ignore:semaphore_tracker:UserWarning,ignore::UserWarning"
+    os.environ['PYTHONWARNINGS'] = 'ignore:semaphore_tracker:UserWarning,ignore::UserWarning'
 
     # Make this process the head of a process group.
     os.setpgrp()
 
     # Most important line in this file. CUDA fails horribly if we use the default fork
-    multiprocessing.set_start_method("forkserver")
+    multiprocessing.set_start_method('forkserver')
 
     processses = []
     for i in range(ntasks):
@@ -71,19 +65,10 @@ def run(args=None, ntasks=None):
 
         if args.strace:
             # Addtional Monitoring process
-            subprocess.Popen(
-                [
-                    "strace",
-                    "-tt",
-                    "-o",
-                    f"{args.exp_dir}/strace_{i}.log",
-                    "-e",
-                    "trace=write",
-                    "-s256",
-                    "-p",
-                    f"{p.pid}",
-                ]
-            )
+            subprocess.Popen(["strace", "-tt" , 
+                "-o", f"{args.exp_dir}/strace_{i}.log", 
+                "-e", "trace=write", "-s256", 
+                "-p", f"{p.pid}"])
 
         processses.append(p)
 
@@ -111,14 +96,14 @@ def run(args=None, ntasks=None):
         sys.stdout.flush()
         sys.exit(0)
 
-    if args.auto_requeue:
 
+    if args.auto_requeue:
         def forward_usr1_signal(signum, frame):
             print(f"Received USR1 signal in spawn_dist", flush=True)
             for i, p in enumerate(processses):
                 if p.is_alive():
                     os.kill(p.pid, signal.SIGUSR1)
-
+        
         def forward_term_signal(signum, frame):
             print(f"Received SIGTERM signal in spawn_dist", flush=True)
             for i, p in enumerate(processses):
@@ -141,7 +126,6 @@ def run(args=None, ntasks=None):
             terminate(None, None)
 
     print("DONE")
-
 
 if __name__ == "__main__":
     run()

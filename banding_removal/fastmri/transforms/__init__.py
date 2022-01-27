@@ -10,7 +10,6 @@ import inspect
 import pdb
 import logging
 
-
 def load(name):
     logging.info(f"Loading transformer {name}")
     # Split name into file and method name?

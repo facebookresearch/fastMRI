@@ -18,9 +18,9 @@ from fastmri.data import transforms
 from fastmri.data.transforms import VarNetSample
 from fastmri.models.adaptive_varnet import AdaptiveSensitivityModel, AdaptiveVarNetBlock
 from fastmri.models.varnet import NormUnet
-from fastmri.pl_modules.mri_module import DistributedMetricSum, MriModule
+from fastmri.pl_modules.mri_module import MriModule
 
-from .metrics import DistributedArraySum
+from .metrics import DistributedMetricSum
 
 
 class VarNet(nn.Module):

@@ -15,9 +15,9 @@ import torch
 from fastmri import evaluate
 from fastmri.data import transforms
 from fastmri.models import AdaptiveVarNet
-from fastmri.pl_modules.mri_module import DistributedMetricSum, MriModule
+from fastmri.pl_modules.mri_module import MriModule
 
-from .metrics import DistributedArraySum
+from .metrics import DistributedArraySum, DistributedMetricSum
 
 
 class AdaptiveVarNetModule(MriModule):

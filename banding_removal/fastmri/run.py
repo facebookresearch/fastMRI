@@ -14,6 +14,7 @@ import logging
 sys.path.append(sys.path[0] + "/..")
 __package__ = "fastmri"
 
+
 def run(args=None):
     from .args import Args
 
@@ -34,7 +35,7 @@ def run(args=None):
             trainer.train()
 
     except KeyboardInterrupt:
-        pass # Hide traceback
+        pass  # Hide traceback
     except Exception as e:
         logging.exception("Uncaught exception")
         raise

@@ -28,6 +28,7 @@ from . import model
 from . import optimizer
 from .data.mri_data import SliceData
 
+
 class BaseTrainer(object):
     def __init__(self, args):
         self.args = args
@@ -56,21 +57,28 @@ class BaseTrainer(object):
         logging.info(f"run pid: {os.getpid()} parent: {os.getppid()}")
         logging.info("#########")
         logging.info(args.__dict__)
-        logging.info(f"Rank: {args.rank} World_size: {args.world_size}, Run {args.run_name}")
+        logging.info(
+            f"Rank: {args.rank} World_size: {args.world_size}, Run {args.run_name}"
+        )
 
         args.cuda = torch.cuda.is_available()
         logging.info(f"Pytorch version: {torch.__version__}")
-        logging.info("Using CUDA: {} CUDA AVAIL: {} #DEVICES: {} VERSION: {}".format(
-            args.cuda, torch.cuda.is_available(), torch.cuda.device_count(),
-            torch.version.cuda))
+        logging.info(
+            "Using CUDA: {} CUDA AVAIL: {} #DEVICES: {} VERSION: {}".format(
+                args.cuda,
+                torch.cuda.is_available(),
+                torch.cuda.device_count(),
+                torch.version.cuda,
+            )
+        )
         if not args.cuda:
-            self.device = 'cpu'
+            self.device = "cpu"
         else:
-            self.device = 'cuda'
+            self.device = "cuda"
             cudnn.benchmark = True
             cudnn.enabled = True
 
-        random.seed(args.seed) # The seed needs to be constant between processes.
+        random.seed(args.seed)  # The seed needs to be constant between processes.
         torch.manual_seed(args.seed)
         torch.cuda.manual_seed_all(args.seed)
 
@@ -78,7 +86,7 @@ class BaseTrainer(object):
         logging.info("Creating data objects")
 
         self.train_data = SliceData(
-            root=self.args.data_path / f'{args.challenge}_train',
+            root=self.args.data_path / f"{args.challenge}_train",
             transform=self.train_transform,
             args=self.args,
         )
@@ -93,7 +101,7 @@ class BaseTrainer(object):
         val_args.acquisition_types = None
         val_args.acquisition_systems = None
         self.dev_data = SliceData(
-            root=self.args.data_path / f'{args.challenge}_val',
+            root=self.args.data_path / f"{args.challenge}_val",
             transform=self.dev_transform,
             args=val_args,
         )
@@ -102,24 +110,25 @@ class BaseTrainer(object):
             # Only display the first size in the dataset.
             display_size, indices = list(self.dev_data.slice_indices_by_size.items())[0]
             self.display_data = CallbackDataset(
-                    callback=functools.partial(data_for_index, self.dev_data, indices),
-                    start=0,
-                    end=len(indices),
-                    increment=len(indices) // args.display_count)
+                callback=functools.partial(data_for_index, self.dev_data, indices),
+                start=0,
+                end=len(indices),
+                increment=len(indices) // args.display_count,
+            )
         else:
             ndev = len(self.dev_data)
             indices = range(0, ndev)
             self.display_data = CallbackDataset(
-                    callback=functools.partial(data_for_index, self.dev_data, indices),
-                    start=0,
-                    end=ndev,
-                    increment=args.display_count)
+                callback=functools.partial(data_for_index, self.dev_data, indices),
+                start=0,
+                end=ndev,
+                increment=args.display_count,
+            )
 
     def loader_setup(self, args):
         logging.info("Creating samplers ...")
         train_sampler = RandomSampler(self.train_data)
         dev_sampler = RandomSampler(self.dev_data)
-
 
         logging.info("Creating data loaders ...")
         self.train_loader = DataLoader(
@@ -176,14 +185,14 @@ class BaseTrainer(object):
 
     def serialize(self):
         return {
-	    'runinfo': self.runinfo,
-	    'epoch': self.runinfo["at_epoch"],
-	    'args': self.args,
-	    'model': self.model.state_dict(),
-	    'optimizer': self.optimizer.state_dict(),
-	    'best_dev_loss': self.runinfo["best_dev_loss"],
-	    'exp_dir': self.exp_dir
-	}
+            "runinfo": self.runinfo,
+            "epoch": self.runinfo["at_epoch"],
+            "args": self.args,
+            "model": self.model.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+            "best_dev_loss": self.runinfo["best_dev_loss"],
+            "exp_dir": self.exp_dir,
+        }
 
     ##################################################################################
     def train(self):
@@ -196,7 +205,7 @@ class BaseTrainer(object):
             if self.args.is_distributed:
                 self.train_loader.sampler.set_epoch(epoch)
 
-            seed = self.runinfo["seed"] + 1031*epoch
+            seed = self.runinfo["seed"] + 1031 * epoch
             torch.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
 
@@ -234,7 +243,9 @@ class BaseTrainer(object):
         start = timer()
         dev_loss = self.stats(epoch, self.dev_loader, "Dev")
         end = timer()
-        logging.info(f"EVAL Loss: {dev_loss} time: {datetime.timedelta(seconds=end-start)}")
+        logging.info(
+            f"EVAL Loss: {dev_loss} time: {datetime.timedelta(seconds=end-start)}"
+        )
 
         if math.isnan(dev_loss) or math.isinf(dev_loss):
             logging.info("NaN or Inf detected, ending training")
@@ -252,22 +263,22 @@ class BaseTrainer(object):
         return t.to(self.device, non_blocking=True)
 
     def preprocess_data(self, tensors):
-        """ Called on a batch returned by a dataloader, to do things like
-            .cuda() and .half etc., Should be idempotent.
-            Calls preprocess_data_tensor on tensors
+        """Called on a batch returned by a dataloader, to do things like
+        .cuda() and .half etc., Should be idempotent.
+        Calls preprocess_data_tensor on tensors
         """
-        if hasattr(tensors, '_fields'):
+        if hasattr(tensors, "_fields"):
             # Skip if already processed to a named tuple
             return tensors
         elif isinstance(tensors, dict):
             ts = OrderedDict()
-            for k,t in tensors.items():
+            for k, t in tensors.items():
                 if isinstance(t, torch.Tensor):
                     ts[k] = self.preprocess_data_tensor(t)
                 else:
                     ts[k] = t
             # Convert to a named tuple
-            BatchTuple = namedtuple('Batch', ts.keys())
+            BatchTuple = namedtuple("Batch", ts.keys())
             return BatchTuple(**ts)
         elif isinstance(tensors, torch.Tensor):
             return self.preprocess_data_tensor(tensors)

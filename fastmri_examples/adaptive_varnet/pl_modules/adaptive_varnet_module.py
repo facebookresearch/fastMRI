@@ -15,9 +15,9 @@ import torch
 from fastmri import evaluate
 from fastmri.data import transforms
 from fastmri.models import AdaptiveVarNet
-from fastmri.pl_modules.mri_module import DistributedMetricSum, MriModule
+from fastmri.pl_modules.mri_module import MriModule
 
-from .metrics import DistributedArraySum
+from .metrics import DistributedArraySum, DistributedMetricSum
 
 
 class AdaptiveVarNetModule(MriModule):
@@ -140,8 +140,15 @@ class AdaptiveVarNetModule(MriModule):
         self.policy_activation = policy_activation
 
         # logging functions
+        self.NMSE = DistributedMetricSum()
+        self.SSIM = DistributedMetricSum()
+        self.PSNR = DistributedMetricSum()
+        self.ValLoss = DistributedMetricSum()
+        self.TotExamples = DistributedMetricSum()
+        self.TotSliceExamples = DistributedMetricSum()
         self.ValMargDist = DistributedArraySum()
         self.ValCondEnt = DistributedMetricSum()
+
         self.TrainNMSE = DistributedMetricSum()
         self.TrainSSIM = DistributedMetricSum()
         self.TrainPSNR = DistributedMetricSum()
@@ -176,8 +183,8 @@ class AdaptiveVarNetModule(MriModule):
 
         self.loss = fastmri.SSIMLoss()
 
-    def forward(self, kspace, masked_kspace, mask, fname, slice_num):
-        return self.varnet(kspace, masked_kspace, mask, fname, slice_num)
+    def forward(self, kspace, masked_kspace, mask):
+        return self.varnet(kspace, masked_kspace, mask)
 
     def compute_loss(self, output, target, max_value):
         base_loss = self.loss(
@@ -186,22 +193,20 @@ class AdaptiveVarNetModule(MriModule):
         return base_loss
 
     def training_step(self, batch, batch_idx):
-        kspace, masked_kspace, mask, target, fname, slice_num, max_value, _ = batch
+        output, extra_outputs = self(batch.kspace, batch.masked_kspace, batch.mask)
 
-        output, extra_outputs = self(kspace, masked_kspace, mask, fname, slice_num)
+        target, output = transforms.center_crop_to_smallest(batch.target, output)
 
-        target, output = transforms.center_crop_to_smallest(target, output)
-
-        loss = self.compute_loss(output, target, max_value)
+        loss = self.compute_loss(output, target, batch.max_value)
 
         self.log("train_loss", loss)
 
         # Return same stuff as on validation step here
         return {
             "batch_idx": batch_idx,
-            "fname": fname,
-            "slice_num": slice_num,
-            "max_value": max_value,
+            "fname": batch.fname,
+            "slice_num": batch.slice_num,
+            "max_value": batch.max_value,
             "output": output,
             "target": target,
             "loss": loss,
@@ -282,19 +287,17 @@ class AdaptiveVarNetModule(MriModule):
         }
 
     def validation_step(self, batch, batch_idx):
-        kspace, masked_kspace, mask, target, fname, slice_num, max_value, _ = batch
+        output, extra_outputs = self(batch.kspace, batch.masked_kspace, batch.mask)
 
-        output, extra_outputs = self(kspace, masked_kspace, mask, fname, slice_num)
+        target, output = transforms.center_crop_to_smallest(batch.target, output)
 
-        target, output = transforms.center_crop_to_smallest(target, output)
-
-        loss = self.compute_loss(output, target, max_value)
+        loss = self.compute_loss(output, target, batch.max_value)
 
         return {
             "batch_idx": batch_idx,
-            "fname": fname,
-            "slice_num": slice_num,
-            "max_value": max_value,
+            "fname": batch.fname,
+            "slice_num": batch.slice_num,
+            "max_value": batch.max_value,
             "output": output,
             "target": target,
             "val_loss": loss,
@@ -400,12 +403,147 @@ class AdaptiveVarNetModule(MriModule):
             "max_vals": max_vals,
         }
 
+    def training_epoch_end(self, train_logs):
+        losses = []
+        mse_vals = defaultdict(dict)
+        target_norms = defaultdict(dict)
+        ssim_vals = defaultdict(dict)
+        max_vals = dict()
+
+        # use dict updates to handle duplicate slices
+        for train_log in train_logs:
+            losses.append(train_log["loss"].data.view(-1))
+
+            for k in train_log["mse_vals"].keys():
+                mse_vals[k].update(train_log["mse_vals"][k])
+            for k in train_log["target_norms"].keys():
+                target_norms[k].update(train_log["target_norms"][k])
+            for k in train_log["ssim_vals"].keys():
+                ssim_vals[k].update(train_log["ssim_vals"][k])
+            for k in train_log["max_vals"]:
+                max_vals[k] = train_log["max_vals"][k]
+
+        # check to make sure we have all files in all metrics
+        assert (
+            mse_vals.keys()
+            == target_norms.keys()
+            == ssim_vals.keys()
+            == max_vals.keys()
+        )
+
+        # apply means across image volumes
+        metrics = {"nmse": 0, "ssim": 0, "psnr": 0}
+        local_examples = 0
+        for fname in mse_vals.keys():
+            local_examples = local_examples + 1
+            mse_val = torch.mean(
+                torch.cat([v.view(-1) for _, v in mse_vals[fname].items()])
+            )
+            target_norm = torch.mean(
+                torch.cat([v.view(-1) for _, v in target_norms[fname].items()])
+            )
+            metrics["nmse"] = metrics["nmse"] + mse_val / target_norm
+            metrics["psnr"] = (
+                metrics["psnr"]
+                + 20
+                * torch.log10(
+                    torch.tensor(
+                        max_vals[fname], dtype=mse_val.dtype, device=mse_val.device
+                    )
+                )
+                - 10 * torch.log10(mse_val)
+            )
+            metrics["ssim"] = metrics["ssim"] + torch.mean(
+                torch.cat([v.view(-1) for _, v in ssim_vals[fname].items()])
+            )
+
+        # reduce across ddp via sum
+        metrics["nmse"] = self.TrainNMSE(metrics["nmse"])
+        metrics["ssim"] = self.TrainSSIM(metrics["ssim"])
+        metrics["psnr"] = self.TrainPSNR(metrics["psnr"])
+        tot_examples = self.TrainTotExamples(torch.tensor(local_examples))
+        train_loss = self.TrainLoss(torch.sum(torch.cat(losses)))
+        tot_slice_examples = self.TrainTotSliceExamples(
+            torch.tensor(len(losses), dtype=torch.float)
+        )
+
+        self.log("training_loss", train_loss / tot_slice_examples, prog_bar=True)
+        for metric, value in metrics.items():
+            self.log(f"train_metrics/{metric}", value / tot_examples)
+
+    def validation_epoch_end(self, val_logs):
+        # aggregate losses
+        losses = []
+        mse_vals = defaultdict(dict)
+        target_norms = defaultdict(dict)
+        ssim_vals = defaultdict(dict)
+        max_vals = dict()
+
+        # use dict updates to handle duplicate slices
+        for val_log in val_logs:
+            losses.append(val_log["val_loss"].view(-1))
+
+            for k in val_log["mse_vals"].keys():
+                mse_vals[k].update(val_log["mse_vals"][k])
+            for k in val_log["target_norms"].keys():
+                target_norms[k].update(val_log["target_norms"][k])
+            for k in val_log["ssim_vals"].keys():
+                ssim_vals[k].update(val_log["ssim_vals"][k])
+            for k in val_log["max_vals"]:
+                max_vals[k] = val_log["max_vals"][k]
+
+        # check to make sure we have all files in all metrics
+        assert (
+            mse_vals.keys()
+            == target_norms.keys()
+            == ssim_vals.keys()
+            == max_vals.keys()
+        )
+
+        # apply means across image volumes
+        metrics = {"nmse": 0, "ssim": 0, "psnr": 0}
+        local_examples = 0
+        for fname in mse_vals.keys():
+            local_examples = local_examples + 1
+            mse_val = torch.mean(
+                torch.cat([v.view(-1) for _, v in mse_vals[fname].items()])
+            )
+            target_norm = torch.mean(
+                torch.cat([v.view(-1) for _, v in target_norms[fname].items()])
+            )
+            metrics["nmse"] = metrics["nmse"] + mse_val / target_norm
+            metrics["psnr"] = (
+                metrics["psnr"]
+                + 20
+                * torch.log10(
+                    torch.tensor(
+                        max_vals[fname], dtype=mse_val.dtype, device=mse_val.device
+                    )
+                )
+                - 10 * torch.log10(mse_val)
+            )
+            metrics["ssim"] = metrics["ssim"] + torch.mean(
+                torch.cat([v.view(-1) for _, v in ssim_vals[fname].items()])
+            )
+
+        # reduce across ddp via sum
+        metrics["nmse"] = self.NMSE(metrics["nmse"])
+        metrics["ssim"] = self.SSIM(metrics["ssim"])
+        metrics["psnr"] = self.PSNR(metrics["psnr"])
+        tot_examples = self.TotExamples(torch.tensor(local_examples))
+        val_loss = self.ValLoss(torch.sum(torch.cat(losses)))
+        tot_slice_examples = self.TotSliceExamples(
+            torch.tensor(len(losses), dtype=torch.float)
+        )
+
+        self.log("validation_loss", val_loss / tot_slice_examples, prog_bar=True)
+        for metric, value in metrics.items():
+            self.log(f"val_metrics/{metric}", value / tot_examples)
+
     def test_step(self, batch, batch_idx):
-        kspace, masked_kspace, mask, target, fname, slice_num, _, crop_size = batch
+        output, extra_outputs = self(batch.kspace, batch.masked_kspace, batch.mask)
 
-        output, extra_outputs = self(kspace, masked_kspace, mask, fname, slice_num)
-
-        crop_size = crop_size[0]  # always have a batch size of 1 for varnet
+        crop_size = batch.crop_size[0]  # always have a batch size of 1 for varnet
 
         # check for FLAIR 203
         if output.shape[-1] < crop_size[1]:
@@ -414,8 +552,8 @@ class AdaptiveVarNetModule(MriModule):
         output = transforms.center_crop(output, crop_size)
 
         return {
-            "fname": fname,
-            "slice": slice_num,
+            "fname": batch.fname,
+            "slice": batch.slice_num,
             "output": output.cpu().numpy(),
         }
 

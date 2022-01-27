@@ -5,12 +5,13 @@ import fastmri
 import numpy as np
 import pytorch_lightning as pl
 import torch
+
 from fastmri import evaluate
 from fastmri.data.mri_data import fetch_dir
 from fastmri.data.transforms import MiniCoilTransform
 from fastmri.pl_modules import FastMriDataModule
 
-from pl_modules import AdaptiveVarNetModule
+from pl_modules import AdaptiveVarNetModule, VarNetModule
 from subsample import create_mask_for_mask_type
 
 
@@ -30,6 +31,25 @@ def entropy(prob_mask: torch.Tensor):
     ent[prob_mask == 0] = 0
     ent[prob_mask == 1] = 0
     return ent
+
+
+def load_model(
+    module_class: pl.LightningModule,
+    fname: pathlib.Path,
+):
+    print(f"loading model from {fname}")
+    checkpoint = torch.load(fname, map_location=torch.device("cpu"))
+
+    # Initialise model with stored params
+    module = module_class(**checkpoint["hyper_parameters"])
+
+    # Load stored weights: this will error if the keys don't match the model weights, which will happen
+    #  when we are loading a VarNet instead of an AdaptiveVarNet or vice-versa.
+    # TODO: Check that this works with models trained much earlier, where some extra parameters might exist even
+    #  within class.
+    module.load_state_dict(checkpoint["state_dict"])
+
+    return module
 
 
 def cli_main(args):
@@ -70,7 +90,20 @@ def cli_main(args):
     # model
     # ------------
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    model = AdaptiveVarNetModule.load_from_checkpoint(args.load_checkpoint)
+
+    try:
+        # Try to load as AdaptiveVarNetModule, if this fails, then the model is probably a VarNetModule instead
+        print("Trying to load as AdaptiveVarNetModule...")
+        model = load_model(AdaptiveVarNetModule, args.load_checkpoint)
+        print("... Success!")
+    except RuntimeError:
+        # If this still fails, then probably the state dict
+        print(
+            "Loading as AdaptiveVarNetModule failed, trying to load as VarNetModule..."
+        )
+        model = load_model(VarNetModule, args.load_checkpoint)
+        print("... Success!")
+
     model.to(device)
 
     ssim_loss = fastmri.SSIMLoss()
@@ -86,28 +119,12 @@ def cli_main(args):
         for i, batch in enumerate(data_loader):
             if i == args.num_batches:
                 break
-            kspace, masked_kspace, mask, target, fname, slice_num, max_value, _ = batch
 
             output, extra_outputs = model(
-                kspace.to(device),
-                masked_kspace.to(device),
-                mask.to(device),
-                fname,
-                slice_num,
+                batch.kspace.to(device),
+                batch.masked_kspace.to(device),
+                batch.mask.to(device),
             )
-            prob_masks_list = extra_outputs["prob_masks"]
-
-            assert (
-                len(prob_masks_list) == 1
-            ), "Found more than one prob mask... Multiple policies in this checkpoint?"
-            batch_prob_masks = (
-                prob_masks_list[0][:, 0, 0, :, 0].detach().cpu()
-            )  # b x 1 x 1 x 128 x 1 --> b x 128
-            assert np.isclose(batch_prob_masks[0].sum(), model.budget), (
-                f"Sum of a prob mask should match budget {model.budget} "
-                f"but it was {batch_prob_masks[0].sum()}"
-            )
-            all_prob_masks.append(batch_prob_masks)
 
             # ----- SSIM calculation -----
             # Note that SSIMLoss computes average SSIM over the entire batch
@@ -115,21 +132,37 @@ def cli_main(args):
                 1
                 - ssim_loss(
                     output.unsqueeze(1).cpu(),
-                    target.unsqueeze(1),
-                    data_range=max_value,
+                    batch.target.unsqueeze(1),
+                    data_range=batch.max_value,
                     reduced=False,
                 ).mean(dim=(1, 2))
             )
             all_ssims.append(ssim.cpu())
 
-            target = target.numpy()
+            target = batch.target.numpy()
             output = output.cpu().numpy()
 
-            for gt, rec, maxval in zip(target, output, max_value.numpy()):
+            for gt, rec, maxval in zip(target, output, batch.max_value.numpy()):
                 psnr = evaluate.psnr(gt, rec, maxval=maxval)
                 nmse = evaluate.nmse(gt, rec)
                 all_psnrs.append(psnr)
                 all_nmses.append(nmse)
+
+            # Save prob_masks if they exist (not for VarNetModule)
+            if "prob_masks" in extra_outputs:
+                prob_masks_list = extra_outputs["prob_masks"]
+
+                assert (
+                    len(prob_masks_list) == 1
+                ), "Found more than one prob mask... Multiple policies in this checkpoint? Not currently supported."
+                batch_prob_masks = (
+                    prob_masks_list[0][:, 0, 0, :, 0].detach().cpu()
+                )  # b x 1 x 1 x 128 x 1 --> b x 128
+                assert np.isclose(batch_prob_masks[0].sum(), model.budget), (
+                    f"Sum of a prob mask should match budget {model.budget} "
+                    f"but it was {batch_prob_masks[0].sum()}"
+                )
+                all_prob_masks.append(batch_prob_masks)
 
         # These are numpy arrays
         psnr_array = np.concatenate(np.array(all_psnrs)[:, None], axis=0)
@@ -169,7 +202,7 @@ def build_args():
 
     parser.add_argument(
         "--load_checkpoint",
-        type=str,
+        type=pathlib.Path,
         help="Model checkpoint to load.",
     )
     parser.add_argument(

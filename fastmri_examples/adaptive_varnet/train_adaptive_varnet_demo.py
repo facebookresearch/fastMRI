@@ -86,7 +86,7 @@ def make_wandb_run_name(args):
     name = ""
 
     # Create base name
-    if args.active_acquisition:
+    if args.learn_acquisition:
         if args.loupe_mask:
             name += "loupe-"
         else:
@@ -99,7 +99,7 @@ def make_wandb_run_name(args):
     name += str(args.num_cascades)
     name += "-"
 
-    if args.active_acquisition and not args.loupe_mask:
+    if args.learn_acquisition and not args.loupe_mask:
         name += "p"
         name += str(args.cascades_per_policy)
         name += "-"
@@ -117,7 +117,7 @@ def make_wandb_run_name(args):
     else:
         name += "dcmultip-"
 
-    if args.active_acquisition:
+    if args.learn_acquisition:
         if args.use_softplus:
             name += f"softplus{args.slope}b-"
         else:
@@ -198,7 +198,7 @@ class WandbLoggerCallback(Callback):
 
             base_dir = pathlib.Path.cwd() / "wandb"
             now = datetime.now()
-            if args.active_acquisition:
+            if args.learn_acquisition:
                 if args.loupe_mask:
                     algo = "loupe"
                 else:
@@ -434,7 +434,7 @@ def cli_main(args):
     # ------------
     # model
     # ------------
-    if args.active_acquisition:
+    if args.learn_acquisition:
         model = AdaptiveVarNetModule(
             num_cascades=args.num_cascades,
             pools=args.pools,
@@ -599,12 +599,11 @@ def build_args():
 
     # Active acquisition arguments
     parser.add_argument(
-        "--active_acquisition",
+        "--learn_acquisition",
         default=False,
         type=str2bool,
         help=(
-            "Whether to do mask design (e.g. LOUPE, Policy) or not. Note that this argument is technically named "
-            "incorrectly, since these learned subsampling methods are not active."
+            "Whether to do mask design (e.g. LOUPE, Policy) or not."
         ),
     )
     parser.add_argument(

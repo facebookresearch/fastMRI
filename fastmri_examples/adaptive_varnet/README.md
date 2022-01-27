@@ -22,10 +22,10 @@ pip install -r fastmri_examples/adaptive_varnet/requirements.txt
 The following commands are for the acceleration 4, budget 22 setting. For an MR image of default size (128, 128) this corresponds to 32 sampled lines, starting from 10 low-frequency lines.
 
 #### Policy (sigmoid with slope 10, 5 cascades):
-> python ./fastmri_examples/adaptive_varnet/train_adaptive_varnet_demo.py --data_path PATH_TO_DATA --default_root_dir PATH_TO_OUT --seed SEED --batch_size 16 --num_cascades 5 --accelerations 4 --center_fractions 0.08 --num_sense_lines 10 --budget 22 --active_acquisition True --loupe_mask False --use_softplus False --slope 10 --cascades_per_policy 5
+> python ./fastmri_examples/adaptive_varnet/train_adaptive_varnet_demo.py --data_path PATH_TO_DATA --default_root_dir PATH_TO_OUT --seed SEED --batch_size 16 --num_cascades 5 --accelerations 4 --center_fractions 0.08 --num_sense_lines 10 --budget 22 --learn_acquisition True --loupe_mask False --use_softplus False --slope 10 --cascades_per_policy 5
 
 #### LOUPE (sigmoid with slope 10, 5 cascades):
-> python ./fastmri_examples/adaptive_varnet/train_adaptive_varnet_demo.py --data_path PATH_TO_DATA --default_root_dir PATH_TO_OUT --seed SEED --batch_size 16 --num_cascades 5 --accelerations 4 --center_fractions 0.08 --num_sense_lines 10 --budget 22 --active_acquisition True --loupe_mask True --use_softplus False --slope 10
+> python ./fastmri_examples/adaptive_varnet/train_adaptive_varnet_demo.py --data_path PATH_TO_DATA --default_root_dir PATH_TO_OUT --seed SEED --batch_size 16 --num_cascades 5 --accelerations 4 --center_fractions 0.08 --num_sense_lines 10 --budget 22 --learn_acquisition True --loupe_mask True --use_softplus False --slope 10
 
 #### Equispaced (5 cascades):
 > python ./fastmri_examples/adaptive_varnet/train_adaptive_varnet_demo.py --data_path PATH_TO_DATA --default_root_dir PATH_TO_OUT --seed SEED --batch_size 16 --num_cascades 5 --accelerations 4 --center_fractions 0.08 --num_sense_lines 10

@@ -17,6 +17,7 @@ from .parameter_group_mixin import ParameterGroupMixin
 from .ssim_loss_mixin import SSIMLossMixin
 from .orientation_adversary.adversary_mixin import AdversaryMixin
 
+
 class Trainer(object):
     def __new__(cls, args):
         bases = []
@@ -29,8 +30,15 @@ class Trainer(object):
         if args.parameter_groups:
             bases.append(ParameterGroupMixin)
 
-        bases += [VisualizationMixin, LoggingMixin, LearningRateMixin, CheckpointingMixin,
-                 TransformMixin, TrainingLoopMixin, BaseTrainer]
+        bases += [
+            VisualizationMixin,
+            LoggingMixin,
+            LearningRateMixin,
+            CheckpointingMixin,
+            TransformMixin,
+            TrainingLoopMixin,
+            BaseTrainer,
+        ]
 
         trainer = super().__new__(cls)
         cls = trainer.__class__

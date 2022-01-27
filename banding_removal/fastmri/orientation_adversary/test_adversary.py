@@ -6,6 +6,7 @@ LICENSE file in the root directory of this source tree.
 """
 
 import sys
+
 sys.path.append(sys.path[0] + "/../..")
 
 import logging
@@ -22,10 +23,12 @@ from PIL import Image
 from fastmri.data import transforms
 from fastmri.orientation_adversary.adversary_mixin import toggle_grad, compute_grad2
 
+
 class ReferenceTrainer(object):
     """
-        This is a simplification of a known good implementation
+    This is a simplification of a known good implementation
     """
+
     def __init__(self, generator, discriminator, use_reg=False):
         self.generator = generator
         self.discriminator = discriminator
@@ -68,10 +71,9 @@ class ReferenceTrainer(object):
             reg = compute_grad2(d_fake, x_fake).mean()
             reg.backward()
         else:
-            reg = torch.tensor(0.)
+            reg = torch.tensor(0.0)
 
         toggle_grad(self.discriminator, False)
-
 
         return dloss.item(), reg.item(), x_fake.detach()
 
@@ -80,10 +82,11 @@ class ReferenceTrainer(object):
         loss = F.binary_cross_entropy_with_logits(d_out, targets)
         return loss
 
+
 def test_adversary():
-    """ The adversary mixin uses a different way of computing the loss
-        compared to the reference implementation, it only calls backwards once.
-        This unit test just compares this technique to a reference version.
+    """The adversary mixin uses a different way of computing the loss
+    compared to the reference implementation, it only calls backwards once.
+    This unit test just compares this technique to a reference version.
     """
     use_reg = True
     nchan = 10
@@ -107,24 +110,26 @@ def test_adversary():
 
     # Encourage the predictor to trick the adversary TODO: Should this be 0.5 instead?
     false_label = 1 - true_label
-    orien_loss_predictor = F.binary_cross_entropy_with_logits(orientation_prediction, false_label)
+    orien_loss_predictor = F.binary_cross_entropy_with_logits(
+        orientation_prediction, false_label
+    )
     orien_loss_predictor = orien_loss_predictor
 
     # Encourage the adversary to predict the correct orientation
     toggle_grad(adversary_model, True)
     prediction_reorien_adv = prediction_reorien.detach()
-    prediction_reorien_adv.requires_grad_() #TODO Might not be required
+    prediction_reorien_adv.requires_grad_()  # TODO Might not be required
     orientation_prediction_adv = adversary_model(prediction_reorien_adv)
-    orien_loss_adv = F.binary_cross_entropy_with_logits(orientation_prediction_adv, true_label)
+    orien_loss_adv = F.binary_cross_entropy_with_logits(
+        orientation_prediction_adv, true_label
+    )
 
     # Prediction error for logging
-    correct = (orientation_prediction_adv>0).float() == true_label
+    correct = (orientation_prediction_adv > 0).float() == true_label
     accuracy = correct.float().mean()
 
     if use_reg:
-        reg = compute_grad2(
-            orientation_prediction_adv, 
-            prediction_reorien_adv).mean()
+        reg = compute_grad2(orientation_prediction_adv, prediction_reorien_adv).mean()
     else:
         reg = torch.zeros_like(orien_loss_adv)
 
@@ -141,15 +146,12 @@ def test_adversary():
     ####################################
     ### Now try reference implementation
     trainer = ReferenceTrainer(prediction_model, adversary_model, use_reg=use_reg)
-    
+
     dloss, reg, _ = trainer.discriminator_trainstep(data)
     gloss = trainer.generator_trainstep(data)
-    
+
     ref_adversary_grad = adversary_model.weight.grad.clone()
     ref_prediction_grad = prediction_model.weight.grad.clone()
 
     assert torch.allclose(adversary_grad, ref_adversary_grad)
     assert torch.allclose(prediction_grad, ref_prediction_grad)
-
-
-

@@ -5,7 +5,6 @@ import fastmri
 import numpy as np
 import pytorch_lightning as pl
 import torch
-import pathlib
 
 from fastmri import evaluate
 from fastmri.data.mri_data import fetch_dir
@@ -35,7 +34,8 @@ def entropy(prob_mask: torch.Tensor):
 
 
 def load_model(
-    module_class: pl.LightningModule, fname: pathlib.Path,
+    module_class: pl.LightningModule,
+    fname: pathlib.Path,
 ):
     print(f"loading model from {fname}")
     checkpoint = torch.load(fname, map_location=torch.device("cpu"))
@@ -96,7 +96,9 @@ def cli_main(args):
         model = load_model(AdaptiveVarNetModule, args.load_checkpoint)
     except RuntimeError:
         # If this still fails, then probably the state dict
-        print("Loading as AdaptiveVarNetModule failed, trying to load as VarNetModule...")
+        print(
+            "Loading as AdaptiveVarNetModule failed, trying to load as VarNetModule..."
+        )
         model = load_model(VarNetModule, args.load_checkpoint)
         print("... Success!")
 

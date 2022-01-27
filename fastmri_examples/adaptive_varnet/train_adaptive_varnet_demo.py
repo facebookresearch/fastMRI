@@ -602,9 +602,7 @@ def build_args():
         "--learn_acquisition",
         default=False,
         type=str2bool,
-        help=(
-            "Whether to do mask design (e.g. LOUPE, Policy) or not."
-        ),
+        help="Whether to do mask design (e.g. LOUPE, Policy) or not.",
     )
     parser.add_argument(
         "--budget",

@@ -10,6 +10,7 @@ from torch.utils.data import Dataset
 import gc
 import torch
 
+
 def save_reconstructions(reconstructions, out_dir):
     """
     Saves the reconstructions from a model into h5 files that is appropriate for submission
@@ -23,8 +24,8 @@ def save_reconstructions(reconstructions, out_dir):
     """
     out_dir.mkdir(exist_ok=True)
     for fname, recons in reconstructions.items():
-        with h5py.File(out_dir / fname, 'w') as f:
-            f.create_dataset('reconstruction', data=recons)
+        with h5py.File(out_dir / fname, "w") as f:
+            f.create_dataset("reconstruction", data=recons)
 
 
 def tensor_to_complex_np(data):
@@ -41,8 +42,15 @@ def tensor_to_complex_np(data):
 
 
 def create_submission_file(
-  json_out_file, challenge, submission_url, model_name, model_description, nyu_data_only,
-  participants=None, paper_url=None, code_url=None
+    json_out_file,
+    challenge,
+    submission_url,
+    model_name,
+    model_description,
+    nyu_data_only,
+    participants=None,
+    paper_url=None,
+    code_url=None,
 ):
     """
     Creates a JSON file for submitting to the leaderboard.
@@ -62,10 +70,12 @@ def create_submission_file(
         code_url (str, optional): Link to the code for the model
     """
 
-    if challenge not in {'singlecoil', 'multicoil'}:
-        raise ValueError(f'Challenge should be singlecoil or multicoil, not {challenge}')
+    if challenge not in {"singlecoil", "multicoil"}:
+        raise ValueError(
+            f"Challenge should be singlecoil or multicoil, not {challenge}"
+        )
 
-    phase_name = f'{challenge}_leaderboard'
+    phase_name = f"{challenge}_leaderboard"
     submission_data = dict(
         recon_zip_url=submission_url,
         model_name=model_name,
@@ -73,19 +83,19 @@ def create_submission_file(
         nyudata_only=nyu_data_only,
         participants=participants,
         paper_url=paper_url,
-        code_url=code_url
+        code_url=code_url,
     )
-    submission_data = dict(result=[{
-        phase_name: submission_data
-    }])
+    submission_data = dict(result=[{phase_name: submission_data}])
 
-    with open(json_out_file, 'w') as json_file:
+    with open(json_out_file, "w") as json_file:
         json.dump(submission_data, json_file, indent=2)
+
 
 class CallbackDataset(Dataset):
     """
-        This saves memory essentially
+    This saves memory essentially
     """
+
     def __init__(self, callback, start, end, increment):
         super().__init__()
         self.callback = callback
@@ -94,16 +104,17 @@ class CallbackDataset(Dataset):
         self.increment = increment
 
     def __len__(self):
-        return (self.end-self.start)//self.increment
+        return (self.end - self.start) // self.increment
 
     def __getitem__(self, i):
-        return self.callback(i*self.increment+self.start)
+        return self.callback(i * self.increment + self.start)
+
 
 def host_memory_usage_in_gb():
     gc.collect()
-    gc.disable() # Avoids accessing gc'd objects during traversal.
+    gc.disable()  # Avoids accessing gc'd objects during traversal.
     objects = gc.get_objects()
-    tensors = [obj for obj in objects if torch.is_tensor(obj)] # Debug
+    tensors = [obj for obj in objects if torch.is_tensor(obj)]  # Debug
     host_tensors = [t for t in tensors if not t.is_cuda]
     total_mem_mb = 0
     visited_data = []
@@ -119,8 +130,8 @@ def host_memory_usage_in_gb():
 
         numel = tensor.storage().size()
         element_size = tensor.storage().element_size()
-        mem_mb = numel*element_size /1024/1024 # 32bit=4Byte, MByte
+        mem_mb = numel * element_size / 1024 / 1024  # 32bit=4Byte, MByte
         total_mem_mb += mem_mb
 
     gc.enable()
-    return total_mem_mb / 1024 # in
+    return total_mem_mb / 1024  # in

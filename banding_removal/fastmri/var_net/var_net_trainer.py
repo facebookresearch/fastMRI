@@ -35,11 +35,14 @@ class VarNetTrainer(Trainer):
             input_ksp = input_ksp.unsqueeze(1)
             target = target.unsqueeze(1)
 
-        output = self.model(dict(
-            kspace=input_ksp.transpose(1, 2),
-            mask=batch.mask.transpose(1, 2).byte(),
-            num_lf=num_lf,
-            sens_maps=batch.sens_map))
+        output = self.model(
+            dict(
+                kspace=input_ksp.transpose(1, 2),
+                mask=batch.mask.transpose(1, 2).byte(),
+                num_lf=num_lf,
+                sens_maps=batch.sens_map,
+            )
+        )
 
         return output, target
 

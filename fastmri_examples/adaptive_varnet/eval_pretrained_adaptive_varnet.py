@@ -93,7 +93,9 @@ def cli_main(args):
 
     try:
         # Try to load as AdaptiveVarNetModule, if this fails, then the model is probably a VarNetModule instead
+        print("Trying to load as AdaptiveVarNetModule...")
         model = load_model(AdaptiveVarNetModule, args.load_checkpoint)
+        print("... Success!")
     except RuntimeError:
         # If this still fails, then probably the state dict
         print(

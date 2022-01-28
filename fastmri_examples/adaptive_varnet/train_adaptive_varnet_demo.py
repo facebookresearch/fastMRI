@@ -16,7 +16,7 @@ import pytorch_lightning as pl
 import torch
 import wandb
 from fastmri.data.mri_data import fetch_dir
-from fastmri.data.transforms import MiniCoilTransform, VarNetDataTransform
+from fastmri.data.transforms import MiniCoilTransform
 from fastmri.pl_modules import FastMriDataModule
 from pytorch_lightning.callbacks import Callback
 
@@ -389,31 +389,24 @@ def cli_main(args):
         args.skip_low_freqs,
     )
     # use random masks for train transform, fixed masks for val transform
-    if args.compress_coils:
-        train_transform = MiniCoilTransform(
-            mask_func=mask,
-            use_seed=False,  # Set this to True to get deterministic results for Equispaced and Random.
-            num_compressed_coils=args.num_compressed_coils,
-            crop_size=args.crop_size,
-        )
-        val_transform = MiniCoilTransform(
-            mask_func=mask,
-            num_compressed_coils=args.num_compressed_coils,
-            crop_size=args.crop_size,
-        )
-        if args.test_split in ("test", "challenge"):
-            mask = None
-        test_transform = MiniCoilTransform(
-            mask_func=mask,
-            num_compressed_coils=args.num_compressed_coils,
-            crop_size=args.crop_size,
-        )
-    else:
-        train_transform = VarNetDataTransform(mask_func=mask, use_seed=False)
-        val_transform = VarNetDataTransform(mask_func=mask)
-        if args.test_split in ("test", "challenge"):
-            mask = None
-        test_transform = VarNetDataTransform(mask_func=mask)
+    train_transform = MiniCoilTransform(
+        mask_func=mask,
+        use_seed=False,  # Set this to True to get deterministic results for Equispaced and Random.
+        num_compressed_coils=args.num_compressed_coils,
+        crop_size=args.crop_size,
+    )
+    val_transform = MiniCoilTransform(
+        mask_func=mask,
+        num_compressed_coils=args.num_compressed_coils,
+        crop_size=args.crop_size,
+    )
+    if args.test_split in ("test", "challenge"):
+        mask = None
+    test_transform = MiniCoilTransform(
+        mask_func=mask,
+        num_compressed_coils=args.num_compressed_coils,
+        crop_size=args.crop_size,
+    )
 
     # ptl data module - this handles data loaders
     data_module = FastMriDataModule(
@@ -576,13 +569,6 @@ def build_args():
         help="wandb entity to use.",
     )
 
-    # MiniCoilTransform arguments
-    parser.add_argument(
-        "--compress_coils",
-        default=True,
-        type=str2bool,
-        help="Whether to do coil compression.",
-    )
     parser.add_argument(
         "--num_compressed_coils",
         default=4,
@@ -616,7 +602,8 @@ def build_args():
         type=int,
         help=(
             "How many cascades to do per policy. `num_cascades` must be "
-            "a multiple of this + 1."
+            "a multiple of this + 1 when learning a Policy model. Else "
+            "this argument is ignored."
         ),
     )
 
@@ -681,7 +668,8 @@ def build_args():
         type=str2bool,
         help=(
             "Whether to sparsify the gradients in DC by using torch.where() "
-            "with the mask: this essentially removes gradients for the policy on unsampled rows."
+            "with the mask: this essentially removes gradients for the policy "
+            "on unsampled rows."
         ),
     )
 

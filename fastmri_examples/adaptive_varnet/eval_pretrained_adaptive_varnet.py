@@ -66,6 +66,7 @@ def cli_main(args):
         args.skip_low_freqs,
     )
 
+    # Assumes coil compression with 4 coils, (128, 128) cropped images
     val_transform = MiniCoilTransform(
         mask_func=mask,
         num_compressed_coils=4,

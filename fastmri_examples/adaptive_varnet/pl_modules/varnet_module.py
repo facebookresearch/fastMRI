@@ -20,7 +20,7 @@ from fastmri.models.adaptive_varnet import AdaptiveSensitivityModel, AdaptiveVar
 from fastmri.models.varnet import NormUnet
 from fastmri.pl_modules.mri_module import MriModule
 
-from .metrics import DistributedMetricSum
+from .metrics import DistributedMetricSum, DistributedArraySum
 
 
 class VarNet(nn.Module):
@@ -213,6 +213,8 @@ class VarNetModule(MriModule):
         self.ValLoss = DistributedMetricSum()
         self.TotExamples = DistributedMetricSum()
         self.TotSliceExamples = DistributedMetricSum()
+        self.ValMargDist = DistributedArraySum()
+        self.ValCondEnt = DistributedMetricSum()
 
         self.TrainNMSE = DistributedMetricSum()
         self.TrainSSIM = DistributedMetricSum()
@@ -220,6 +222,8 @@ class VarNetModule(MriModule):
         self.TrainLoss = DistributedMetricSum()
         self.TrainTotExamples = DistributedMetricSum()
         self.TrainTotSliceExamples = DistributedMetricSum()
+        self.TrainMargDist = DistributedArraySum()
+        self.TrainCondEnt = DistributedMetricSum()
 
         self.varnet = VarNet(
             num_cascades=self.num_cascades,

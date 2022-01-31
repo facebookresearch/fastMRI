@@ -9,6 +9,7 @@ from typing import Dict, NamedTuple, Optional, Sequence, Tuple, Union
 
 import fastmri
 import numpy as np
+import pdb
 import torch
 
 from .subsample import MaskFunc
@@ -607,9 +608,9 @@ class MiniCoilTransform:
                         [attrs["recon_size"][0], attrs["recon_size"][1]]
                     )
                 else:
-                    crop_size = self.crop_size
+                    crop_size = torch.tensor(self.crop_size)
             elif isinstance(self.crop_size, int):
-                crop_size = (self.crop_size, self.crop_size)
+                crop_size = torch.tensor((self.crop_size, self.crop_size))
             else:
                 raise ValueError(
                     f"`crop_size` should be None, tuple, list, or int, not: {type(self.crop_size)}"
@@ -629,8 +630,12 @@ class MiniCoilTransform:
         # the answer is that the readout axis is 2-factor oversampled
         # we do this in MRI to prevent wraparound by the anatomy if the volume
         # selection did not perform well enough
-        kspace = kspace[:, ::2]
-        kspace = center_crop(kspace, crop_size)
+        kspace_crop = crop_size.clone()
+        kspace_crop[1] = 2 * crop_size[1]
+        kspace = center_crop(kspace, kspace_crop)
+        kspace = fastmri.fft2c(
+            complex_center_crop(fastmri.ifft2c(to_tensor(kspace)), crop_size)
+        ).numpy()
 
         # we calculate the target before coil compression. This causes the mini
         # simulation to be one where we have a 15-coil, low-resolution image

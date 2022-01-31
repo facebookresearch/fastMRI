@@ -9,7 +9,6 @@ from typing import Dict, NamedTuple, Optional, Sequence, Tuple, Union
 
 import fastmri
 import numpy as np
-import pdb
 import torch
 
 from .subsample import MaskFunc

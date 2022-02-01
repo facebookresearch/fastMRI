@@ -630,7 +630,7 @@ class MiniCoilTransform:
         # we do this in MRI to prevent wraparound by the anatomy if the volume
         # selection did not perform well enough
         kspace_crop = crop_size.clone()
-        kspace_crop[1] = 2 * crop_size[1]
+        kspace_crop[0] = 2 * crop_size[0]
         kspace = center_crop(kspace, kspace_crop)
         kspace = fastmri.fft2c(
             complex_center_crop(fastmri.ifft2c(to_tensor(kspace)), crop_size)

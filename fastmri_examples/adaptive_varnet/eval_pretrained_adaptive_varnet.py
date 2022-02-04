@@ -266,7 +266,9 @@ def build_args():
     )
 
     args = parser.parse_args()
-    assert len(args.crop_size) == 2, f"Crop size must be of length 2, not {len(args.crop_size)}."
+    assert (
+        len(args.crop_size) == 2
+    ), f"Crop size must be of length 2, not {len(args.crop_size)}."
 
     return args
 

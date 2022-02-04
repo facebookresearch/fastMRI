@@ -167,6 +167,7 @@ class AdaptiveVarNetModule(MriModule):
             budget=self.budget,
             cascades_per_policy=self.cascades_per_policy,
             loupe_mask=self.loupe_mask,
+            crop_size=self.crop_size,
             use_softplus=self.use_softplus,
             num_actions=self.num_actions,
             num_sense_lines=self.num_sense_lines,

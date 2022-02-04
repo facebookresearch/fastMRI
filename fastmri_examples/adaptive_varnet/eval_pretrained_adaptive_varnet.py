@@ -66,11 +66,11 @@ def cli_main(args):
         args.skip_low_freqs,
     )
 
-    # Assumes coil compression with 4 coils, (128, 128) cropped images
+    # Assumes coil compression with 4 coils
     val_transform = MiniCoilTransform(
         mask_func=mask,
         num_compressed_coils=4,
-        crop_size=(128, 128),
+        crop_size=args.crop_size,
     )
 
     data_module = FastMriDataModule(
@@ -222,6 +222,13 @@ def build_args():
         help="Acceleration rates to use.",
     )
     parser.add_argument(
+        "--crop_size",
+        default=(128, 128),
+        type=int,
+        nargs="+",
+        help="Crop size used by checkpoint.",
+    )
+    parser.add_argument(
         "--num_batches",
         default=None,
         type=int,
@@ -259,6 +266,7 @@ def build_args():
     )
 
     args = parser.parse_args()
+    assert len(args.crop_size) == 2, f"Crop size must be of length 2, not {len(args.crop_size)}."
 
     return args
 

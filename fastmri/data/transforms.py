@@ -625,7 +625,7 @@ class MiniCoilTransform:
         acq_end = crop_size[1]
 
         # new cropping section
-        square_crop = (kspace.shape[1] // 2, kspace.shape[1] // 2)
+        square_crop = (attrs["recon_size"][0], attrs["recon_size"][1])
         kspace = fastmri.fft2c(
             complex_center_crop(fastmri.ifft2c(to_tensor(kspace)), square_crop)
         ).numpy()

@@ -190,51 +190,6 @@ class TrainingLoopMixin(object):
                 if self.args.break_early is not None and percent_done >= self.args.break_early:
                     break
 
-            # if batch_idx % 50 == 0:
-            #     from mem_top import mem_top
-            #     import pympler
-            #     from pympler import tracker
-            #     tr = tracker.SummaryTracker()
-            #     mem_summary = mem_top()
-            #     logging.debug(mem_summary)
-            #     print(mem_summary)
-            # if batch_idx % 50 == 0 and batch_idx > 0:
-            #     tr.print_diff()
-            #     if not args.is_distributed:
-            #         import pympler
-            #         from pympler import muppy
-            #         import pdb
-            #         pdb.set_trace()
-
-
-            # if batch_idx == 0:
-            #     self.snapshots = []
-            #     import tracemalloc
-            #     from tracemalloc import Filter
-                
-            # # Use  PYTHONTRACEMALLOC=1
-            # if batch_idx % 10 == 0:
-            #     self.snapshots.append(tracemalloc.take_snapshot())
-            # if batch_idx % 10 == 0 and batch_idx > 0:
-            #     top_stats = self.snapshots[-1].statistics('lineno')
-            #     # stats = self.snapshots[-1].compare_to(self.snapshots[-2], 'filename')    
-
-            #     print("[ Top 20 ]")
-            #     for stat in top_stats[:20]:
-            #         print(stat)
-
-            #     # for stat in stats[:10]:                
-            #     #     print("{} new KiB {} total KiB {} new {} total memory blocks: ".format(stat.size_diff/1024, stat.size / 1024, stat.count_diff ,stat.count))                
-            #     #     for line in stat.traceback.format():                    
-            #     #     print(line)
-            # if batch_idx % 50 == 0 and batch_idx > 0:
-            #     stats = self.snapshots[-1].compare_to(self.snapshots[-2], 'filename')
-            #     for stat in stats[:20]:
-            #         print(stat)
-            #     pdb.set_trace()
-            # if self.args.debug_epoch:
-            #     break
-
             if batch_idx % 50 == 0:
                 import os
                 if args.rank == 0:

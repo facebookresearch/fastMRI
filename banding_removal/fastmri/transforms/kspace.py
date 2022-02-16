@@ -11,6 +11,7 @@ from collections import OrderedDict
 from fastmri.data import transforms
 
 import numpy as np
+import gc
 import random
 import pdb
 
@@ -38,6 +39,7 @@ class KSpaceDataTransform(object):
         target_im = transforms.to_tensor(target_im)
         target_ksp = transforms.to_tensor(target_ksp)
 
+        gc.collect()
         if self.args.coil_compress_coils:
             target_ksp = transforms.coil_compress(target_ksp, self.args.coil_compress_coils)
 
@@ -55,7 +57,7 @@ class KSpaceDataTransform(object):
             acq_start = attrs['padding_left']
             acq_end = attrs['padding_right']
 
-        #pdb.set_trace()
+        gc.collect()
 
         seed = None if not self.use_seed else tuple(map(ord, fname))
         input_ksp, mask, num_lf = transforms.apply_mask(
@@ -64,6 +66,7 @@ class KSpaceDataTransform(object):
             (acq_start, acq_end))
 
         #pdb.set_trace()
+        gc.collect()
 
         sens_map = torch.Tensor(0)
         if self.args.compute_sensitivities:
@@ -72,15 +75,21 @@ class KSpaceDataTransform(object):
             sens_map = est_sens_maps(kspace_np, start_of_center_mask, end_of_center_mask)
             sens_map = transforms.to_tensor(sens_map)
 
+        gc.collect()
+
         if self.args.grappa_input:
             with h5py.File(self.args.grappa_input_path / self.partition / fname, 'r') as hf:
                 kernel = transforms.to_tensor(hf['kernel'][slice])
                 input_ksp = transforms.apply_grappa(input_ksp, kernel, target_ksp, mask)
 
+        gc.collect()
+
         grappa_kernel = torch.Tensor(0)
         if self.args.grappa_path is not None:
             with h5py.File(self.args.grappa_path / self.partition / fname, 'r') as hf:
                 grappa_kernel = transforms.to_tensor(hf['kernel'][slice])
+
+        gc.collect()
 
         if self.args.grappa_target:
             with h5py.File(self.args.grappa_target_path / self.partition / fname, 'r') as hf:
@@ -88,15 +97,22 @@ class KSpaceDataTransform(object):
                 target_ksp = transforms.apply_grappa(target_ksp.clone(), kernel, target_ksp, mask, sample_accel=2)
                 target_im = transforms.root_sum_of_squares(transforms.complex_abs(transforms.ifft2(target_ksp)))
 
-        input_im = transforms.ifft2(input_ksp)
+        gc.collect()
+
+        
         if not self.args.scale_inputs:
             scale = torch.Tensor([1.])
         else:
+            input_im = transforms.ifft2(input_ksp)
             abs_input = transforms.complex_abs(input_im)
+            del input_im
+
             if self.args.scale_type == 'max':
                 scale = torch.max(abs_input)
             else:
                 scale = torch.mean(abs_input)
+
+            del abs_input
 
             input_ksp /= scale
             target_ksp /= scale
@@ -104,6 +120,10 @@ class KSpaceDataTransform(object):
 
         scale = scale.view([1, 1, 1])
         attrs_dict = dict(**attrs)
+
+        gc.collect()
+
+        #pdb.set_trace()
 
         return OrderedDict(
             input = input_ksp,

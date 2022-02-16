@@ -48,6 +48,8 @@ def run(args=None, ntasks=None):
             except:
                 ntasks = 2
 
+    print(f"ntasks: {ntasks}")
+
     args.is_distributed = True
     # Temp ignore for bug in pytorch dataloader, it leaks semaphores
     os.environ['PYTHONWARNINGS'] = 'ignore:semaphore_tracker:UserWarning,ignore::UserWarning'
@@ -124,6 +126,9 @@ def run(args=None, ntasks=None):
         if any(not p.is_alive() for p in processses):
             print("Detected an exited process, so exiting main")
             terminate(None, None)
+        # for i, p in enumerate(processses):
+        #     if not p.is_alive():
+        #         print(f"process {i} dead")
 
     print("DONE")
 

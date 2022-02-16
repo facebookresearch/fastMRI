@@ -14,6 +14,7 @@ import pdb
 import logging
 from collections import defaultdict
 
+import ismrmrd
 import h5py
 import torch
 from torch.utils.data import Dataset
@@ -156,21 +157,17 @@ class SliceData(Dataset):
 
             # Compute the size of zero padding in k-space
             # We really should have stored this as an attribute in the hdf5 file
-            try:
-                import ismrmrd
-                hdr = ismrmrd.xsd.CreateFromDocument(
-                    data['ismrmrd_header'][()])
-                enc = hdr.encoding[0]
-                enc_size = (enc.encodedSpace.matrixSize.x,
-                            enc.encodedSpace.matrixSize.y,
-                            enc.encodedSpace.matrixSize.z)
-                enc_limits_center = enc.encodingLimits.kspace_encoding_step_1.center
-                enc_limits_max = enc.encodingLimits.kspace_encoding_step_1.maximum + 1
-                padding_left = enc_size[1] // 2 - enc_limits_center
-                padding_right = padding_left + enc_limits_max
-            except:
-                padding_left = 0
-                padding_right = 0
+            hdr = ismrmrd.xsd.CreateFromDocument(
+                data['ismrmrd_header'][()])
+            enc = hdr.encoding[0]
+            enc_size = (enc.encodedSpace.matrixSize.x,
+                        enc.encodedSpace.matrixSize.y,
+                        enc.encodedSpace.matrixSize.z)
+            enc_limits_center = enc.encodingLimits.kspace_encoding_step_1.center
+            enc_limits_max = enc.encodingLimits.kspace_encoding_step_1.maximum + 1
+            padding_left = enc_size[1] // 2 - enc_limits_center
+            padding_right = padding_left + enc_limits_max
+
 
             kspace = data['kspace']
 
@@ -226,6 +223,13 @@ class SliceData(Dataset):
                 ipat2_mask = data['mask'][()]
                 inds = np.nonzero(ipat2_mask)[0]
                 attrs['mask_offset'] = inds[0]
+
+            if i % 25 == 0:
+                import os
+                import psutil
+                msg = f"(DATA) pid: {os.getpid()} rss MB : {psutil.Process().memory_info().rss / 1024 ** 2} vms MB: {psutil.Process().memory_info().vms / 1024 ** 2}"
+                print(msg)
+                logging.debug(msg)
 
             return self.transform(kspace, target, attrs, fname.name, slices)
 

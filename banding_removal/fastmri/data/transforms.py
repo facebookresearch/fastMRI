@@ -14,6 +14,34 @@ from torch.nn import functional as F
 from scipy.sparse.linalg import svds
 from scipy.linalg import svd
 
+# Renamed in later versions of pytorch
+try:
+    fft = torch.fft
+    ifft = torch.ifft   
+    rfft = torch.rfft
+    irfft = torch.irfft
+except AttributeError:
+    # Forwards compatibility for new pytorch versions
+    def fft(input, signal_ndim, normalized=True):
+        return torch.view_as_real(torch.fft.fft2(
+            torch.view_as_complex(input),
+            norm="ortho" if normalized else "backward"))
+            
+    def ifft(input, signal_ndim, normalized=True):
+        return torch.view_as_real(torch.fft.ifft2(
+            torch.view_as_complex(input),
+            norm="ortho" if normalized else "backward"))
+
+    def rfft(input, signal_ndim, normalized=True, onesided=False):
+        raise Exception("Real handling rfft")
+        return torch.fft.rfft2(input, signal_ndim, 
+            norm="ortho" if normalized else "backward", 
+            onesided=onesided)
+    def irfft(input, signal_ndim, normalized=True, onesided=False):
+        raise Exception("Real handling irfft")
+        return torch.fft.irfft2(input, signal_ndim, 
+            norm="ortho" if normalized else "backward", 
+            onesided=onesided)
 
 def complex_to_chans(data):
     batch, chans, rows, cols, dims = data.shape
@@ -124,7 +152,7 @@ def fft2(data):
     """
     assert data.size(-1) == 2
     data = ifftshift(data, dim=(-3, -2))
-    data = torch.fft(data, 2, normalized=True)
+    data = fft(data, 2, normalized=True)
     data = fftshift(data, dim=(-3, -2))
     return data
 
@@ -143,14 +171,14 @@ def ifft2(data):
     """
     assert data.size(-1) == 2
     data = ifftshift(data, dim=(-3, -2))
-    data = torch.ifft(data, 2, normalized=True)
+    data = ifft(data, 2, normalized=True)
     data = fftshift(data, dim=(-3, -2))
     return data
 
 
 def rfft2(data):
     data = ifftshift(data, dim=(-2, -1))
-    data = torch.rfft(data, 2, normalized=True, onesided=False)
+    data = rfft(data, 2, normalized=True, onesided=False)
     data = fftshift(data, dim=(-3, -2))
     return data
 
@@ -158,7 +186,7 @@ def rfft2(data):
 def irfft2(data):
     assert data.size(-1) == 2
     data = ifftshift(data, dim=(-3, -2))
-    data = torch.irfft(data, 2, normalized=True, onesided=False)
+    data = irfft(data, 2, normalized=True, onesided=False)
     data = fftshift(data, dim=(-2, -1))
     return data
 

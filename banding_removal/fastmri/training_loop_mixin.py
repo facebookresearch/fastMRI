@@ -164,7 +164,8 @@ class TrainingLoopMixin(object):
                 losses['instantaneous_' + name] = loss_dict[name]
                 losses['average_' + name] = avg_losses[name]
 
-            self.runinfo['train_fnames'].append(batch['fname'])
+            del loss_dict
+            #self.runinfo['train_fnames'].append(batch['fname'])
             self.training_loss_hook(progress, losses, logging_epoch)
 
             del losses
@@ -189,7 +190,77 @@ class TrainingLoopMixin(object):
                 if self.args.break_early is not None and percent_done >= self.args.break_early:
                     break
 
-            if self.args.debug_epoch:
+            # if batch_idx % 50 == 0:
+            #     from mem_top import mem_top
+            #     import pympler
+            #     from pympler import tracker
+            #     tr = tracker.SummaryTracker()
+            #     mem_summary = mem_top()
+            #     logging.debug(mem_summary)
+            #     print(mem_summary)
+            # if batch_idx % 50 == 0 and batch_idx > 0:
+            #     tr.print_diff()
+            #     if not args.is_distributed:
+            #         import pympler
+            #         from pympler import muppy
+            #         import pdb
+            #         pdb.set_trace()
+
+
+            # if batch_idx == 0:
+            #     self.snapshots = []
+            #     import tracemalloc
+            #     from tracemalloc import Filter
+                
+            # # Use  PYTHONTRACEMALLOC=1
+            # if batch_idx % 10 == 0:
+            #     self.snapshots.append(tracemalloc.take_snapshot())
+            # if batch_idx % 10 == 0 and batch_idx > 0:
+            #     top_stats = self.snapshots[-1].statistics('lineno')
+            #     # stats = self.snapshots[-1].compare_to(self.snapshots[-2], 'filename')    
+
+            #     print("[ Top 20 ]")
+            #     for stat in top_stats[:20]:
+            #         print(stat)
+
+            #     # for stat in stats[:10]:                
+            #     #     print("{} new KiB {} total KiB {} new {} total memory blocks: ".format(stat.size_diff/1024, stat.size / 1024, stat.count_diff ,stat.count))                
+            #     #     for line in stat.traceback.format():                    
+            #     #     print(line)
+            # if batch_idx % 50 == 0 and batch_idx > 0:
+            #     stats = self.snapshots[-1].compare_to(self.snapshots[-2], 'filename')
+            #     for stat in stats[:20]:
+            #         print(stat)
+            #     pdb.set_trace()
+            # if self.args.debug_epoch:
+            #     break
+
+            if batch_idx % 50 == 0:
+                import os
+                if args.rank == 0:
+                    with os.popen('free -m') as f:
+                        output = f.read()
+                    print(output)
+                    logging.debug(output)
+                import os
+                import psutil
+                msg = f"rank: {args.rank} pid: {os.getpid()} rss MB : {psutil.Process().memory_info().rss / 1024 ** 2} vms MB: {psutil.Process().memory_info().vms / 1024 ** 2}"
+                print(msg)
+                logging.debug(msg)
+
+            if self.args.short_epochs and batch_idx == 300:
+                break
+
+            if self.args.short_epochs and batch_idx == 11830//(args.world_size*5):
+                if args.rank == 0:
+                    with os.popen('free -m') as f:
+                        output = f.read()
+                    print(output)
+                    logging.debug(output)
+
+                msg = f"rank: {args.rank} pid: {os.getpid()} rss MB : {psutil.Process().memory_info().rss / 1024 ** 2} vms MB: {psutil.Process().memory_info().vms / 1024 ** 2}"
+                print(msg)
+                logging.debug(msg)
                 break
 
     def stats(self, epoch, loader, setname):

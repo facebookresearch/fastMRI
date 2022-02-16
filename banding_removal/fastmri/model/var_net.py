@@ -11,6 +11,7 @@ from torch import nn
 import math
 import numpy as np
 import torch
+import pdb
 import torch.nn.functional as F
 
 from fastmri.data import transforms as T
@@ -128,11 +129,21 @@ class Cartesian(nn.Module):
 
 class FT(nn.Module):
     def forward(self, x):
-        return T.fft2(x)
+        # if torch.any(torch.isnan(x)):
+        #     pdb.set_trace()
+        y = T.fft2(x)
+        # if torch.any(torch.isnan(y)):
+        #     pdb.set_trace()
+        return y
 
 class IFT(nn.Module):
     def forward(self, x):
-        return T.ifft2(x)
+        # if torch.any(torch.isnan(x)):
+        #     pdb.set_trace()
+        y = T.ifft2(x)
+        # if torch.any(torch.isnan(y)):
+        #     pdb.set_trace()
+        return y
 
 class Push(nn.Module):
     pass
@@ -196,7 +207,12 @@ class SensReduce(nn.Module):
         return sens_reduce(x, input['sens_maps'])
 
 def sens_reduce(x, sens_maps):
-    return complex_mul(x, T.complex_conj(sens_maps)).sum(dim=1, keepdim=True)
+    # if torch.any(torch.isnan(x)):
+    #     pdb.set_trace()
+    y = complex_mul(x, T.complex_conj(sens_maps)).sum(dim=1, keepdim=True)
+    # if torch.any(torch.isnan(y)):
+    #     pdb.set_trace()
+    return y
 
 class GRAPPA(nn.Module):
     def __init__(self, acceleration):
@@ -312,23 +328,37 @@ class SoftDC(nn.Module):
         self.register_buffer('zero', torch.zeros(1, 1, 1, 1, 1))
 
     def soft_dc(self, x, input):
+        # if torch.any(torch.isnan(x)):
+        #     pdb.set_trace()
         if self.space == 'img-space':
             x = T.fft2(sens_expand(x, input['sens_maps']))
+        # if torch.any(torch.isnan(x)):
+        #     pdb.set_trace()
         x = torch.where(input['mask'], x - input['kspace'], self.zero)
         if self.space == 'img-space':
             x = sens_reduce(T.ifft2(x), input['sens_maps'])
+        # if torch.any(torch.isnan(x)):
+        #     pdb.set_trace()
         return self.lambda_ * x
 
     def net_forward(self, x, input):
+        xinitial = x
+        # if torch.any(torch.isnan(x)):
+        #     pdb.set_trace()
         if self.space == 'k-space':
             x = sens_reduce(T.ifft2(x), input['sens_maps'])
-
+        # if torch.any(torch.isnan(x)):
+        #     pdb.set_trace()
         x = merge_multi_slice(x, cat_dim=-2).unsqueeze(1).contiguous()
         x = self.net(x)
+        # if torch.any(torch.isnan(x)):
+        #     pdb.set_trace()
         x = unmerge_multi_slice(x, 2).contiguous()
 
         if self.space == 'k-space':
             x = T.fft2(sens_expand(x, input['sens_maps']))
+        # if torch.any(torch.isnan(x)):
+        #     pdb.set_trace()
         return x
 
     def forward(self, x, input):
@@ -353,6 +383,8 @@ class SensModel(nn.Module):
     def forward(self, input):
         if self.model_sens is not None:
             input['sens_maps'] = self.model_sens(input)
+        # if torch.any(torch.isnan(input['sens_maps'])):
+        #     pdb.set_trace()
         return self.model(input)
 
 def var_net(args_local):

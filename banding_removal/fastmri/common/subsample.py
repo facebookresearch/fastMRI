@@ -153,6 +153,7 @@ class MagicMask(MaskFunc):
         mask = np.concatenate((mask_positive, mask_negative))
 
         shifted_mask = np.fft.fftshift(mask) # Shift it
+        #pdb.set_trace()
         return shifted_mask
 
 class MagicMaskFraction(MaskFunc):

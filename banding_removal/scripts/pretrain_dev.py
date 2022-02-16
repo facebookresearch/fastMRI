@@ -19,7 +19,7 @@ config = {
     'architecture': 'var_net.var_net',
     'data_transform': 'kspace.KSpaceDataTransform',
 
-    'method_str': "12[SoftDC(cunet(18,2)),]IFT(),RSS()",
+    'method_str': "6[SoftDC(cunet(18,2)),]IFT(),RSS()",
     'sens_method_str': 'MaskCenter(),IFT(),Fm2Batch(cunet(8,2)),dRSS()',
     'mask_type': 'magic', # Key change
 
@@ -29,11 +29,12 @@ config = {
 
     'batch_size': 1,
     'method': 'adam',
-    'lr': 0.0003,
+    'lr': 0.0001,
 
+    #'nan_detection': True,
     'calculate_offsets_directly': True,
 
-    'workers': 8,
+    'workers': 0,
 
     'filter_acceleration': 1,
     'min_kspace_width': None,
@@ -65,4 +66,5 @@ config = {
 }
 
 if __name__ == "__main__":
-    spawn_dist.run(config) # Multiple GPU training (8 recommended)
+    #spawn_dist.run(config) # Multiple GPU training (8 recommended)
+    run.run(config) # Single GPU training (for debugging)

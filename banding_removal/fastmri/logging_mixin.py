@@ -69,19 +69,20 @@ class LoggingMixin(object):
         debugh.setLevel(logging.DEBUG)
         root.addHandler(debugh)
 
-        self.tensorboard_dir = self.exp_dir / 'tensorboard'
+        if args.tensorboard:
+            self.tensorboard_dir = self.exp_dir / 'tensorboard'
 
-        if not args.is_distributed:
-            shutil.rmtree(str(self.tensorboard_dir), ignore_errors=True)
-            self.tensorboard_dir.mkdir(exist_ok=True)
+            if not args.is_distributed:
+                shutil.rmtree(str(self.tensorboard_dir), ignore_errors=True)
+                self.tensorboard_dir.mkdir(exist_ok=True)
 
-        if args.rank == 0:
-            log_dir = self.tensorboard_dir / "main"
-        else:
-            log_dir = self.tensorboard_dir / f"node{args.rank:03}"
-        self.tensorboard = SummaryWriter(log_dir=str(log_dir))
-        root.addHandler(TensorboardHandler(self.tensorboard, f"log{args.rank}"))
-        logging.info(f"Tensorboard logging to {self.tensorboard_dir.resolve()}")
+            if args.rank == 0:
+                log_dir = self.tensorboard_dir / "main"
+            else:
+                log_dir = self.tensorboard_dir / f"node{args.rank:03}"
+            self.tensorboard = SummaryWriter(log_dir=str(log_dir))
+            root.addHandler(TensorboardHandler(self.tensorboard, f"log{args.rank}"))
+            logging.info(f"Tensorboard logging to {self.tensorboard_dir.resolve()}")
         self.global_step = 0
         super().initial_setup(args)
 
@@ -110,8 +111,9 @@ class LoggingMixin(object):
         self.global_step += 1
 
     def add_losses_to_tensorboard(self, losses):
-        for loss_key, loss_value in losses.items():
-            self.tensorboard.add_scalar(loss_key, loss_value, global_step=self.global_step)
+        if self.args.tensorboard:
+            for loss_key, loss_value in losses.items():
+                self.tensorboard.add_scalar(loss_key, loss_value, global_step=self.global_step)
 
     def training_loss_hook(self, progress, losses, logging_epoch):
         super().training_loss_hook(progress, losses, logging_epoch)

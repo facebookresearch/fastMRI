@@ -32,6 +32,7 @@ install_requires = [
     "h5py>=2.10.0",
     "PyYAML>=5.3.1",
     "torchmetrics>=0.5.1",
+    "pandas>=1.3.4",
 ]
 
 setup(

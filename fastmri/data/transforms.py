@@ -625,16 +625,11 @@ class MiniCoilTransform:
         acq_end = crop_size[1]
 
         # new cropping section
-        # why sample every other point you may ask?
-        # the answer is that the readout axis is 2-factor oversampled
-        # we do this in MRI to prevent wraparound by the anatomy if the volume
-        # selection did not perform well enough
-        kspace_crop = crop_size.clone()
-        kspace_crop[0] = 2 * crop_size[0]
-        kspace = center_crop(kspace, kspace_crop)
+        square_crop = (attrs["recon_size"][0], attrs["recon_size"][1])
         kspace = fastmri.fft2c(
-            complex_center_crop(fastmri.ifft2c(to_tensor(kspace)), crop_size)
+            complex_center_crop(fastmri.ifft2c(to_tensor(kspace)), square_crop)
         ).numpy()
+        kspace = complex_center_crop(kspace, crop_size)
 
         # we calculate the target before coil compression. This causes the mini
         # simulation to be one where we have a 15-coil, low-resolution image

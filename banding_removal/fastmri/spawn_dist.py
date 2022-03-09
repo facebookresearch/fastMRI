@@ -1,3 +1,10 @@
+"""
+Copyright (c) Facebook, Inc. and its affiliates.
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.
+"""
+
 #from __future__ import print_function
 import argparse
 import pickle
@@ -40,6 +47,8 @@ def run(args=None, ntasks=None):
                 ntasks = int(os.popen("nvidia-smi -L | wc -l").read())
             except:
                 ntasks = 2
+
+    print(f"ntasks: {ntasks}")
 
     args.is_distributed = True
     # Temp ignore for bug in pytorch dataloader, it leaks semaphores
@@ -117,6 +126,9 @@ def run(args=None, ntasks=None):
         if any(not p.is_alive() for p in processses):
             print("Detected an exited process, so exiting main")
             terminate(None, None)
+        # for i, p in enumerate(processses):
+        #     if not p.is_alive():
+        #         print(f"process {i} dead")
 
     print("DONE")
 

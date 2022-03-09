@@ -1,3 +1,10 @@
+"""
+Copyright (c) Facebook, Inc. and its affiliates.
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.
+"""
+
 import logging
 import os
 import sys
@@ -121,6 +128,7 @@ class BaseTrainer(object):
             num_workers=args.workers,
             pin_memory=args.pin_memory,
             sampler=train_sampler,
+            persistent_workers=False,
         )
         self.dev_loader = DataLoader(
             dataset=self.dev_data,
@@ -128,6 +136,7 @@ class BaseTrainer(object):
             num_workers=args.workers,
             pin_memory=args.pin_memory,
             sampler=dev_sampler,
+            persistent_workers=False,
         )
 
         self.display_loader = DataLoader(
@@ -136,6 +145,7 @@ class BaseTrainer(object):
             num_workers=args.workers,
             pin_memory=args.pin_memory,
             drop_last=False,
+            persistent_workers=False,
         )
 
         logging.debug("Determining batches ...")
@@ -215,7 +225,7 @@ class BaseTrainer(object):
         loss.backward()
 
     def start_of_epoch_hook(self, epoch):
-        if self.args.eval_at_start:
+        if self.args.eval_at_start and self.args.evaluate:
             dev_loss = self.stats(epoch, self.dev_loader, "Dev")
             logging.info(f"EVAL Loss: {dev_loss}")
 
@@ -223,19 +233,20 @@ class BaseTrainer(object):
         self.end_of_epoch_eval_hook(epoch)
 
     def end_of_epoch_eval_hook(self, epoch):
-        logging.info("Starting evaluation")
-        start = timer()
-        dev_loss = self.stats(epoch, self.dev_loader, "Dev")
-        end = timer()
-        logging.info(f"EVAL Loss: {dev_loss} time: {datetime.timedelta(seconds=end-start)}")
+        if self.args.evaluate:
+            logging.info("Starting evaluation")
+            start = timer()
+            dev_loss = self.stats(epoch, self.dev_loader, "Dev")
+            end = timer()
+            logging.info(f"EVAL Loss: {dev_loss} time: {datetime.timedelta(seconds=end-start)}")
 
-        if math.isnan(dev_loss) or math.isinf(dev_loss):
-            logging.info("NaN or Inf detected, ending training")
-            self.postrun()
-            sys.exit(1)
+            if math.isnan(dev_loss) or math.isinf(dev_loss):
+                logging.info("NaN or Inf detected, ending training")
+                self.postrun()
+                sys.exit(1)
 
-        is_new_best = dev_loss < self.runinfo["best_dev_loss"]
-        self.runinfo["best_dev_loss"] = min(self.runinfo["best_dev_loss"], dev_loss)
+            is_new_best = dev_loss < self.runinfo["best_dev_loss"]
+            self.runinfo["best_dev_loss"] = min(self.runinfo["best_dev_loss"], dev_loss)
 
     def postrun(self):
         pass

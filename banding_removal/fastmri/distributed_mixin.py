@@ -1,3 +1,10 @@
+"""
+Copyright (c) Facebook, Inc. and its affiliates.
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.
+"""
+
 
 import logging
 import os
@@ -117,11 +124,12 @@ class DistributedMixin(object):
     def loader_setup(self, args):
         """ A distributed sampler has to be used
         """
-        train_sampler = DistributedSampler(self.train_data)
+        train_sampler = DistributedSampler(self.train_data, seed=args.seed)
 
         self.train_loader = DataLoader(
             self.train_data, batch_size=args.batch_size,
             sampler=train_sampler,
+            prefetch_factor=1,
             num_workers=args.workers, pin_memory=args.pin_memory, drop_last=True)
 
         logging.debug("Determining batches ...")
@@ -131,6 +139,7 @@ class DistributedMixin(object):
         self.dev_loader = DataLoader(
             self.dev_data, batch_size=args.batch_size,
             sampler=VolumeSampler(self.dev_data),
+            prefetch_factor=1,
             num_workers=args.workers, pin_memory=args.pin_memory, drop_last=False)
 
         ### No need to use a distributed sampler for the display loader
@@ -138,6 +147,7 @@ class DistributedMixin(object):
             dataset=self.display_data,
             batch_size=args.batch_size,
             num_workers=args.workers,
+            prefetch_factor=1,
             pin_memory=args.pin_memory,
             drop_last=False,
         )

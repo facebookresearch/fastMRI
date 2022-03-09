@@ -5,16 +5,13 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import pathlib
-
 import numpy as np
 import pytest
 import torch
-import yaml
+from .create_temp_data import create_temp_data, create_temp_annotation
 
 # these are really slow - skip by default
-skip_module_test_flag = True
-skip_data_test_flag = True
+SKIP_INTEGRATIONS = True
 
 
 def create_input(shape):
@@ -24,14 +21,23 @@ def create_input(shape):
     return x
 
 
-@pytest.fixture
-def skip_module_test():
-    return skip_module_test_flag
+@pytest.fixture(scope="session")
+def fastmri_mock_dataset(tmp_path_factory):
+    path = tmp_path_factory.mktemp("fastmri_data")
+
+    return create_temp_data(path)
+
+
+@pytest.fixture(scope="session")
+def fastmri_mock_annotation(tmp_path_factory):
+    path = tmp_path_factory.mktemp("fastmri_annotation")
+
+    return create_temp_annotation(path)
 
 
 @pytest.fixture
-def skip_data_test():
-    return skip_data_test_flag
+def skip_integration_tests():
+    return SKIP_INTEGRATIONS
 
 
 @pytest.fixture

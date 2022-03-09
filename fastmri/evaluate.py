@@ -8,101 +8,64 @@ LICENSE file in the root directory of this source tree.
 import argparse
 import pathlib
 from argparse import ArgumentParser
+from typing import Optional
 
 import h5py
 import numpy as np
-from pytorch_lightning.metrics.metric import NumpyMetric, TensorMetric
 from runstats import Statistics
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
-from torch.distributed import ReduceOp
 
 from fastmri.data import transforms
 
 
-class MSE(NumpyMetric):
-    """Calculates MSE and aggregates by summing across distr processes."""
-
-    def __init__(self, name="MSE", *args, **kwargs):
-        super().__init__(name=name, *args, **kwargs)
-
-    def forward(self, gt, pred):
-        return mse(gt, pred)
-
-
-class NMSE(NumpyMetric):
-    """Calculates NMSE and aggregates by summing across distr processes."""
-
-    def __init__(self, name="NMSE", *args, **kwargs):
-        super().__init__(name=name, *args, **kwargs)
-
-    def forward(self, gt, pred):
-        return nmse(gt, pred)
-
-
-class PSNR(NumpyMetric):
-    """Calculates PSNR and aggregates by summing across distr processes."""
-
-    def __init__(self, name="PSNR", *args, **kwargs):
-        super().__init__(name=name, *args, **kwargs)
-
-    def forward(self, gt, pred):
-        return psnr(gt, pred)
-
-
-class SSIM(NumpyMetric):
-    """Calculates SSIM and aggregates by summing across distr processes."""
-
-    def __init__(self, name="SSIM", *args, **kwargs):
-        super().__init__(name=name, *args, **kwargs)
-
-    def forward(self, gt, pred, maxval=None):
-        return ssim(gt, pred, maxval=maxval)
-
-
-class DistributedMetricSum(TensorMetric):
-    """Used for summing parameters across distr processes."""
-
-    def __init__(self, name="DistributedMetricSum", *args, **kwargs):
-        super().__init__(name=name, *args, **kwargs)
-
-    def forward(self, x):
-        return x.clone()
-
-
-def mse(gt, pred):
+def mse(gt: np.ndarray, pred: np.ndarray) -> np.ndarray:
     """Compute Mean Squared Error (MSE)"""
     return np.mean((gt - pred) ** 2)
 
 
-def nmse(gt, pred):
+def nmse(gt: np.ndarray, pred: np.ndarray) -> np.ndarray:
     """Compute Normalized Mean Squared Error (NMSE)"""
     return np.linalg.norm(gt - pred) ** 2 / np.linalg.norm(gt) ** 2
 
 
-def psnr(gt, pred):
+def psnr(
+    gt: np.ndarray, pred: np.ndarray, maxval: Optional[float] = None
+) -> np.ndarray:
     """Compute Peak Signal to Noise Ratio metric (PSNR)"""
-    return peak_signal_noise_ratio(gt, pred, data_range=gt.max())
+    if maxval is None:
+        maxval = gt.max()
+    return peak_signal_noise_ratio(gt, pred, data_range=maxval)
 
 
-def ssim(gt, pred, maxval=None):
+def ssim(
+    gt: np.ndarray, pred: np.ndarray, maxval: Optional[float] = None
+) -> np.ndarray:
     """Compute Structural Similarity Index Metric (SSIM)"""
+    if not gt.ndim == 3:
+        raise ValueError("Unexpected number of dimensions in ground truth.")
+    if not gt.ndim == pred.ndim:
+        raise ValueError("Ground truth dimensions does not match pred.")
+
     maxval = gt.max() if maxval is None else maxval
 
-    ssim = 0
+    ssim = np.array([0])
     for slice_num in range(gt.shape[0]):
         ssim = ssim + structural_similarity(
             gt[slice_num], pred[slice_num], data_range=maxval
         )
 
-    ssim = ssim / gt.shape[0]
-
-    return ssim
+    return ssim / gt.shape[0]
 
 
-METRIC_FUNCS = dict(MSE=mse, NMSE=nmse, PSNR=psnr, SSIM=ssim,)
+METRIC_FUNCS = dict(
+    MSE=mse,
+    NMSE=nmse,
+    PSNR=psnr,
+    SSIM=ssim,
+)
 
 
-class Metrics(object):
+class Metrics:
     """
     Maintains running statistics for a given collection of metrics.
     """

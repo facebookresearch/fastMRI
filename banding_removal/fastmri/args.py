@@ -1,3 +1,10 @@
+"""
+Copyright (c) Facebook, Inc. and its affiliates.
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.
+"""
+
 import os
 import argparse
 import sys
@@ -16,6 +23,7 @@ class Args(argparse.ArgumentParser):
 
         self.add_argument('--run_name', default="run", type=str)
         self.add_argument('--seed', default=42, type=int)
+        self.add_argument('--tensorboard', default=False, type=bool)
         self.add_argument('--debug', default=False, type=bool,
             help="Additional debug logging/checks. Very slow.")
         self.add_argument('--strace', default=False, type=bool,
@@ -351,6 +359,11 @@ class Args(argparse.ArgumentParser):
             help="number of slices to grab for prediction before the slice being predicted")
         self.add_argument('--after_slices', default=0, type=int,
             help="number of slices to grab for prediction after the slice being predicted")
+
+        self.add_argument('--short_epochs', default=False, type=bool,
+            help="Run only 20% of each epoch")
+        self.add_argument('--evaluate', default=True, type=bool,
+            help="Evaluate on dev set every epoch")
 
         # Override defaults with passed overrides
         self.set_defaults(**overrides)

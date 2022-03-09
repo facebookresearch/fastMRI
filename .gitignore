@@ -6,6 +6,7 @@ logs
 *.png
 *.cfl
 *.hdr
+*egg-info*
 recon-workspace.code-workspace
 datasets/
 logs/
@@ -14,3 +15,8 @@ add_header.py
 *fair_cluster*
 fastmri_dirs.yaml
 dataset_cache.pkl
+.mypy_cache/
+lightning_logs/
+*.pt
+build/
+dist/

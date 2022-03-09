@@ -1,3 +1,10 @@
+"""
+Copyright (c) Facebook, Inc. and its affiliates.
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.
+"""
+
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -49,7 +56,7 @@ class SSIMLossMixin(object):
         output_ = self.unnorm(output, batch)
         target_ = self.unnorm(target, batch)
         ssim_loss = 1 - self.ssim(output_, target_, data_range=max_value)
-        loss = ssim_loss.add(self.ssim_l1_coefficient, l1_loss)
+        loss = ssim_loss.add(l1_loss, alpha=self.ssim_l1_coefficient)
         loss_dict = {
             'train_loss': loss,
             'ssim_loss': ssim_loss,

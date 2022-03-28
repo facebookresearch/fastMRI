@@ -612,7 +612,7 @@ def build_args():
         "--loupe_mask",
         default=False,
         type=str2bool,
-        help="Whether to use LOUPE-like mask for non-active acquisitition.",
+        help="Whether to use LOUPE mask, for non-adaptive acquisition.",
     )
     parser.add_argument(
         "--use_softplus",

@@ -326,7 +326,7 @@ class VarNetModule(MriModule):
             batch.kspace, batch.masked_kspace, batch.mask
         )
         target, output = transforms.center_crop_to_smallest(batch.target, output)
-        # NOTE: Using max value here...
+
         return {
             "batch_idx": batch_idx,
             "fname": batch.fname,

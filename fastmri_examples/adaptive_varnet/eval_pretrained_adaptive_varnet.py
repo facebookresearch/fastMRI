@@ -92,10 +92,12 @@ def cli_main(args):
     # ------------
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
+    non_adaptive = False
     try:
         # Try to load as AdaptiveVarNetModule, if this fails, then the model is probably a VarNetModule instead
         print("Trying to load as AdaptiveVarNetModule...")
         model = load_model(AdaptiveVarNetModule, args.load_checkpoint)
+
         print("... Success!")
     except RuntimeError:
         # If this still fails, then probably the state dict
@@ -103,19 +105,23 @@ def cli_main(args):
             "Loading as AdaptiveVarNetModule failed, trying to load as VarNetModule..."
         )
         model = load_model(VarNetModule, args.load_checkpoint)
+        non_adaptive = True
         print("... Success!")
 
     model.to(device)
 
-    ssim_loss = fastmri.SSIMLoss()
-
-    all_prob_masks = []
-    all_ssims, all_psnrs, all_nmses = [], [], []
     data_loader = (
         data_module.val_dataloader()
         if args.data_mode == "val"
         else data_module.train_dataloader()
     )
+
+    # --------------------------------------------------------------------------------
+    # We loop over the whole dataset and store information per-volume[
+    # The metrics will be computed in a different loop
+    # --------------------------------------------------------------------------------
+    vol_info = {}
+    seen_slices = set()
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
             if i == args.num_batches:
@@ -127,54 +133,84 @@ def cli_main(args):
                 batch.mask.to(device),
             )
 
-            # ----- SSIM calculation -----
-            # Note that SSIMLoss computes average SSIM over the entire batch
-            ssim = (
-                1
-                - ssim_loss(
-                    output.unsqueeze(1).cpu(),
-                    batch.target.unsqueeze(1),
-                    data_range=batch.max_value,
-                    reduced=False,
-                ).mean(dim=(1, 2))
-            )
-            all_ssims.append(ssim.cpu())
-
-            target = batch.target.numpy()
-            output = output.cpu().numpy()
-
-            for gt, rec, maxval in zip(target, output, batch.max_value.numpy()):
-                psnr = evaluate.psnr(gt, rec, maxval=maxval)
-                nmse = evaluate.nmse(gt, rec)
-                all_psnrs.append(psnr)
-                all_nmses.append(nmse)
-
-            # Save prob_masks if they exist (not for VarNetModule)
-            if "prob_masks" in extra_outputs:
-                prob_masks_list = extra_outputs["prob_masks"]
-
+            prob_masks_list = extra_outputs["prob_masks"]
+            if not non_adaptive:
                 assert (
                     len(prob_masks_list) == 1
-                ), "Found more than one prob mask... Multiple policies in this checkpoint? Not currently supported."
+                ), "Found more than one prob mask... Multiple policies in this checkpoint?"
                 batch_prob_masks = (
-                    prob_masks_list[0][:, 0, 0, :, 0].detach().cpu()
+                    prob_masks_list[0].squeeze().detach().cpu()
                 )  # b x 1 x 1 x 128 x 1 --> b x 128
-                assert np.isclose(batch_prob_masks[0].sum(), model.budget), (
-                    f"Sum of a prob mask should match budget {model.budget} "
-                    f"but it was {batch_prob_masks[0].sum()}"
-                )
-                all_prob_masks.append(batch_prob_masks)
+                assert np.isclose(
+                    batch_prob_masks[0].sum(), model.budget
+                ), f"Sum of a prob mask should match budget {model.budget}!"
 
-        # These are numpy arrays
+            for i, f in enumerate(batch.fname):
+                if f not in vol_info:
+                    vol_info[f] = []
+                prob_mask = None if non_adaptive else batch_prob_masks[i]
+                slice_id = (f, batch.slice_num[i])
+                assert slice_id not in seen_slices
+                seen_slices.add(slice_id)
+                vol_info[f].append(
+                    (
+                        output[i].cpu(),
+                        batch.masked_kspace[i].cpu(),
+                        batch.slice_num[i],
+                        batch.target[i].cpu(),
+                        batch.max_value[i],
+                        prob_mask,
+                    )
+                )
+
+        # --------------------------------------------------------------------------------
+        # Now we compute metrics per volume
+        # --------------------------------------------------------------------------------
+        all_prob_masks = []
+        all_ssims, all_psnrs, all_nmses = [], [], []
+        for vol_name, vol_data in vol_info.items():
+            # slice_data is (output, masked_kspace, slice_num, target, max_value, prob_mask)
+            output = torch.stack([slice_data[0] for slice_data in vol_data]).numpy()
+            target = torch.stack([slice_data[3] for slice_data in vol_data]).numpy()
+
+            if not non_adaptive:
+                all_prob_masks.append(
+                    torch.stack([slice_data[-1] for slice_data in vol_data])
+                )
+
+            # ----- Metrics calculation -----
+            if args.vol_based:
+                # Note that SSIMLoss computes average SSIM over the entire batch
+                ssim = evaluate.ssim(target, output)
+                psnr = evaluate.psnr(target, output)
+                nmse = evaluate.nmse(target, output)
+                all_ssims.append(ssim)
+                all_psnrs.append(psnr)
+                all_nmses.append(nmse)
+            else:
+                for gt, rec in zip(target, output):
+                    gt = gt[np.newaxis, :]
+                    rec = rec[np.newaxis, :]
+                    ssim = evaluate.ssim(gt, rec)
+                    psnr = evaluate.psnr(gt, rec)
+                    nmse = evaluate.nmse(gt, rec)
+                    all_ssims.append(ssim)
+                    all_psnrs.append(psnr)
+                    all_nmses.append(nmse)
+
+        # --------------------------------------------------------------------------------
+        # Aggregate everything
+        # --------------------------------------------------------------------------------
+        ssim_array = np.concatenate(np.array(all_ssims)[:, None], axis=0)
         psnr_array = np.concatenate(np.array(all_psnrs)[:, None], axis=0)
         nmse_array = np.concatenate(np.array(all_nmses)[:, None], axis=0)
-        ssim_tensor = torch.cat(all_ssims, dim=0)
 
         return_dict = {
-            "ssim": ssim_tensor.mean().item(),
+            "ssim": ssim_array.mean().item(),
             "psnr": psnr_array.mean().item(),
             "nmse": nmse_array.mean().item(),
         }
+
         if all_prob_masks:
             # Each row sums to model.budget.
             prob_mask_tensor = torch.cat(all_prob_masks, dim=0).double()
@@ -244,6 +280,12 @@ def build_args():
         default=True,
         type=str2bool,
         help="Whether skip low-frequency lines when computing equispaced mask.",
+    )
+    parser.add_argument(
+        "--vol_based",
+        default=True,
+        type=str2bool,
+        help="Whether to do volume-based evaluation (otherwise slice-based).",
     )
 
     parser = AdaptiveVarNetModule.add_model_specific_args(parser)

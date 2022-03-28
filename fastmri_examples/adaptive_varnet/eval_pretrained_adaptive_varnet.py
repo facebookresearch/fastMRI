@@ -1,11 +1,9 @@
 import pathlib
 from argparse import ArgumentParser
 
-import fastmri
 import numpy as np
 import pytorch_lightning as pl
 import torch
-
 from fastmri import evaluate
 from fastmri.data.mri_data import fetch_dir
 from fastmri.data.transforms import MiniCoilTransform

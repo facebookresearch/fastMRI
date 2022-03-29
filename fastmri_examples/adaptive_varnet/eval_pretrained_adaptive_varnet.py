@@ -300,7 +300,7 @@ def build_args():
         data_path=data_path,  # path to fastMRI data
         mask_type="adaptive_equispaced_fraction",  # VarNet uses equispaced mask
         challenge="multicoil",  # only multicoil implemented for VarNet
-        batch_size=1,  # number of samples per batch
+        batch_size=64,  # number of samples per batch
         test_path=None,  # path for test split, overwrites data_path
         num_workers=20,
     )

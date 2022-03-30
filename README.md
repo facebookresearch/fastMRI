@@ -56,6 +56,12 @@ help(SliceDataset)
 If you encounter an issue, the best first thing to do is to try to match the
 test environments in `requirements.txt` and `dev-requirements.txt`.
 
+**Note:** As documented in [Issue 215](https://github.com/facebookresearch/fastMRI/issues/215),
+there is currently a memory leak when using `h5py` installed from `pip` and
+converting to a `torch.Tensor`. To avoid the leak, you need to use `h5py` with
+a version of HDF5 before 1.12.1. As of February 16, 2022, the `conda` version
+of `h5py` 3.6.0 used HDF5 1.10.6, which avoids the leak.
+
 First install PyTorch according to the directions at the
 [PyTorch Website](https://pytorch.org/get-started/) for your operating system
 and CUDA setup. Then, run

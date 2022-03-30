@@ -10,6 +10,7 @@ import torchvision
 import logging
 import sys
 import pdb
+import gc
 import numpy as np
 from torch.nn import functional as F
 from .common import image_grid
@@ -31,7 +32,8 @@ class VisualizationMixin(object):
         super().start_of_epoch_hook(epoch)
 
     def end_of_epoch_hook(self, epoch):
-        self.visualize_dev(epoch+1) #Start indexing at 1
+        if not self.args.short_epochs or (self.args.short_epochs and epoch % 5 == 0):
+            self.visualize_dev(epoch+1) #Start indexing at 1
 
         super().end_of_epoch_hook(epoch)
 
@@ -47,12 +49,14 @@ class VisualizationMixin(object):
         if grid_size == 0:
             return
 
-        logging.debug("Saving visualizations")
+        logging.debug("Saving visualizations ...")
         images_processed = 0
 
         grid_recons = None
         with torch.no_grad():
             for batch_idx, batch in enumerate(self.display_loader):
+                logging.debug(f"Processing batch_idx: {batch_idx}")
+                gc.collect()
                 output, target = self.predict(batch)
                 target = transforms.center_crop_or_pad(target,
                         (self.args.resolution_height, self.args.resolution_width))
@@ -71,8 +75,10 @@ class VisualizationMixin(object):
                         output.shape[2], output.shape[3]).to(self.device)
                     grid_images = torch.zeros_like(grid_recons)
                     grid_iffts = torch.zeros_like(grid_recons)
+                    logging.debug(f"Built grid")
 
                 for j in range(output.shape[0]):
+                    logging.debug(f"j: {j}")
                     if images_processed >= grid_size:
                         break
                     grid_recons[images_processed, ...] = output.data[j, ...].float()
@@ -93,10 +99,17 @@ class VisualizationMixin(object):
             grid_recons = grid_recons.cpu()
             grid_images = grid_images.cpu()
             grid_errors = torch.abs(grid_recons - grid_images)
+            gc.collect()
 
             if self.args.rank == 0: # Only master task does visual
+                logging.debug(f"Saving target")
+                gc.collect()
                 self.save_images(grid_images, 'Target', epoch)
+                gc.collect()
+                logging.debug(f"Saving reconstruction")
                 self.save_images(grid_recons, 'Reconstruction', epoch)
+                gc.collect()
+                logging.debug(f"Saving errors")
                 self.save_images(grid_errors, 'Error', epoch)
 
             logging.debug(f"Sent images to tensorboard and saved.")
@@ -110,8 +123,11 @@ class VisualizationMixin(object):
             image_dir.mkdir(exist_ok=True)
 
             image_blocks = []
+            logging.debug(f"Building grid ...")
             losses = {'NMSE': [], 'SSIM': [], 'MSE': []}
             for i in range(images_processed):
+                gc.collect()
+                logging.debug(f"i: {i}")
                 gtnp = grid_images[i].cpu().numpy()
                 prednp = grid_recons[i].cpu().numpy()
                 losses['NMSE'].append(evaluate.nmse(gtnp, prednp))
@@ -129,7 +145,14 @@ class VisualizationMixin(object):
                     (((grid_iffts[i] - shift) / scale, ) if self.args.display_ifft else ())
                     )
 
+            del gt
+            del gtnp
+            del prednp
+            del grid_images
+            gc.collect()
             grid_pil = image_grid.grid(image_blocks, losses=losses, runinfo=self.runinfo)
+            del image_blocks
+            gc.collect()
             grid_path = image_dir / f"epoch{epoch:03}.png"
             if self.args.rank == 0:
                 grid_pil.save(grid_path, format="PNG")
@@ -137,11 +160,12 @@ class VisualizationMixin(object):
             sys.stdout.flush()
 
     def save_images(self, image, tag, epoch):
-        image = image.float()
-        image = image - image.min()
-        image = image / image.max()
-        grid = torchvision.utils.make_grid(image, nrow=4, pad_value=1)
-        self.tensorboard.add_image(tag, grid, epoch)
+        if self.args.tensorboard:
+            image = image.float()
+            image = image - image.min()
+            image = image / image.max()
+            grid = torchvision.utils.make_grid(image, nrow=4, pad_value=1)
+            self.tensorboard.add_image(tag, grid, epoch)
 
     def visualize_data_transform(self):
         """

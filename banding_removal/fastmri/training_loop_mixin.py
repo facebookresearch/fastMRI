@@ -164,7 +164,8 @@ class TrainingLoopMixin(object):
                 losses['instantaneous_' + name] = loss_dict[name]
                 losses['average_' + name] = avg_losses[name]
 
-            self.runinfo['train_fnames'].append(batch['fname'])
+            del loss_dict
+            #self.runinfo['train_fnames'].append(batch['fname'])
             self.training_loss_hook(progress, losses, logging_epoch)
 
             del losses
@@ -189,7 +190,32 @@ class TrainingLoopMixin(object):
                 if self.args.break_early is not None and percent_done >= self.args.break_early:
                     break
 
-            if self.args.debug_epoch:
+            if batch_idx % 50 == 0:
+                import os
+                if args.rank == 0:
+                    with os.popen('free -m') as f:
+                        output = f.read()
+                    print(output)
+                    logging.debug(output)
+                import os
+                import psutil
+                msg = f"rank: {args.rank} pid: {os.getpid()} rss MB : {psutil.Process().memory_info().rss / 1024 ** 2} vms MB: {psutil.Process().memory_info().vms / 1024 ** 2}"
+                print(msg)
+                logging.debug(msg)
+
+            if self.args.short_epochs and batch_idx == 300:
+                break
+
+            if self.args.short_epochs and batch_idx == 11830//(args.world_size*5):
+                if args.rank == 0:
+                    with os.popen('free -m') as f:
+                        output = f.read()
+                    print(output)
+                    logging.debug(output)
+
+                msg = f"rank: {args.rank} pid: {os.getpid()} rss MB : {psutil.Process().memory_info().rss / 1024 ** 2} vms MB: {psutil.Process().memory_info().vms / 1024 ** 2}"
+                print(msg)
+                logging.debug(msg)
                 break
 
     def stats(self, epoch, loader, setname):

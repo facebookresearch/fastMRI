@@ -56,7 +56,7 @@ class SSIMLossMixin(object):
         output_ = self.unnorm(output, batch)
         target_ = self.unnorm(target, batch)
         ssim_loss = 1 - self.ssim(output_, target_, data_range=max_value)
-        loss = ssim_loss.add(self.ssim_l1_coefficient, l1_loss)
+        loss = ssim_loss.add(l1_loss, alpha=self.ssim_l1_coefficient)
         loss_dict = {
             'train_loss': loss,
             'ssim_loss': ssim_loss,

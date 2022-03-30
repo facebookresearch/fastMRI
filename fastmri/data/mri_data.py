@@ -294,12 +294,12 @@ class SliceDataset(torch.utils.data.Dataset):
                 example for example in self.examples if example[0].stem in sampled_vols
             ]
 
-            if num_cols:
-                self.examples = [
-                    ex
-                    for ex in self.examples
-                    if ex[2]["encoding_size"][1] in num_cols  # type: ignore
-                ]
+        if num_cols:
+            self.examples = [
+                ex
+                for ex in self.examples
+                if ex[2]["encoding_size"][1] in num_cols  # type: ignore
+            ]
 
     def _retrieve_metadata(self, fname):
         with h5py.File(fname, "r") as hf:

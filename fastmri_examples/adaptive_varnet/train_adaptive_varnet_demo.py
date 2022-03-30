@@ -5,31 +5,88 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import torch
 import json
 import os
-import wandb
 import pathlib
-import matplotlib.pyplot as plt
 from argparse import ArgumentParser
 from datetime import datetime
 
+import matplotlib.pyplot as plt
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import Callback
-from wandb.util import parse_sweep_id
-
-from fastmri.utils import str2bool, int2none, str2none
+import torch
+import wandb
 from fastmri.data.mri_data import fetch_dir
-from fastmri.data.subsample import create_mask_for_mask_type
-from fastmri.data.transforms import VarNetDataTransform, MiniCoilTransform
-from fastmri.pl_modules import FastMriDataModule, VarNetModule, ActiveVarNetModule
+from fastmri.data.transforms import MiniCoilTransform
+from fastmri.pl_modules import FastMriDataModule
+from pytorch_lightning.callbacks import Callback
+
+from pl_modules import AdaptiveVarNetModule, VarNetModule
+from subsample import create_mask_for_mask_type
+
+
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters()) if model is not None else 0
+
+
+def count_trainable_parameters(model):
+    return (
+        sum(p.numel() for p in model.parameters() if p.requires_grad)
+        if model is not None
+        else 0
+    )
+
+
+def count_untrainable_parameters(model):
+    return (
+        sum(p.numel() for p in model.parameters() if not p.requires_grad)
+        if model is not None
+        else 0
+    )
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ("yes", "true", "t", "y", "1"):
+        return True
+    elif v.lower() in ("no", "false", "f", "n", "0"):
+        return False
+    else:
+        raise ValueError("Boolean value expected.")
+
+
+def str2none(v):
+    if v is None:
+        return v
+    if v.lower() == "none":
+        return None
+    else:
+        return v
+
+
+def int2none(v):
+    if v is None:
+        return v
+    if v.lower() == "none":
+        return None
+    else:
+        return int(v)
+
+
+def float2none(v):
+    if v is None:
+        return v
+    if v.lower() == "none":
+        return None
+    else:
+        return float(v)
 
 
 def make_wandb_run_name(args):
     name = ""
 
     # Create base name
-    if args.active_acquisition:
+    if args.learn_acquisition:
         if args.loupe_mask:
             name += "loupe-"
         else:
@@ -42,7 +99,7 @@ def make_wandb_run_name(args):
     name += str(args.num_cascades)
     name += "-"
 
-    if args.active_acquisition and not args.loupe_mask:
+    if args.learn_acquisition and not args.loupe_mask:
         name += "p"
         name += str(args.cascades_per_policy)
         name += "-"
@@ -60,7 +117,7 @@ def make_wandb_run_name(args):
     else:
         name += "dcmultip-"
 
-    if args.active_acquisition:
+    if args.learn_acquisition:
         if args.use_softplus:
             name += f"softplus{args.slope}b-"
         else:
@@ -68,7 +125,7 @@ def make_wandb_run_name(args):
         if args.straight_through_slope != 10:
             name += f"stslope{args.straight_through_slope}-"
         if args.hard_dc:
-            if not args.dc_mode == 'first':
+            if not args.dc_mode == "first":
                 name += f"hdc{args.dc_mode}-"
         else:
             name += "sdc-"
@@ -89,10 +146,10 @@ def make_wandb_run_name(args):
 
             if args.policy_activation != "leakyrelu":
                 name += "elu-"
-        else: # LOUPE runs
+        else:  # LOUPE runs
             pass
     else:  # Non-active runs
-        if args.mask_type != 'equispaced':
+        if args.mask_type != "adaptive_equispaced_fraction":
             name += f"{args.mask_type}-"
 
     name += "seed"
@@ -124,16 +181,24 @@ class WandbLoggerCallback(Callback):
             # Get wandb id from file in checkpoint dir
             # resume_from_checkpoint = default_root_dir / checkpoints / model.ckpt
             # wandb_id is stored in default_root_dir / wandb_id.txt
-            with open(pathlib.Path(args.resume_from_checkpoint).parent.parent / "wandb_id.txt", "r") as f:
+            with open(
+                pathlib.Path(args.resume_from_checkpoint).parent.parent
+                / "wandb_id.txt",
+                "r",
+            ) as f:
                 id = f.read()
-            with open(pathlib.Path(args.resume_from_checkpoint).parent.parent / "wandb_dir.txt", "r") as f:
+            with open(
+                pathlib.Path(args.resume_from_checkpoint).parent.parent
+                / "wandb_dir.txt",
+                "r",
+            ) as f:
                 dir = pathlib.Path(f.read())
         else:
             id = wandb.util.generate_id()
 
             base_dir = pathlib.Path.cwd() / "wandb"
             now = datetime.now()
-            if args.active_acquisition:
+            if args.learn_acquisition:
                 if args.loupe_mask:
                     algo = "loupe"
                 else:
@@ -324,31 +389,24 @@ def cli_main(args):
         args.skip_low_freqs,
     )
     # use random masks for train transform, fixed masks for val transform
-    if args.compress_coils:
-        train_transform = MiniCoilTransform(
-            mask_func=mask,
-            use_seed=False,  # Set this to True to get deterministic results for Equispaced and Random.
-            num_compressed_coils=args.num_compressed_coils,
-            crop_size=args.crop_size,
-        )
-        val_transform = MiniCoilTransform(
-            mask_func=mask,
-            num_compressed_coils=args.num_compressed_coils,
-            crop_size=args.crop_size,
-        )
-        if args.test_split in ("test", "challenge"):
-            mask = None
-        test_transform = MiniCoilTransform(
-            mask_func=mask,
-            num_compressed_coils=args.num_compressed_coils,
-            crop_size=args.crop_size,
-        )
-    else:
-        train_transform = VarNetDataTransform(mask_func=mask, use_seed=False)
-        val_transform = VarNetDataTransform(mask_func=mask)
-        if args.test_split in ("test", "challenge"):
-            mask = None
-        test_transform = VarNetDataTransform(mask_func=mask)
+    train_transform = MiniCoilTransform(
+        mask_func=mask,
+        use_seed=False,  # Set this to True to get deterministic results for Equispaced and Random.
+        num_compressed_coils=args.num_compressed_coils,
+        crop_size=args.crop_size,
+    )
+    val_transform = MiniCoilTransform(
+        mask_func=mask,
+        num_compressed_coils=args.num_compressed_coils,
+        crop_size=args.crop_size,
+    )
+    if args.test_split in ("test", "challenge"):
+        mask = None
+    test_transform = MiniCoilTransform(
+        mask_func=mask,
+        num_compressed_coils=args.num_compressed_coils,
+        crop_size=args.crop_size,
+    )
 
     # ptl data module - this handles data loaders
     data_module = FastMriDataModule(
@@ -369,8 +427,8 @@ def cli_main(args):
     # ------------
     # model
     # ------------
-    if args.active_acquisition:
-        model = ActiveVarNetModule(
+    if args.learn_acquisition:
+        model = AdaptiveVarNetModule(
             num_cascades=args.num_cascades,
             pools=args.pools,
             chans=args.chans,
@@ -471,8 +529,8 @@ def build_args():
     # data transform params
     parser.add_argument(
         "--mask_type",
-        choices=("random", "equispaced"),
-        default="equispaced",
+        choices=("random", "adaptive_equispaced_fraction"),
+        default="adaptive_equispaced_fraction",
         type=str,
         help="Type of k-space mask",
     )
@@ -511,13 +569,6 @@ def build_args():
         help="wandb entity to use.",
     )
 
-    # MiniCoilTransform arguments
-    parser.add_argument(
-        "--compress_coils",
-        default=True,
-        type=str2bool,
-        help="Whether to do coil compression.",
-    )
     parser.add_argument(
         "--num_compressed_coils",
         default=4,
@@ -534,11 +585,10 @@ def build_args():
 
     # Active acquisition arguments
     parser.add_argument(
-        "--active_acquisition",
+        "--learn_acquisition",
         default=False,
         type=str2bool,
-        help=("Whether to do mask design (e.g. LOUPE, Policy) or not. Note that this argument is technically named "
-              "incorrectly, since these learned subsampling methods are not active."),
+        help="Whether to do mask design (e.g. LOUPE, Policy) or not.",
     )
     parser.add_argument(
         "--budget",
@@ -552,7 +602,8 @@ def build_args():
         type=int,
         help=(
             "How many cascades to do per policy. `num_cascades` must be "
-            "a multiple of this + 1."
+            "a multiple of this + 1 when learning a Policy model. Else "
+            "this argument is ignored."
         ),
     )
 
@@ -561,7 +612,7 @@ def build_args():
         "--loupe_mask",
         default=False,
         type=str2bool,
-        help="Whether to use LOUPE-like mask for non-active acquisitition.",
+        help="Whether to use LOUPE mask, for non-adaptive acquisition.",
     )
     parser.add_argument(
         "--use_softplus",
@@ -598,8 +649,10 @@ def build_args():
         "--dc_mode",
         default="first",
         type=str,
-        help=("Whether to do DC before ('first'), after ('last') or simultaneously "
-              "('simul') with Refinement step. Default 'first'."),
+        help=(
+            "Whether to do DC before ('first'), after ('last') or simultaneously "
+            "('simul') with Refinement step. Default 'first'."
+        ),
     )
 
     # Gradient arguments
@@ -613,8 +666,11 @@ def build_args():
         "--sparse_dc_gradients",
         default=True,
         type=str2bool,
-        help=("Whether to sparsify the gradients in DC by using torch.where() "
-              "with the mask: this essentially removes gradients for the policy on unsampled rows."),
+        help=(
+            "Whether to sparsify the gradients in DC by using torch.where() "
+            "with the mask: this essentially removes gradients for the policy "
+            "on unsampled rows."
+        ),
     )
 
     parser.add_argument(
@@ -660,7 +716,7 @@ def build_args():
     parser = FastMriDataModule.add_data_specific_args(parser)
     parser.set_defaults(
         data_path=data_path,  # path to fastMRI data
-        mask_type="equispaced",  # VarNet uses equispaced mask
+        mask_type="adaptive_equispaced_fraction",  # VarNet uses equispaced mask
         challenge="multicoil",  # only multicoil implemented for VarNet
         batch_size=1,  # number of samples per batch
         test_path=None,  # path for test split, overwrites data_path
@@ -733,7 +789,7 @@ def run_cli():
 
     # Prevent Lightning pre-emption
     for fname in pathlib.Path(args.default_root_dir).iterdir():
-        if fname.name[:len("hpc_ckpt")] == "hpc_ckpt" and fname.suffix == ".ckpt":
+        if fname.name[: len("hpc_ckpt")] == "hpc_ckpt" and fname.suffix == ".ckpt":
             fname.unlink()
 
     # ---------------------

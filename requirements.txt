@@ -7,3 +7,4 @@ pytorch_lightning==1.4.7
 h5py==2.10.0
 PyYAML==5.4.1
 torchmetrics==0.5.1
+click==8.0.4

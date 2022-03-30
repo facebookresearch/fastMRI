@@ -10,22 +10,21 @@ from collections import defaultdict
 from typing import Tuple
 
 import fastmri
-
-import torch
 import numpy as np
-
-from fastmri.data import transforms
-from fastmri.models import ActiveVarNet
+import torch
 from fastmri import evaluate
+from fastmri.data import transforms
+from fastmri.models import AdaptiveVarNet
+from fastmri.pl_modules.mri_module import MriModule
 
-from .mri_module import MriModule
+from .metrics import DistributedArraySum, DistributedMetricSum
 
 
-class ActiveVarNetModule(MriModule):
+class AdaptiveVarNetModule(MriModule):
     """
-    Active VarNet training module.
+    Adaptive VarNet training module.
 
-    This can be used to train active variational models.
+    This can be used to train adaptive variational models.
     """
 
     def __init__(
@@ -72,35 +71,43 @@ class ActiveVarNetModule(MriModule):
             lr_step_size: Learning rate step size.
             lr_gamma: Learning rate gamma decay.
             weight_decay: Parameter for penalizing weights norm.
-            budget: Number of active acquisitions to perform, if doing active acquisition.
+            budget: Number of adaptive acquisitions to perform, if doing adaptive
+                acquisition.
             cascades_per_policy: How many cascades to use per policy step.
-            loupe_mask: Whether to use LOUPE-like mask instead of equispaced (still keeps
-                center lines).
+            loupe_mask: Whether to use LOUPE-like mask instead of equispaced
+                (still keeps center lines).
             use_softplus: Whether to use softplus or sigmoid in LOUPE.
             crop_size: tuple, crop size of MR images.
-            num_actions: Number of possible actions to sample (=image width). Used only
-                when loupe_mask is True.
-            num_sense_lines: Number of low-frequency lines to use for sensitivity map
-                computation, must be even or `None`. Default `None` will automatically
-                compute the number from masks. Default behaviour may cause some slices to
-                use more low-frequency lines than others, when used in conjunction with
+            num_actions: Number of possible actions to sample (=image width). Used
+                only when loupe_mask is True.
+            num_sense_lines: Number of low-frequency lines to use for
+                sensitivity map computation, must be even or `None`. Default
+                `None` will automatically compute the number from masks.
+                Default behaviour may cause some slices to use more
+                low-frequency lines than others, when used in conjunction with
                 e.g. the EquispacedMaskFunc defaults.
             hard_dc: Whether to do hard DC layers instead of soft (learned).
             dc_mode: str, whether to do DC before ('first'), after ('last') or
                 simultaneously ('simul') with Refinement step. Default 'simul'.
-            slope: Slope to use for sigmoid in LOUPE and Policy forward, or beta to use in softplus.
-            sparse_dc_gradients: Whether to sparsify the gradients in DC by using torch.where()
-                with the mask: this essentially removes gradients for the policy on unsampled rows.
+            slope: Slope to use for sigmoid in LOUPE and Policy forward, or
+                beta to use in softplus.
+            sparse_dc_gradients: Whether to sparsify the gradients in DC by
+                using torch.where() with the mask: this essentially removes
+                gradients for the policy on unsampled rows.
             straight_through_slope: Slope to use in Straight Through estimator.
-            st_clamp: Whether to clamp gradients between -1 and 1 in straight through estimator.
-            policy_fc_size: int, size of fully connected layers in Policy architecture.
-            policy_drop_prob: float, dropout probability of convolutional layers in Policy.
-            policy_num_fc_layers: int, number of fully-connected layers to apply after the convolutional layers in the
-                policy.
-            policy_activation: str, "leakyrelu" or "elu". Activation function to use between fully-connected layers in
-                the policy. Only used if policy_num_fc_layers > 1.
+            st_clamp: Whether to clamp gradients between -1 and 1 in straight
+                through estimator.
+            policy_fc_size: int, size of fully connected layers in Policy
+                architecture.
+            policy_drop_prob: float, dropout probability of convolutional
+                layers in Policy.
+            policy_num_fc_layers: int, number of fully-connected layers to
+                apply after the convolutional layers in the policy.
+            policy_activation: str, "leakyrelu" or "elu". Activation function
+                to use between fully-connected layers in the policy. Only used
+                if policy_num_fc_layers > 1.
         """
-        super().__init__(budget=budget)
+        super().__init__()
         self.save_hyperparameters()
 
         self.num_cascades = num_cascades
@@ -132,7 +139,26 @@ class ActiveVarNetModule(MriModule):
         self.policy_num_fc_layers = policy_num_fc_layers
         self.policy_activation = policy_activation
 
-        self.varnet = ActiveVarNet(
+        # logging functions
+        self.NMSE = DistributedMetricSum()
+        self.SSIM = DistributedMetricSum()
+        self.PSNR = DistributedMetricSum()
+        self.ValLoss = DistributedMetricSum()
+        self.TotExamples = DistributedMetricSum()
+        self.TotSliceExamples = DistributedMetricSum()
+        self.ValMargDist = DistributedArraySum()
+        self.ValCondEnt = DistributedMetricSum()
+
+        self.TrainNMSE = DistributedMetricSum()
+        self.TrainSSIM = DistributedMetricSum()
+        self.TrainPSNR = DistributedMetricSum()
+        self.TrainLoss = DistributedMetricSum()
+        self.TrainTotExamples = DistributedMetricSum()
+        self.TrainTotSliceExamples = DistributedMetricSum()
+        self.TrainMargDist = DistributedArraySum()
+        self.TrainCondEnt = DistributedMetricSum()
+
+        self.varnet = AdaptiveVarNet(
             num_cascades=self.num_cascades,
             sens_chans=self.sens_chans,
             sens_pools=self.sens_pools,
@@ -141,6 +167,7 @@ class ActiveVarNetModule(MriModule):
             budget=self.budget,
             cascades_per_policy=self.cascades_per_policy,
             loupe_mask=self.loupe_mask,
+            crop_size=self.crop_size,
             use_softplus=self.use_softplus,
             num_actions=self.num_actions,
             num_sense_lines=self.num_sense_lines,
@@ -157,8 +184,8 @@ class ActiveVarNetModule(MriModule):
 
         self.loss = fastmri.SSIMLoss()
 
-    def forward(self, kspace, masked_kspace, mask, fname, slice_num):
-        return self.varnet(kspace, masked_kspace, mask, fname, slice_num)
+    def forward(self, kspace, masked_kspace, mask):
+        return self.varnet(kspace, masked_kspace, mask)
 
     def compute_loss(self, output, target, max_value):
         base_loss = self.loss(
@@ -167,24 +194,20 @@ class ActiveVarNetModule(MriModule):
         return base_loss
 
     def training_step(self, batch, batch_idx):
-        kspace, masked_kspace, mask, target, fname, slice_num, max_value, _ = batch
+        output, extra_outputs = self(batch.kspace, batch.masked_kspace, batch.mask)
 
-        output, extra_outputs = self(kspace, masked_kspace, mask, fname, slice_num)
+        target, output = transforms.center_crop_to_smallest(batch.target, output)
 
-        target, output = transforms.center_crop_to_smallest(target, output)
-
-        loss = self.compute_loss(
-            output, target, max_value
-        )
+        loss = self.compute_loss(output, target, batch.max_value)
 
         self.log("train_loss", loss)
 
         # Return same stuff as on validation step here
         return {
             "batch_idx": batch_idx,
-            "fname": fname,
-            "slice_num": slice_num,
-            "max_value": max_value,
+            "fname": batch.fname,
+            "slice_num": batch.slice_num,
+            "max_value": batch.max_value,
             "output": output,
             "target": target,
             "loss": loss,
@@ -265,21 +288,17 @@ class ActiveVarNetModule(MriModule):
         }
 
     def validation_step(self, batch, batch_idx):
-        kspace, masked_kspace, mask, target, fname, slice_num, max_value, _ = batch
+        output, extra_outputs = self(batch.kspace, batch.masked_kspace, batch.mask)
 
-        output, extra_outputs = self(kspace, masked_kspace, mask, fname, slice_num)
+        target, output = transforms.center_crop_to_smallest(batch.target, output)
 
-        target, output = transforms.center_crop_to_smallest(target, output)
-
-        loss = self.compute_loss(
-            output, target, max_value
-        )
+        loss = self.compute_loss(output, target, batch.max_value)
 
         return {
             "batch_idx": batch_idx,
-            "fname": fname,
-            "slice_num": slice_num,
-            "max_value": max_value,
+            "fname": batch.fname,
+            "slice_num": batch.slice_num,
+            "max_value": batch.max_value,
             "output": output,
             "target": target,
             "val_loss": loss,
@@ -385,12 +404,147 @@ class ActiveVarNetModule(MriModule):
             "max_vals": max_vals,
         }
 
+    def training_epoch_end(self, train_logs):
+        losses = []
+        mse_vals = defaultdict(dict)
+        target_norms = defaultdict(dict)
+        ssim_vals = defaultdict(dict)
+        max_vals = dict()
+
+        # use dict updates to handle duplicate slices
+        for train_log in train_logs:
+            losses.append(train_log["loss"].data.view(-1))
+
+            for k in train_log["mse_vals"].keys():
+                mse_vals[k].update(train_log["mse_vals"][k])
+            for k in train_log["target_norms"].keys():
+                target_norms[k].update(train_log["target_norms"][k])
+            for k in train_log["ssim_vals"].keys():
+                ssim_vals[k].update(train_log["ssim_vals"][k])
+            for k in train_log["max_vals"]:
+                max_vals[k] = train_log["max_vals"][k]
+
+        # check to make sure we have all files in all metrics
+        assert (
+            mse_vals.keys()
+            == target_norms.keys()
+            == ssim_vals.keys()
+            == max_vals.keys()
+        )
+
+        # apply means across image volumes
+        metrics = {"nmse": 0, "ssim": 0, "psnr": 0}
+        local_examples = 0
+        for fname in mse_vals.keys():
+            local_examples = local_examples + 1
+            mse_val = torch.mean(
+                torch.cat([v.view(-1) for _, v in mse_vals[fname].items()])
+            )
+            target_norm = torch.mean(
+                torch.cat([v.view(-1) for _, v in target_norms[fname].items()])
+            )
+            metrics["nmse"] = metrics["nmse"] + mse_val / target_norm
+            metrics["psnr"] = (
+                metrics["psnr"]
+                + 20
+                * torch.log10(
+                    torch.tensor(
+                        max_vals[fname], dtype=mse_val.dtype, device=mse_val.device
+                    )
+                )
+                - 10 * torch.log10(mse_val)
+            )
+            metrics["ssim"] = metrics["ssim"] + torch.mean(
+                torch.cat([v.view(-1) for _, v in ssim_vals[fname].items()])
+            )
+
+        # reduce across ddp via sum
+        metrics["nmse"] = self.TrainNMSE(metrics["nmse"])
+        metrics["ssim"] = self.TrainSSIM(metrics["ssim"])
+        metrics["psnr"] = self.TrainPSNR(metrics["psnr"])
+        tot_examples = self.TrainTotExamples(torch.tensor(local_examples))
+        train_loss = self.TrainLoss(torch.sum(torch.cat(losses)))
+        tot_slice_examples = self.TrainTotSliceExamples(
+            torch.tensor(len(losses), dtype=torch.float)
+        )
+
+        self.log("training_loss", train_loss / tot_slice_examples, prog_bar=True)
+        for metric, value in metrics.items():
+            self.log(f"train_metrics/{metric}", value / tot_examples)
+
+    def validation_epoch_end(self, val_logs):
+        # aggregate losses
+        losses = []
+        mse_vals = defaultdict(dict)
+        target_norms = defaultdict(dict)
+        ssim_vals = defaultdict(dict)
+        max_vals = dict()
+
+        # use dict updates to handle duplicate slices
+        for val_log in val_logs:
+            losses.append(val_log["val_loss"].view(-1))
+
+            for k in val_log["mse_vals"].keys():
+                mse_vals[k].update(val_log["mse_vals"][k])
+            for k in val_log["target_norms"].keys():
+                target_norms[k].update(val_log["target_norms"][k])
+            for k in val_log["ssim_vals"].keys():
+                ssim_vals[k].update(val_log["ssim_vals"][k])
+            for k in val_log["max_vals"]:
+                max_vals[k] = val_log["max_vals"][k]
+
+        # check to make sure we have all files in all metrics
+        assert (
+            mse_vals.keys()
+            == target_norms.keys()
+            == ssim_vals.keys()
+            == max_vals.keys()
+        )
+
+        # apply means across image volumes
+        metrics = {"nmse": 0, "ssim": 0, "psnr": 0}
+        local_examples = 0
+        for fname in mse_vals.keys():
+            local_examples = local_examples + 1
+            mse_val = torch.mean(
+                torch.cat([v.view(-1) for _, v in mse_vals[fname].items()])
+            )
+            target_norm = torch.mean(
+                torch.cat([v.view(-1) for _, v in target_norms[fname].items()])
+            )
+            metrics["nmse"] = metrics["nmse"] + mse_val / target_norm
+            metrics["psnr"] = (
+                metrics["psnr"]
+                + 20
+                * torch.log10(
+                    torch.tensor(
+                        max_vals[fname], dtype=mse_val.dtype, device=mse_val.device
+                    )
+                )
+                - 10 * torch.log10(mse_val)
+            )
+            metrics["ssim"] = metrics["ssim"] + torch.mean(
+                torch.cat([v.view(-1) for _, v in ssim_vals[fname].items()])
+            )
+
+        # reduce across ddp via sum
+        metrics["nmse"] = self.NMSE(metrics["nmse"])
+        metrics["ssim"] = self.SSIM(metrics["ssim"])
+        metrics["psnr"] = self.PSNR(metrics["psnr"])
+        tot_examples = self.TotExamples(torch.tensor(local_examples))
+        val_loss = self.ValLoss(torch.sum(torch.cat(losses)))
+        tot_slice_examples = self.TotSliceExamples(
+            torch.tensor(len(losses), dtype=torch.float)
+        )
+
+        self.log("validation_loss", val_loss / tot_slice_examples, prog_bar=True)
+        for metric, value in metrics.items():
+            self.log(f"val_metrics/{metric}", value / tot_examples)
+
     def test_step(self, batch, batch_idx):
-        kspace, masked_kspace, mask, target, fname, slice_num, _, crop_size = batch
+        output, extra_outputs = self(batch.kspace, batch.masked_kspace, batch.mask)
 
-        output, extra_outputs = self(kspace, masked_kspace, mask, fname, slice_num)
-
-        crop_size = crop_size[0]  # always have a batch size of 1 for varnet
+        crop_size = batch.crop_size[0]  # always have a batch size of 1 for varnet
 
         # check for FLAIR 203
         if output.shape[-1] < crop_size[1]:
@@ -399,8 +553,8 @@ class ActiveVarNetModule(MriModule):
         output = transforms.center_crop(output, crop_size)
 
         return {
-            "fname": fname,
-            "slice": slice_num,
+            "fname": batch.fname,
+            "slice": batch.slice_num,
             "output": output.cpu().numpy(),
         }
 

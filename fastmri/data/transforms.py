@@ -235,7 +235,7 @@ def normalize(
 
 def normalize_instance(
     data: torch.Tensor, eps: Union[float, torch.Tensor] = 0.0
-) -> Tuple[torch.Tensor, Union[torch.Tensor], Union[torch.Tensor]]:
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Normalize the given tensor  with instance norm/
 
@@ -509,3 +509,166 @@ class VarNetDataTransform:
             )
 
         return sample
+
+
+class MiniCoilSample(NamedTuple):
+    """
+    A sample of masked coil-compressed k-space for reconstruction.
+
+    Args:
+        kspace: the original k-space before masking.
+        masked_kspace: k-space after applying sampling mask.
+        mask: The applied sampling mask.
+        num_low_frequencies: The number of samples for the densely-sampled
+            center.
+        target: The target image (if applicable).
+        fname: File name.
+        slice_num: The slice index.
+        max_value: Maximum image value.
+        crop_size: The size to crop the final image.
+    """
+
+    kspace: torch.Tensor
+    masked_kspace: torch.Tensor
+    mask: torch.Tensor
+    target: torch.Tensor
+    fname: str
+    slice_num: int
+    max_value: float
+    crop_size: Tuple[int, int]
+
+
+class MiniCoilTransform:
+    """
+    Multi-coil compressed transform, for faster prototyping.
+    """
+
+    def __init__(
+        self,
+        mask_func: Optional[MaskFunc] = None,
+        use_seed: Optional[bool] = True,
+        crop_size: Optional[tuple] = None,
+        num_compressed_coils: Optional[int] = None,
+    ):
+        """
+        Args:
+            mask_func: Optional; A function that can create a mask of
+                appropriate shape. Defaults to None.
+            use_seed: If True, this class computes a pseudo random number
+                generator seed from the filename. This ensures that the same
+                mask is used for all the slices of a given volume every time.
+            crop_size: Image dimensions for mini MR images.
+            num_compressed_coils: Number of coils to output from coil
+                compression.
+        """
+        self.mask_func = mask_func
+        self.use_seed = use_seed
+        self.crop_size = crop_size
+        self.num_compressed_coils = num_compressed_coils
+
+    def __call__(self, kspace, mask, target, attrs, fname, slice_num):
+        """
+        Args:
+            kspace: Input k-space of shape (num_coils, rows, cols) for
+                multi-coil data.
+            mask: Mask from the test dataset. Not used if mask_func is defined.
+            target: Target image.
+            attrs: Acquisition related information stored in the HDF5 object.
+            fname: File name.
+            slice_num: Serial number of the slice.
+
+        Returns:
+            tuple containing:
+                kspace: original kspace (used for active acquisition only).
+                masked_kspace: k-space after applying sampling mask. If there
+                    is no mask or mask_func, returns same as kspace.
+                mask: The applied sampling mask
+                target: The target image (if applicable). The target is built
+                    from the RSS opp of all coils pre-compression.
+                fname: File name.
+                slice_num: The slice index.
+                max_value: Maximum image value.
+                crop_size: The size to crop the final image.
+        """
+        if target is not None:
+            target = to_tensor(target)
+            max_value = attrs["max"]
+        else:
+            target = torch.tensor(0)
+            max_value = 0.0
+
+        if self.crop_size is None:
+            crop_size = torch.tensor([attrs["recon_size"][0], attrs["recon_size"][1]])
+        else:
+            if isinstance(self.crop_size, tuple) or isinstance(self.crop_size, list):
+                assert len(self.crop_size) == 2
+                if self.crop_size[0] is None or self.crop_size[1] is None:
+                    crop_size = torch.tensor(
+                        [attrs["recon_size"][0], attrs["recon_size"][1]]
+                    )
+                else:
+                    crop_size = torch.tensor(self.crop_size)
+            elif isinstance(self.crop_size, int):
+                crop_size = torch.tensor((self.crop_size, self.crop_size))
+            else:
+                raise ValueError(
+                    f"`crop_size` should be None, tuple, list, or int, not: {type(self.crop_size)}"
+                )
+
+        if self.num_compressed_coils is None:
+            num_compressed_coils = kspace.shape[0]
+        else:
+            num_compressed_coils = self.num_compressed_coils
+
+        seed = None if not self.use_seed else tuple(map(ord, fname))
+        acq_start = 0
+        acq_end = crop_size[1]
+
+        # new cropping section
+        square_crop = (attrs["recon_size"][0], attrs["recon_size"][1])
+        kspace = fastmri.fft2c(
+            complex_center_crop(fastmri.ifft2c(to_tensor(kspace)), square_crop)
+        ).numpy()
+        kspace = complex_center_crop(kspace, crop_size)
+
+        # we calculate the target before coil compression. This causes the mini
+        # simulation to be one where we have a 15-coil, low-resolution image
+        # and our reconstructor has an SVD coil approximation. This is a little
+        # bit more realistic than doing the target after SVD compression
+        target = fastmri.rss_complex(fastmri.ifft2c(to_tensor(kspace)))
+        max_value = target.max()
+
+        # apply coil compression
+        new_shape = (num_compressed_coils,) + kspace.shape[1:]
+        kspace = np.reshape(kspace, (kspace.shape[0], -1))
+        left_vec, _, _ = np.linalg.svd(kspace, compute_uv=True, full_matrices=False)
+        kspace = np.reshape(
+            np.array(np.matrix(left_vec[:, :num_compressed_coils]).H @ kspace),
+            new_shape,
+        )
+        kspace = to_tensor(kspace)
+
+        # Mask kspace
+        if self.mask_func:
+            masked_kspace, mask, _ = apply_mask(
+                kspace, self.mask_func, seed, (acq_start, acq_end)
+            )
+            mask = mask.byte()
+        elif mask is not None:
+            masked_kspace = kspace
+            shape = np.array(kspace.shape)
+            num_cols = shape[-2]
+            shape[:-3] = 1
+            mask_shape = [1] * len(shape)
+            mask_shape[-2] = num_cols
+            mask = torch.from_numpy(mask.reshape(*mask_shape).astype(np.float32))
+            mask = mask.reshape(*mask_shape)
+            mask = mask.byte()
+        else:
+            masked_kspace = kspace
+            shape = np.array(kspace.shape)
+            num_cols = shape[-2]
+
+        return MiniCoilSample(
+            kspace, masked_kspace, mask, target, fname, slice_num, max_value, crop_size
+        )

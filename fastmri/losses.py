@@ -29,7 +29,13 @@ class SSIMLoss(nn.Module):
         NP = win_size ** 2
         self.cov_norm = NP / (NP - 1)
 
-    def forward(self, X: torch.Tensor, Y: torch.Tensor, data_range: torch.Tensor):
+    def forward(
+        self,
+        X: torch.Tensor,
+        Y: torch.Tensor,
+        data_range: torch.Tensor,
+        reduced: bool = True,
+    ):
         assert isinstance(self.w, torch.Tensor)
 
         data_range = data_range[:, None, None, None]
@@ -52,4 +58,7 @@ class SSIMLoss(nn.Module):
         D = B1 * B2
         S = (A1 * A2) / D
 
-        return 1 - S.mean()
+        if reduced:
+            return 1 - S.mean()
+        else:
+            return 1 - S

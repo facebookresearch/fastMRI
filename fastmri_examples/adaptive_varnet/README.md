@@ -45,10 +45,11 @@ If you use this this code in your research, please cite the corresponding
 paper:
 
 ```BibTeX
-@inproceedings{bakker2022adaptive,
+@article{bakker2022adaptive,
     title={On learning adaptive acquisition policies for undersampled multi-coil {MRI} reconstruction},
     author={Tim Bakker and Matthew Muckley and Adriana Romero-Soriano and Michal Drozdzal and Luis Pineda},
-    booktitle={MIDL},
+    journal={Proceedings of Machine Learning Research (MIDL)},
+    pages={to appear},
     year={2022},
 }
 ```

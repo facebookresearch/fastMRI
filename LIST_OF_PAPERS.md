@@ -14,6 +14,7 @@ The following is a short list of fastMRI publications. Clicking on the title wil
 10. Defazio, A., Murrell, T., & Recht, M. P. (2020). [MRI Banding Removal via Adversarial Training](#mri-banding-removal-via-adversarial-training). In *Advances in Neural Information Processing Systems*, 33, pages 7660-7670.
 11. Muckley, M. J.\*, Riemenschneider, B.\*, Radmanesh, A., Kim, S., Jeong, G., Ko, J., ... & Knoll, F. (2021). [Results of the 2020 fastMRI Challenge for Machine Learning MR Image Reconstruction](#results-of-the-2020-fastmri-challenge-for-machine-learning-mr-image-reconstruction). *IEEE Transactions on Medical Imaging*, 40(9), pages 2306-2317.
 12. Johnson, P. M., Jeong, G., Hammernik, K., Schlemper, J., Qin, C., Duan, J., ..., & Knoll, F. [Evaluation of the Robustness of Learned MR Image Reconstruction to Systematic Deviations Between Training and Test Data for the Models from the fastMRI Challenge](#evaluation-of-the-robustness-of-learned-mr-image-reconstruction-to-systematic-deviations-between-training-and-test-data-for-the-models-from-the-fastmri-challenge). In *MICCAI Machine Learning for Medical Image Reconstruction Workshop*, pages 25–34, 2021.
+13. Bakker, T., Muckley, M.J., Romero-Soriano, A., Drozdzal, M. & Pineda, L. (2022). [On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction](https://arxiv.org/abs/2203.16392). *Accepted at MIDL, 2022*, to appear.
 
 ## fastMRI: An open dataset and benchmarks for accelerated MRI
 
@@ -263,5 +264,22 @@ The 2019 fastMRI challenge was an open challenge designed to advance research in
     booktitle={International Workshop on Machine Learning for Medical Image Reconstruction},
     year={2021},
     pages={25--34},
+}
+```
+
+
+## On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction
+
+[publication](https://arxiv.org/abs/2203.16392)
+
+Most current approaches to undersampled multi-coil MRI reconstruction focus on learning the reconstruction model for a fixed, equidistant acquisition trajectory. In this paper, we study the problem of joint learning of the reconstruction model together with acquisition policies. To this end, we extend the End-to-End Variational Network with learnable acquisition policies that can adapt to different data points. We validate our model on a coil-compressed version of the large scale undersampled multi-coil fastMRI dataset using two undersampling factors: 4× and 8×. Our experiments show on-par performance with the learnable non-adaptive and handcrafted equidistant strategies at 4×, and an observed improvement of more than 2% in SSIM at 8× acceleration, suggesting that potentially-adaptive k-space acquisition trajectories can improve reconstructed image quality for larger acceleration factors. However, and perhaps surprisingly, our best performing policies learn to be explicitly non-adaptive.
+
+```BibTeX
+@article{bakker2022adaptive,
+    title={On learning adaptive acquisition policies for undersampled multi-coil {MRI} reconstruction},
+    author={Tim Bakker and Matthew Muckley and Adriana Romero-Soriano and Michal Drozdzal and Luis Pineda},
+    journal={Proceedings of Machine Learning Research (MIDL)},
+    pages={to appear},
+    year={2022},
 }
 ```

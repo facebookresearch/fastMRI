@@ -1,8 +1,8 @@
 # End-to-End Variational Networks for Accelerated MRI Reconstruction Model
 
-This directory contains a PyTorch implementation for reproducing the paper (currently under review at MIDL 2022).
+This directory contains a PyTorch implementation for reproducing the following paper, to be published at MIDL 2022.
 
-[On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction (T. Bakker, et al., 2021).][adaptive_varnet]
+[On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction (T. Bakker, et al., 2022).][adaptive_varnet]
 
 ## Installation
 We **strongly** recommend creating a separate conda environment for this example, as the
@@ -45,12 +45,14 @@ If you use this this code in your research, please cite the corresponding
 paper:
 
 ```BibTeX
-@unpublished{bakker2021adaptive,
-    title={On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction},
+@article{bakker2022adaptive,
+    title={On learning adaptive acquisition policies for undersampled multi-coil {MRI} reconstruction},
     author={Tim Bakker and Matthew Muckley and Adriana Romero-Soriano and Michal Drozdzal and Luis Pineda},
-    year={2021},
+    journal={Proceedings of Machine Learning Research (MIDL)},
+    pages={to appear},
+    year={2022},
 }
 ```
 
-[adaptive_varnet]: https://openreview.net/pdf?id=eAkOp9Oet5y
+[adaptive_varnet]: https://arxiv.org/abs/2203.16392
 [wandb]: https://wandb.ai/site

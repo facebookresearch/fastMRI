@@ -17,7 +17,7 @@ pip install -r fastmri_examples/adaptive_varnet/requirements.txt
 ```
 
 
-## Example commands:
+## Example training commands:
 
 The following commands are for the acceleration 4, budget 22 setting. For an MR image of default size (128, 128) this corresponds to 32 sampled lines, starting from 10 low-frequency lines.
 
@@ -37,6 +37,40 @@ For acceleration 8, change the following arguments where relevant. For an MR ima
 > --accelerations 8 --center_fractions 0.04 --num_sense_lines 4 --budget 12
 
 See `train_adaptive_varnet_demo.py` for additional arguments.
+
+
+## Example evaluation commands:
+
+The following command can be used to evaluate a model (see the relevant script for more options):
+
+> python ./fastmri_examples/adaptive_varnet/eval_pretrained_adaptive_varnet.py --load_checkpoint MODEL_CHECKPOINT --data_path PATH_TO_DATA --challenge multicoil --batch_size 64 --accelerations 4 --center_fractions 0.08
+
+For acceleration 8 models, change the following arguments:
+
+> --accelerations 8 --center_fractions 0.04
+
+
+## Pre-trained models
+
+We provide the models used for our visualisations. These correspond to the best-performing model in their class, except for the softplus policy models, which instead correspond to well-performing models that exhibits adaptivity.
+
+#### Acceleration 4 models:
+[Sigmoid policy](https://dl.fbaipublicfiles.com/active-mri-acquisition/midl_models/adaptive_4x.ckpt)
+
+[Softplus policy](https://dl.fbaipublicfiles.com/active-mri-acquisition/midl_models/adaptive_softplus_4x.ckpt)
+
+[LOUPE](https://dl.fbaipublicfiles.com/active-mri-acquisition/midl_models/loupe_4x.ckpt)
+
+[Equispaced](https://dl.fbaipublicfiles.com/active-mri-acquisition/midl_models/equispaced_4x.ckpt)
+
+#### Acceleration 8 models:
+[Sigmoid policy](https://dl.fbaipublicfiles.com/active-mri-acquisition/midl_models/adaptive_8x.ckpt)
+
+[Softplus policy](https://dl.fbaipublicfiles.com/active-mri-acquisition/midl_models/adaptive_softplus_8x.ckpt)
+
+[LOUPE](https://dl.fbaipublicfiles.com/active-mri-acquisition/midl_models/loupe_8x.ckpt)
+
+[Equispaced](https://dl.fbaipublicfiles.com/active-mri-acquisition/midl_models/equispaced_8x.ckpt)
 
 
 ## Citing

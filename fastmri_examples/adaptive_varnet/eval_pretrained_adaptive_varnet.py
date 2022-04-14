@@ -43,8 +43,6 @@ def load_model(
 
     # Load stored weights: this will error if the keys don't match the model weights, which will happen
     #  when we are loading a VarNet instead of an AdaptiveVarNet or vice-versa.
-    # TODO: Check that this works with models trained much earlier, where some extra parameters might exist even
-    #  within class.
     module.load_state_dict(checkpoint["state_dict"])
 
     return module
@@ -245,15 +243,21 @@ def build_args():
         nargs="+",
         default=[0.08],
         type=float,
-        help="Number of center lines to use in mask. "
-        "0.08 for acceleration 4, 0.04 for acceleration 8 models.",
+        help=(
+            "Number of center lines to use in mask. 0.08 for acceleration 4, 0.04 for acceleration 8 models.",
+        )
     )
     parser.add_argument(
         "--accelerations",
         nargs="+",
         default=[4],
         type=int,
-        help="Acceleration rates to use.",
+        help=(
+            "Acceleration rates to use. This and `center_fractions` matter mostly for evaluating the equispaced "
+            "models (the other models only care that the Auto-Calibration Region is fully sampled). Regardless, good "
+            "practice is to set these parameters to the values specified in the `center_fractions` help, for the "
+            "corresponding acceleration.",
+        )
     )
     parser.add_argument(
         "--crop_size",

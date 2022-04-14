@@ -245,7 +245,7 @@ def build_args():
         type=float,
         help=(
             "Number of center lines to use in mask. 0.08 for acceleration 4, 0.04 for acceleration 8 models.",
-        )
+        ),
     )
     parser.add_argument(
         "--accelerations",
@@ -257,7 +257,7 @@ def build_args():
             "models (the other models only care that the Auto-Calibration Region is fully sampled). Regardless, good "
             "practice is to set these parameters to the values specified in the `center_fractions` help, for the "
             "corresponding acceleration.",
-        )
+        ),
     )
     parser.add_argument(
         "--crop_size",

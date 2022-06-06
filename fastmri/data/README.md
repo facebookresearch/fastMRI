@@ -94,13 +94,11 @@ def data_transform(kspace, mask, target, data_attributes, filename, slice_num):
     # Transform the data into appropriate format
     # Here we simply mask the k-space and return the result
     kspace = transforms.to_tensor(kspace)
-    masked_kspace, _ = transforms.apply_mask(kspace, mask_func)
+    masked_kspace = transforms.apply_mask(kspace, mask_func)
     return masked_kspace
 
 dataset = mri_data.SliceDataset(
-    root=pathlib.Path(
-      '/private/home/mmuckley/data/fastmri_knee/singlecoil_train'
-    ),
+    root=pathlib.Path('/path/to/data'),
     transform=data_transform,
     challenge='singlecoil'
 )

@@ -98,7 +98,7 @@ def data_transform(kspace, mask, target, data_attributes, filename, slice_num):
     return masked_kspace
 
 dataset = mri_data.SliceDataset(
-    root=pathlib.Path('/datasets01/fastMRI/112718/singlecoil_train'),
+    root=pathlib.Path('/path/to/data'),
     transform=data_transform,
     challenge='singlecoil'
 )

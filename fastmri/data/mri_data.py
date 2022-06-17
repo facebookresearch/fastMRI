@@ -276,8 +276,8 @@ class SliceDataset(torch.utils.data.Dataset):
             if dataset_cache.get(root) is None and use_dataset_cache:
                 dataset_cache[root] = self.examples
                 logging.info(f"Saving dataset cache to {self.dataset_cache_file}.")
-                with open(self.dataset_cache_file, "wb") as f:
-                    pickle.dump(dataset_cache, f)
+                with open(self.dataset_cache_file, "wb") as cache_f:
+                    pickle.dump(dataset_cache, cache_f)
         else:
             logging.info(f"Using dataset cache from {self.dataset_cache_file}.")
             self.examples = dataset_cache[root]

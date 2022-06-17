@@ -25,7 +25,7 @@ def mse(gt: np.ndarray, pred: np.ndarray) -> np.ndarray:
 
 def nmse(gt: np.ndarray, pred: np.ndarray) -> np.ndarray:
     """Compute Normalized Mean Squared Error (NMSE)"""
-    return np.linalg.norm(gt - pred) ** 2 / np.linalg.norm(gt) ** 2
+    return np.array(np.linalg.norm(gt - pred) ** 2 / np.linalg.norm(gt) ** 2)
 
 
 def psnr(

@@ -1,5 +1,0 @@
-[flake8]
-max-line-length=88
-per-file-ignores=__init__.py:F401
-extend-exclude = *brain_challenge*,*2020-08*
-extend-ignore = E203, E266, E501

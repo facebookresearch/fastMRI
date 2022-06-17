@@ -5,14 +5,16 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-__version__ = "0.1.2a20220121"
-__author__ = "Facebook/NYU fastMRI Team"
-__author_email__ = "fastmri@fb.com"
-__license__ = "MIT"
-__homepage__ = "https://fastmri.org/"
+from importlib.metadata import PackageNotFoundError, version
 
-import torch
-from packaging import version
+try:
+    __version__ = version("fastmri")
+except PackageNotFoundError:
+    # package is not installed
+    import warnings
+
+    warnings.warn("Could not retrieve fastmri version!")
+
 
 from .coil_combine import rss, rss_complex
 from .fftc import fft2c_new as fft2c

@@ -54,7 +54,8 @@ help(SliceDataset)
 
 **Note:** Contributions to the code are continuously tested via GitHub actions.
 If you encounter an issue, the best first thing to do is to try to match the
-`tests` environment in `setup.cfg` via `pip install --editable ".[tests]"`.
+`tests` environment in `requirements_text.text` via
+`pip install -r requirements_test.txt`.
 
 **Note:** As documented in [Issue 215](https://github.com/facebookresearch/fastMRI/issues/215),
 there is currently a memory leak when using `h5py` installed from `pip` and

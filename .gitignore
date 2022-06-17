@@ -20,3 +20,4 @@ lightning_logs/
 *.pt
 build/
 dist/
+fastmri/_version.py

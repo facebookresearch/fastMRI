@@ -9,11 +9,12 @@ import xml.etree.ElementTree as etree
 from argparse import ArgumentParser
 from pathlib import Path
 
-import fastmri
 import h5py
+from tqdm import tqdm
+
+import fastmri
 from fastmri.data import transforms
 from fastmri.data.mri_data import et_query
-from tqdm import tqdm
 
 
 def save_zero_filled(data_dir, out_dir, which_challenge):

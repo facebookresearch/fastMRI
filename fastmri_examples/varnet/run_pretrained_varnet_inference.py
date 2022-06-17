@@ -10,14 +10,15 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-import fastmri
-import fastmri.data.transforms as T
 import numpy as np
 import requests
 import torch
+from tqdm import tqdm
+
+import fastmri
+import fastmri.data.transforms as T
 from fastmri.data import SliceDataset
 from fastmri.models import VarNet
-from tqdm import tqdm
 
 VARNET_FOLDER = "https://dl.fbaipublicfiles.com/fastMRI/trained_models/varnet/"
 MODEL_FNAMES = {

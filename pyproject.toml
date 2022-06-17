@@ -1,0 +1,10 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+    "setuptools-scm>=6.3.2",
+    "setuptools>=59.5.0",
+    "wheel>=0.37.0",
+]
+
+[tool.setuptools_scm]
+write_to = "fastmri/_version.py"

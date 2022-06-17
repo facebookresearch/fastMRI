@@ -76,10 +76,6 @@ jobs:
           mypy fastmri
           flake8 --version
           flake8 fastmri_examples fastmri tests
-      - name: Install fastMRI
-        run: |
-          python -m build .
-          pip install dist/*.whl
       - name: Run pytest
         run: |
           echo -e "PyTorch \c" && pip show torch | grep Version 

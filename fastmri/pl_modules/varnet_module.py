@@ -7,8 +7,9 @@ LICENSE file in the root directory of this source tree.
 
 from argparse import ArgumentParser
 
-import fastmri
 import torch
+
+import fastmri
 from fastmri.data import transforms
 from fastmri.models import VarNet
 

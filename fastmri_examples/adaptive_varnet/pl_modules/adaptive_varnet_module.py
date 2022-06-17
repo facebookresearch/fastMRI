@@ -9,9 +9,10 @@ from argparse import ArgumentParser
 from collections import defaultdict
 from typing import Tuple
 
-import fastmri
 import numpy as np
 import torch
+
+import fastmri
 from fastmri import evaluate
 from fastmri.data import transforms
 from fastmri.models import AdaptiveVarNet

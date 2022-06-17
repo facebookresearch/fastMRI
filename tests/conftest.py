@@ -8,7 +8,8 @@ LICENSE file in the root directory of this source tree.
 import numpy as np
 import pytest
 import torch
-from .create_temp_data import create_temp_data, create_temp_annotation
+
+from .create_temp_data import create_temp_annotation, create_temp_data
 
 # these are really slow - skip by default
 SKIP_INTEGRATIONS = True

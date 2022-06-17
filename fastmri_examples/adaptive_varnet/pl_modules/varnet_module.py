@@ -9,10 +9,11 @@ from argparse import ArgumentParser
 from collections import defaultdict
 from typing import Optional
 
-import fastmri
 import numpy as np
 import torch
 import torch.nn as nn
+
+import fastmri
 from fastmri import evaluate
 from fastmri.data import transforms
 from fastmri.data.transforms import VarNetSample
@@ -20,7 +21,7 @@ from fastmri.models.adaptive_varnet import AdaptiveSensitivityModel, AdaptiveVar
 from fastmri.models.varnet import NormUnet
 from fastmri.pl_modules.mri_module import MriModule
 
-from .metrics import DistributedMetricSum, DistributedArraySum
+from .metrics import DistributedArraySum, DistributedMetricSum
 
 
 class VarNet(nn.Module):

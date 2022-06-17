@@ -7,8 +7,7 @@ LICENSE file in the root directory of this source tree.
 
 import functools
 import operator
-from typing import List
-from typing import Tuple
+from typing import List, Tuple
 
 import torch
 import torch.nn as nn

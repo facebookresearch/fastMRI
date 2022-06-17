@@ -6,9 +6,9 @@ LICENSE file in the root directory of this source tree.
 """
 
 from fastmri.data.mri_data import (
-    SliceDataset,
-    CombinedSliceDataset,
     AnnotatedSliceDataset,
+    CombinedSliceDataset,
+    SliceDataset,
 )
 
 

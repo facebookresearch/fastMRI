@@ -8,11 +8,12 @@ LICENSE file in the root directory of this source tree.
 from argparse import ArgumentParser
 
 import pytest
+from pytorch_lightning import Trainer
+
 from fastmri.data import SliceDataset
 from fastmri.data.subsample import create_mask_for_mask_type
 from fastmri.data.transforms import UnetDataTransform, VarNetDataTransform
 from fastmri.pl_modules import FastMriDataModule, UnetModule, VarNetModule
-from pytorch_lightning import Trainer
 
 
 def build_unet_args(data_path, logdir, backend):

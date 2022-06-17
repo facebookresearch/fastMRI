@@ -5,10 +5,11 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import fastmri
 import numpy as np
 import pytest
 import torch
+
+import fastmri
 from fastmri.data import transforms
 
 from .conftest import create_input

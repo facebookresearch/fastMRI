@@ -144,7 +144,7 @@ def build_args():
     parser.set_defaults(
         gpus=num_gpus,  # number of gpus to use
         replace_sampler_ddp=False,  # this is necessary for volume dispatch during val
-        accelerator=backend,  # what distributed version to use
+        strategy=backend,  # what distributed version to use
         seed=42,  # random seed
         deterministic=True,  # makes things slower, but deterministic
         default_root_dir=default_root_dir,  # directory for logs and checkpoints

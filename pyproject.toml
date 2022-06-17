@@ -7,4 +7,4 @@ requires = [
 ]
 
 [tool.setuptools_scm]
-write_to = "fastmri/version.py"
+write_to = "fastmri/_version.py"

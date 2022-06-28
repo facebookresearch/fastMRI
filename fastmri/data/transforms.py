@@ -76,8 +76,8 @@ def apply_mask(
     shape = (1,) * len(data.shape[:-3]) + tuple(data.shape[-3:])
     mask, num_low_frequencies = mask_func(shape, offset, seed)
     if padding is not None:
-        mask[:, :, : padding[0]] = 0
-        mask[:, :, padding[1] :] = 0  # padding value inclusive on right of zeros
+        mask[..., : padding[0], :] = 0
+        mask[..., padding[1] :, :] = 0  # padding value inclusive on right of zeros
 
     masked_data = data * mask + 0.0  # the + 0.0 removes the sign of the zeros
 

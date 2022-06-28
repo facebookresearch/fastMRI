@@ -36,6 +36,7 @@ def test_apply_mask(shape, center_fractions, accelerations):
     assert np.all(np.where(mask.numpy() == 0, 0, output.numpy()) == output.numpy())
     assert num_low_frequencies == expected_num_low_frequencies
 
+
 @pytest.mark.parametrize(
     "shape, center_fractions, accelerations",
     [([150, 75, 2], [0.08], [4]), ([120, 60, 2], [0.04, 0.08], [8, 4])],

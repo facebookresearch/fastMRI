@@ -62,7 +62,10 @@ def test_apply_mask_with_padding(shape, center_fractions, accelerations):
     assert output.shape == x.shape
     assert mask.shape == expected_mask.shape
     assert np.unique(mask.numpy()).tolist() == [0.0, 1.0]
-    assert np.all(expected_mask[..., padding[0]:padding[1], :].numpy() == mask[..., padding[0]:padding[1], :].numpy())
+    assert np.all(
+        expected_mask[..., padding[0] : padding[1], :].numpy()
+        == mask[..., padding[0] : padding[1], :].numpy()
+    )
     assert np.all(np.where(mask.numpy() == 0, 0, output.numpy()) == output.numpy())
     assert num_low_frequencies == expected_num_low_frequencies
 

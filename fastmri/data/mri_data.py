@@ -208,6 +208,7 @@ class SliceDataset(torch.utils.data.Dataset):
         volume_sample_rate: Optional[float] = None,
         dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
         num_cols: Optional[Tuple[int]] = None,
+        example_filter: Optional[Callable] = None,
     ):
         """
         Args:
@@ -232,6 +233,9 @@ class SliceDataset(torch.utils.data.Dataset):
                 information for faster load times.
             num_cols: Optional; If provided, only slices with the desired
                 number of columns will be considered.
+            example_filter: Optional; A callable object that takes an example
+                metadata as input and returns a boolean indicating whether the
+                example should be included in the dataset.
         """
         if challenge not in ("singlecoil", "multicoil"):
             raise ValueError('challenge should be either "singlecoil" or "multicoil"')
@@ -248,6 +252,9 @@ class SliceDataset(torch.utils.data.Dataset):
             "reconstruction_esc" if challenge == "singlecoil" else "reconstruction_rss"
         )
         self.examples = []
+        self.example_filter = example_filter
+        if self.example_filter is None:
+            self.example_filter = lambda example: True
 
         # set default sampling mode if none given
         if sample_rate is None:
@@ -271,6 +278,7 @@ class SliceDataset(torch.utils.data.Dataset):
 
                 self.examples += [
                     (fname, slice_ind, metadata) for slice_ind in range(num_slices)
+                    if self.example_filter(metadata)
                 ]
 
             if dataset_cache.get(root) is None and use_dataset_cache:
@@ -329,12 +337,13 @@ class SliceDataset(torch.utils.data.Dataset):
 
             num_slices = hf["kspace"].shape[0]
 
-        metadata = {
-            "padding_left": padding_left,
-            "padding_right": padding_right,
-            "encoding_size": enc_size,
-            "recon_size": recon_size,
-        }
+            metadata = {
+                "padding_left": padding_left,
+                "padding_right": padding_right,
+                "encoding_size": enc_size,
+                "recon_size": recon_size,
+                **hf.attrs,
+            }
 
         return metadata, num_slices
 

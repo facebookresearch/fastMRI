@@ -99,6 +99,9 @@ class FastMriDataModule(pl.LightningDataModule):
         volume_sample_rate: Optional[float] = None,
         val_volume_sample_rate: Optional[float] = None,
         test_volume_sample_rate: Optional[float] = None,
+        train_filter: Optional[Callable] = None,
+        val_filter: Optional[Callable] = None,
+        test_filter: Optional[Callable] = None,
         use_dataset_cache_file: bool = True,
         batch_size: int = 1,
         num_workers: int = 4,
@@ -134,6 +137,11 @@ class FastMriDataModule(pl.LightningDataModule):
                 split.
             test_volume_sample_rate: Same as volume_sample_rate, but for val
                 split.
+            train_filter: A callable which takes as input a training example
+                metadata, and returns whether it should be part of the training
+                dataset.
+            val_filter: Same as train_filter, but for val split.
+            test_filter: Same as train_filter, but for test split.
             use_dataset_cache_file: Whether to cache dataset metadata. This is
                 very useful for large datasets like the brain data.
             batch_size: Batch size.
@@ -168,6 +176,9 @@ class FastMriDataModule(pl.LightningDataModule):
         self.volume_sample_rate = volume_sample_rate
         self.val_volume_sample_rate = val_volume_sample_rate
         self.test_volume_sample_rate = test_volume_sample_rate
+        self.train_filter = train_filter
+        self.val_filter = val_filter
+        self.test_filter = test_filter
         self.use_dataset_cache_file = use_dataset_cache_file
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -188,6 +199,7 @@ class FastMriDataModule(pl.LightningDataModule):
                 if volume_sample_rate is None
                 else volume_sample_rate
             )
+            example_filter = self.train_filter
         else:
             is_train = False
             if data_partition == "val":
@@ -199,6 +211,7 @@ class FastMriDataModule(pl.LightningDataModule):
                     if volume_sample_rate is None
                     else volume_sample_rate
                 )
+                example_filter = self.val_filter
             elif data_partition == "test":
                 sample_rate = (
                     self.test_sample_rate if sample_rate is None else sample_rate
@@ -230,10 +243,12 @@ class FastMriDataModule(pl.LightningDataModule):
                 sample_rates=sample_rates,
                 volume_sample_rates=volume_sample_rates,
                 use_dataset_cache=self.use_dataset_cache_file,
+                example_filter=example_filter,
             )
         else:
             if data_partition in ("test", "challenge") and self.test_path is not None:
                 data_path = self.test_path
+                example_filter = self.test_filter
             else:
                 data_path = self.data_path / f"{self.challenge}_{data_partition}"
 
@@ -244,6 +259,7 @@ class FastMriDataModule(pl.LightningDataModule):
                 volume_sample_rate=volume_sample_rate,
                 challenge=self.challenge,
                 use_dataset_cache=self.use_dataset_cache_file,
+                example_filter=example_filter,
             )
 
         # ensure that entire volumes go to the same GPU in the ddp setting

@@ -115,6 +115,7 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
         use_dataset_cache: bool = False,
         dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
         num_cols: Optional[Tuple[int]] = None,
+        example_filter: Optional[Callable] = None,
     ):
         """
         Args:
@@ -142,6 +143,9 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
                 information for faster load times.
             num_cols: Optional; If provided, only slices with the desired
                 number of columns will be considered.
+            example_filter: Optional; A callable object that takes an example
+                metadata as input and returns a boolean indicating whether the
+                example should be included in the dataset.
         """
         if sample_rates is not None and volume_sample_rates is not None:
             raise ValueError(
@@ -177,6 +181,7 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
                     use_dataset_cache=use_dataset_cache,
                     dataset_cache_file=dataset_cache_file,
                     num_cols=num_cols,
+                    example_filter=example_filter,
                 )
             )
 

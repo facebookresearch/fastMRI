@@ -92,15 +92,19 @@ def create_temp_data(path):
                 padding_left = enc_size[1] // 2 - enc_limits_center
                 padding_right = padding_left + enc_limits_max
 
-                metadata[str(fname)] = (
-                    {
-                        "padding_left": padding_left,
-                        "padding_right": padding_right,
-                        "encoding_size": enc_size,
-                        "recon_size": recon_size,
-                    },
-                    num_slices,
-                )
+                acquisition = "CORPD_FBK" if dataset == "knee_data" else "AXT1"
+
+                metadata_dict = {
+                    "padding_left": padding_left,
+                    "padding_right": padding_right,
+                    "encoding_size": enc_size,
+                    "recon_size": recon_size,
+                    "acquisition": acquisition,
+                }
+                if split.split('_')[-1] in ('test', 'challenge'):
+                    metadata_dict['acceleration'] = 4
+
+                metadata[str(fname)] = (metadata_dict, num_slices)
 
                 fcount += 1
 

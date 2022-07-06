@@ -43,11 +43,16 @@ def test_slice_datasets(fastmri_mock_dataset, monkeypatch):
             assert dataset[-1] is not None
 
 
-@pytest.mark.parametrize('acquisition, is_full', [
-    ('CORPD_FBK', True),
-    ('CORPDFS_FBK', False),
-])
-def test_filtered_slice_datasets(fastmri_mock_dataset, monkeypatch, acquisition, is_full):
+@pytest.mark.parametrize(
+    "acquisition, is_full",
+    [
+        ("CORPD_FBK", True),
+        ("CORPDFS_FBK", False),
+    ],
+)
+def test_filtered_slice_datasets(
+    fastmri_mock_dataset, monkeypatch, acquisition, is_full
+):
     knee_path, brain_path, metadata = fastmri_mock_dataset
 
     def retrieve_metadata_mock(a, fname):
@@ -61,7 +66,7 @@ def test_filtered_slice_datasets(fastmri_mock_dataset, monkeypatch, acquisition,
                 knee_path / f"{challenge}_{split}",
                 transform=None,
                 challenge=challenge,
-                filter_examples=lambda metadata: metadata['acquisition'] == acquisition,
+                filter_examples=lambda metadata: metadata["acquisition"] == acquisition,
             )
 
             if is_full:

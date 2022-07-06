@@ -101,8 +101,8 @@ def create_temp_data(path):
                     "recon_size": recon_size,
                     "acquisition": acquisition,
                 }
-                if split.split('_')[-1] in ('test', 'challenge'):
-                    metadata_dict['acceleration'] = 4
+                if split.split("_")[-1] in ("test", "challenge"):
+                    metadata_dict["acceleration"] = 4
 
                 metadata[str(fname)] = (metadata_dict, num_slices)
 

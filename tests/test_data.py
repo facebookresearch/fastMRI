@@ -5,6 +5,8 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+import pytest
+
 from fastmri.data.mri_data import (
     AnnotatedSliceDataset,
     CombinedSliceDataset,
@@ -39,6 +41,33 @@ def test_slice_datasets(fastmri_mock_dataset, monkeypatch):
             assert len(dataset) > 0
             assert dataset[0] is not None
             assert dataset[-1] is not None
+
+
+@pytest.mark.parametrize('acquisition, is_full', [
+    ('CORPD_FBK', True),
+    ('CORPDFS_FBK', False),
+])
+def test_filtered_slice_datasets(fastmri_mock_dataset, monkeypatch, acquisition, is_full):
+    knee_path, brain_path, metadata = fastmri_mock_dataset
+
+    def retrieve_metadata_mock(a, fname):
+        return metadata[str(fname)]
+
+    monkeypatch.setattr(SliceDataset, "_retrieve_metadata", retrieve_metadata_mock)
+
+    for challenge in ("multicoil", "singlecoil"):
+        for split in ("train", "val", "test", "challenge"):
+            dataset = SliceDataset(
+                knee_path / f"{challenge}_{split}",
+                transform=None,
+                challenge=challenge,
+                filter_examples=lambda metadata: metadata['acquisition'] == acquisition,
+            )
+
+            if is_full:
+                assert len(dataset) > 0
+            else:
+                assert len(dataset) == 0
 
 
 def test_combined_slice_dataset(fastmri_mock_dataset, monkeypatch):

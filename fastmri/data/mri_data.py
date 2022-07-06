@@ -282,7 +282,8 @@ class SliceDataset(torch.utils.data.Dataset):
                 metadata, num_slices = self._retrieve_metadata(fname)
 
                 self.examples += [
-                    (fname, slice_ind, metadata) for slice_ind in range(num_slices)
+                    (fname, slice_ind, metadata)
+                    for slice_ind in range(num_slices)
                     if self.example_filter(metadata)
                 ]
 

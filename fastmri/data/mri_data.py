@@ -185,7 +185,7 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
             )
 
         self.datasets = []
-        self.raw_samples: List[Tuple[Path, int, Dict[str, object]]] = []
+        self.raw_samples: List[FastMRIRawDataSample] = []
         for i in range(len(roots)):
             self.datasets.append(
                 SliceDataset(

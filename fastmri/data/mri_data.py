@@ -100,6 +100,12 @@ def fetch_dir(
     return Path(data_dir)
 
 
+class FastMRIRawDataSample(NamedTuple):
+    fname: str
+    slice_ind: int
+    metadata: Dict[str, Any]
+
+
 class CombinedSliceDataset(torch.utils.data.Dataset):
     """
     A container for combining slice datasets.

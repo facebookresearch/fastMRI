@@ -11,7 +11,17 @@ import pickle
 import random
 import xml.etree.ElementTree as etree
 from pathlib import Path
-from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 from warnings import warn
 
 import h5py
@@ -316,7 +326,9 @@ class SliceDataset(torch.utils.data.Dataset):
             num_volumes = round(len(vol_names) * volume_sample_rate)
             sampled_vols = vol_names[:num_volumes]
             self.raw_samples = [
-                raw_sample for raw_sample in self.raw_samples if raw_sample[0].stem in sampled_vols
+                raw_sample
+                for raw_sample in self.raw_samples
+                if raw_sample[0].stem in sampled_vols
             ]
 
         if num_cols:

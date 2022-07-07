@@ -111,7 +111,7 @@ def fetch_dir(
 
 
 class FastMRIRawDataSample(NamedTuple):
-    fname: str
+    fname: Path
     slice_ind: int
     metadata: Dict[str, Any]
 

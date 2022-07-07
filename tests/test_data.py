@@ -58,6 +58,9 @@ def test_filtered_slice_datasets(
     def retrieve_metadata_mock(a, fname):
         return metadata[str(fname)]
 
+    def raw_sample_filter(raw_sample):
+        return raw_sample.metadata["acquisition"] == acquisition
+
     monkeypatch.setattr(SliceDataset, "_retrieve_metadata", retrieve_metadata_mock)
 
     for challenge in ("multicoil", "singlecoil"):
@@ -66,7 +69,7 @@ def test_filtered_slice_datasets(
                 knee_path / f"{challenge}_{split}",
                 transform=None,
                 challenge=challenge,
-                raw_sample_filter=lambda metadata: metadata["acquisition"] == acquisition,
+                raw_sample_filter=raw_sample_filter,
             )
 
             if is_full:

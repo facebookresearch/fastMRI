@@ -199,7 +199,7 @@ class FastMriDataModule(pl.LightningDataModule):
                 if volume_sample_rate is None
                 else volume_sample_rate
             )
-            example_filter = self.train_filter
+            raw_sample_filter = self.train_filter
         else:
             is_train = False
             if data_partition == "val":
@@ -211,7 +211,7 @@ class FastMriDataModule(pl.LightningDataModule):
                     if volume_sample_rate is None
                     else volume_sample_rate
                 )
-                example_filter = self.val_filter
+                raw_sample_filter = self.val_filter
             elif data_partition == "test":
                 sample_rate = (
                     self.test_sample_rate if sample_rate is None else sample_rate
@@ -243,12 +243,12 @@ class FastMriDataModule(pl.LightningDataModule):
                 sample_rates=sample_rates,
                 volume_sample_rates=volume_sample_rates,
                 use_dataset_cache=self.use_dataset_cache_file,
-                example_filter=example_filter,
+                raw_sample_filter=raw_sample_filter,
             )
         else:
             if data_partition in ("test", "challenge") and self.test_path is not None:
                 data_path = self.test_path
-                example_filter = self.test_filter
+                raw_sample_filter = self.test_filter
             else:
                 data_path = self.data_path / f"{self.challenge}_{data_partition}"
 
@@ -259,7 +259,7 @@ class FastMriDataModule(pl.LightningDataModule):
                 volume_sample_rate=volume_sample_rate,
                 challenge=self.challenge,
                 use_dataset_cache=self.use_dataset_cache_file,
-                example_filter=example_filter,
+                raw_sample_filter=raw_sample_filter,
             )
 
         # ensure that entire volumes go to the same GPU in the ddp setting

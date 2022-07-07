@@ -66,7 +66,7 @@ def test_filtered_slice_datasets(
                 knee_path / f"{challenge}_{split}",
                 transform=None,
                 challenge=challenge,
-                example_filter=lambda metadata: metadata["acquisition"] == acquisition,
+                raw_sample_filter=lambda metadata: metadata["acquisition"] == acquisition,
             )
 
             if is_full:

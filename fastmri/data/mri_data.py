@@ -11,7 +11,7 @@ import pickle
 import random
 import xml.etree.ElementTree as etree
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple, Union
 from warnings import warn
 
 import h5py
@@ -121,7 +121,7 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
         use_dataset_cache: bool = False,
         dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
         num_cols: Optional[Tuple[int]] = None,
-        example_filter: Optional[Callable] = None,
+        raw_sample_filter: Optional[Callable] = None,
     ):
         """
         Args:
@@ -149,9 +149,9 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
                 information for faster load times.
             num_cols: Optional; If provided, only slices with the desired
                 number of columns will be considered.
-            example_filter: Optional; A callable object that takes an example
+            raw_sample_filter: Optional; A callable object that takes an raw_sample
                 metadata as input and returns a boolean indicating whether the
-                example should be included in the dataset.
+                raw_sample should be included in the dataset.
         """
         if sample_rates is not None and volume_sample_rates is not None:
             raise ValueError(
@@ -175,7 +175,7 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
             )
 
         self.datasets = []
-        self.examples: List[Tuple[Path, int, Dict[str, object]]] = []
+        self.raw_samples: List[Tuple[Path, int, Dict[str, object]]] = []
         for i in range(len(roots)):
             self.datasets.append(
                 SliceDataset(
@@ -187,11 +187,11 @@ class CombinedSliceDataset(torch.utils.data.Dataset):
                     use_dataset_cache=use_dataset_cache,
                     dataset_cache_file=dataset_cache_file,
                     num_cols=num_cols,
-                    example_filter=example_filter,
+                    raw_sample_filter=raw_sample_filter,
                 )
             )
 
-            self.examples = self.examples + self.datasets[-1].examples
+            self.raw_samples = self.raw_samples + self.datasets[-1].raw_samples
 
     def __len__(self):
         return sum(len(dataset) for dataset in self.datasets)
@@ -219,7 +219,7 @@ class SliceDataset(torch.utils.data.Dataset):
         volume_sample_rate: Optional[float] = None,
         dataset_cache_file: Union[str, Path, os.PathLike] = "dataset_cache.pkl",
         num_cols: Optional[Tuple[int]] = None,
-        example_filter: Optional[Callable] = None,
+        raw_sample_filter: Optional[Callable] = None,
     ):
         """
         Args:
@@ -244,9 +244,9 @@ class SliceDataset(torch.utils.data.Dataset):
                 information for faster load times.
             num_cols: Optional; If provided, only slices with the desired
                 number of columns will be considered.
-            example_filter: Optional; A callable object that takes an example
+            raw_sample_filter: Optional; A callable object that takes an raw_sample
                 metadata as input and returns a boolean indicating whether the
-                example should be included in the dataset.
+                raw_sample should be included in the dataset.
         """
         if challenge not in ("singlecoil", "multicoil"):
             raise ValueError('challenge should be either "singlecoil" or "multicoil"')
@@ -262,11 +262,11 @@ class SliceDataset(torch.utils.data.Dataset):
         self.recons_key = (
             "reconstruction_esc" if challenge == "singlecoil" else "reconstruction_rss"
         )
-        self.examples = []
-        if example_filter is None:
-            self.example_filter = lambda example: True
+        self.raw_samples = []
+        if raw_sample_filter is None:
+            self.raw_sample_filter = lambda raw_sample: True
         else:
-            self.example_filter = example_filter
+            self.raw_sample_filter = raw_sample_filter
 
         # set default sampling mode if none given
         if sample_rate is None:
@@ -288,39 +288,41 @@ class SliceDataset(torch.utils.data.Dataset):
             for fname in sorted(files):
                 metadata, num_slices = self._retrieve_metadata(fname)
 
-                self.examples += [
-                    (fname, slice_ind, metadata)
-                    for slice_ind in range(num_slices)
-                    if self.example_filter(metadata)
-                ]
+                new_raw_samples = []
+                for slice_ind in range(num_slices):
+                    raw_sample = FastMRIRawDataSample(fname, slice_ind, metadata)
+                    if self.raw_sample_filter(raw_sample):
+                        new_raw_samples.append(raw_sample)
+
+                self.raw_samples += new_raw_samples
 
             if dataset_cache.get(root) is None and use_dataset_cache:
-                dataset_cache[root] = self.examples
+                dataset_cache[root] = self.raw_samples
                 logging.info(f"Saving dataset cache to {self.dataset_cache_file}.")
                 with open(self.dataset_cache_file, "wb") as cache_f:
                     pickle.dump(dataset_cache, cache_f)
         else:
             logging.info(f"Using dataset cache from {self.dataset_cache_file}.")
-            self.examples = dataset_cache[root]
+            self.raw_samples = dataset_cache[root]
 
         # subsample if desired
         if sample_rate < 1.0:  # sample by slice
-            random.shuffle(self.examples)
-            num_examples = round(len(self.examples) * sample_rate)
-            self.examples = self.examples[:num_examples]
+            random.shuffle(self.raw_samples)
+            num_raw_samples = round(len(self.raw_samples) * sample_rate)
+            self.raw_samples = self.raw_samples[:num_raw_samples]
         elif volume_sample_rate < 1.0:  # sample by volume
-            vol_names = sorted(list(set([f[0].stem for f in self.examples])))
+            vol_names = sorted(list(set([f[0].stem for f in self.raw_samples])))
             random.shuffle(vol_names)
             num_volumes = round(len(vol_names) * volume_sample_rate)
             sampled_vols = vol_names[:num_volumes]
-            self.examples = [
-                example for example in self.examples if example[0].stem in sampled_vols
+            self.raw_samples = [
+                raw_sample for raw_sample in self.raw_samples if raw_sample[0].stem in sampled_vols
             ]
 
         if num_cols:
-            self.examples = [
+            self.raw_samples = [
                 ex
-                for ex in self.examples
+                for ex in self.raw_samples
                 if ex[2]["encoding_size"][1] in num_cols  # type: ignore
             ]
 
@@ -361,10 +363,10 @@ class SliceDataset(torch.utils.data.Dataset):
         return metadata, num_slices
 
     def __len__(self):
-        return len(self.examples)
+        return len(self.raw_samples)
 
     def __getitem__(self, i: int):
-        fname, dataslice, metadata = self.examples[i]
+        fname, dataslice, metadata = self.raw_samples[i]
 
         with h5py.File(fname, "r") as hf:
             kspace = hf["kspace"][dataslice]
@@ -390,7 +392,7 @@ class AnnotatedSliceDataset(SliceDataset):
 
     This is a subclass from SliceDataset that incorporates functionality of the fastMRI+ dataset.
     It can be used to download the csv file from fastMRI+ based on the specified version using git hash.
-    It parses the csv and links it to samples in SliceDataset as annotated_examples.
+    It parses the csv and links it to samples in SliceDataset as annotated_raw_samples.
 
     Github: https://github.com/microsoft/fastmri-plus
     Paper: https://arxiv.org/abs/2109.03812
@@ -455,7 +457,7 @@ class AnnotatedSliceDataset(SliceDataset):
             num_cols,
         )
 
-        self.annotated_examples = []
+        self.annotated_raw_samples = []
 
         if subsplit not in ("knee", "brain"):
             raise ValueError('subsplit should be either "knee" or "brain"')
@@ -473,8 +475,8 @@ class AnnotatedSliceDataset(SliceDataset):
             )
         annotations_csv = pd.read_csv(annotation_path)
 
-        for example in self.examples:
-            fname, slice_ind, metadata = example
+        for raw_sample in self.raw_samples:
+            fname, slice_ind, metadata = raw_sample
 
             # using filename and slice to find desired annotation
             annotations_df = annotations_csv[
@@ -487,7 +489,7 @@ class AnnotatedSliceDataset(SliceDataset):
             if len(annotations_df) == 0:
                 annotation = self.get_annotation(True, None)
                 metadata["annotation"] = annotation
-                self.annotated_examples.append(
+                self.annotated_raw_samples.append(
                     list([fname, slice_ind, metadata.copy()])
                 )
 
@@ -495,7 +497,7 @@ class AnnotatedSliceDataset(SliceDataset):
                 rows = list(annotations_list)[0]
                 annotation = self.get_annotation(False, rows)
                 metadata["annotation"] = annotation
-                self.annotated_examples.append(
+                self.annotated_raw_samples.append(
                     list([fname, slice_ind, metadata.copy()])
                 )
 
@@ -505,7 +507,7 @@ class AnnotatedSliceDataset(SliceDataset):
                     rows = list(annotations_list)[0]
                     annotation = self.get_annotation(False, rows)
                     metadata["annotation"] = annotation
-                    self.annotated_examples.append(
+                    self.annotated_raw_samples.append(
                         list([fname, slice_ind, metadata.copy()])
                     )
 
@@ -515,16 +517,16 @@ class AnnotatedSliceDataset(SliceDataset):
                     rows = list(annotations_list)[random_number]
                     annotation = self.get_annotation(False, rows)
                     metadata["annotation"] = annotation
-                    self.annotated_examples.append(
+                    self.annotated_raw_samples.append(
                         list([fname, slice_ind, metadata.copy()])
                     )
 
-                # extend examples to have tow copies of the same slice, one for each annotation
+                # extend raw samples to have tow copies of the same slice, one for each annotation
                 elif multiple_annotation_policy == "all":
                     for rows in annotations_list:
                         annotation = self.get_annotation(False, rows)
                         metadata["annotation"] = annotation
-                        self.annotated_examples.append(
+                        self.annotated_raw_samples.append(
                             list([fname, slice_ind, metadata.copy()])
                         )
 

@@ -63,7 +63,7 @@ class VolumeSampler(Sampler):
 
         # get all file names and split them based on number of processes
         self.all_volume_names = sorted(
-            set(str(example[0]) for example in self.dataset.examples)
+            set(str(raw_sample[0]) for raw_sample in self.dataset.raw_samples)
         )
         self.all_volumes_split: List[List[str]] = []
         for rank_num in range(self.num_replicas):
@@ -78,8 +78,8 @@ class VolumeSampler(Sampler):
 
         # get slice indices for each file name
         rank_indices: List[List[int]] = [[] for _ in range(self.num_replicas)]
-        for i, example in enumerate(self.dataset.examples):
-            vname = str(example[0])
+        for i, raw_sample in enumerate(self.dataset.raw_samples):
+            vname = str(raw_sample[0])
             for rank_num in range(self.num_replicas):
                 if vname in self.all_volumes_split[rank_num]:
                     rank_indices[rank_num].append(i)

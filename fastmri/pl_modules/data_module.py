@@ -251,6 +251,7 @@ class FastMriDataModule(pl.LightningDataModule):
                 raw_sample_filter = self.test_filter
             else:
                 data_path = self.data_path / f"{self.challenge}_{data_partition}"
+                raw_sample_filter = self.test_filter
 
             dataset = SliceDataset(
                 root=data_path,

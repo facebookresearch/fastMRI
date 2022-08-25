@@ -221,6 +221,7 @@ class FastMriDataModule(pl.LightningDataModule):
                     if volume_sample_rate is None
                     else volume_sample_rate
                 )
+                raw_sample_filter = self.test_filter
 
         # if desired, combine train and val together for the train split
         dataset: Union[SliceDataset, CombinedSliceDataset]
@@ -248,7 +249,6 @@ class FastMriDataModule(pl.LightningDataModule):
         else:
             if data_partition in ("test", "challenge") and self.test_path is not None:
                 data_path = self.test_path
-                raw_sample_filter = self.test_filter
             else:
                 data_path = self.data_path / f"{self.challenge}_{data_partition}"
 

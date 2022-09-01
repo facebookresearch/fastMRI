@@ -488,31 +488,6 @@ def complex_planar_to_packed(data):
     imaginary = data[..., 1, :, :]
     return torch.stack([real, imaginary], dim=-1)
 
-
-def complex_whiten(complex_image, eps=1e-10):
-    real = complex_image[:, :, 0]
-    imag = complex_image[:, :, 1]
-
-    # Center around mean.
-    centered_complex_image = complex_image - complex_image.mean()
-
-    # Determine covariance between real and imaginary.
-    n = real.nelement()
-    real_real = (real.mul(real).sum() - real.mean().mul(real.mean())) / n
-    real_imag = (real.mul(imag).sum() - real.mean().mul(imag.mean())) / n
-    imag_imag = (imag.mul(imag).sum() - imag.mean().mul(imag.mean())) / n
-    V = torch.Tensor([[real_real, real_imag], [real_imag, imag_imag]])
-
-    # Remove correlation by rotating around covariance eigenvectors.
-    eig_values, eig_vecs = torch.eig(V, eigenvectors=True)
-    whitened_image = torch.matmul(centered_complex_image, eig_vecs)
-
-    # Scale by eigenvalues for unit variance.
-    whitened_image[:, :, 0] = whitened_image[:, :, 0] / (eig_values[0, 0] + eps).sqrt()
-    whitened_image[:, :, 1] = whitened_image[:, :, 1] / (eig_values[1, 0] + eps).sqrt()
-    return whitened_image
-
-
 # Helper functions
 
 def roll(x, shift, dim):

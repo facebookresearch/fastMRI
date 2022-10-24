@@ -554,7 +554,7 @@ class AnnotatedSliceDataset(SliceDataset):
                 "height": -1,
                 "label": "",
             }
-        elif row.study_level == 'Yes':
+        elif row.study_level == "Yes":
             annotation = {
                 "fname": str(row.file),
                 "slice": "",

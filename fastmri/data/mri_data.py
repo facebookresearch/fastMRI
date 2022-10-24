@@ -554,6 +554,17 @@ class AnnotatedSliceDataset(SliceDataset):
                 "height": -1,
                 "label": "",
             }
+        elif row.study_level == "Yes":
+            annotation = {
+                "fname": str(row.file),
+                "slice": "",
+                "study_level": "Yes",
+                "x": -1,
+                "y": -1,
+                "width": -1,
+                "height": -1,
+                "label": str(row.label),
+            }
         else:
             annotation = {
                 "fname": str(row.file),
@@ -569,7 +580,10 @@ class AnnotatedSliceDataset(SliceDataset):
 
     def download_csv(self, version, subsplit, path):
         # request file by git hash and mri type
-        url = f"https://raw.githubusercontent.com/microsoft/fastmri-plus/{version}/Annotations/{subsplit}.csv"
+        if version is None:
+            url = f"https://raw.githubusercontent.com/microsoft/fastmri-plus/main/Annotations/{subsplit}.csv"
+        else:
+            url = f"https://raw.githubusercontent.com/microsoft/fastmri-plus/{version}/Annotations/{subsplit}.csv"
         request = requests.get(url, timeout=10, stream=True)
 
         # create temporary folders

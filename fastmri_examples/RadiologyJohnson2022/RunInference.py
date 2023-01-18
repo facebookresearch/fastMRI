@@ -14,15 +14,13 @@ import time
 import json
 import signal
 import re
-import shutil
 import pickle
 import math
 
-from torch import nn, optim
+from torch import nn
 from torchvision import utils
 import h5py
 import numpy as np
-import pylab as plt
 import torch
 import torch.utils.checkpoint
 import torch.nn.functional as F
@@ -500,7 +498,7 @@ class SoftDC(nn.Module):
 def parse_model(s):
     if s is None:
         return None
-    s = re.sub("(\d+)\[(.*?)\]", lambda m: int(m.group(1)) * m.group(2), s)
+    s = re.sub("(\d+)\[(.*?)\]", lambda m: int(m.group(1)) * m.group(2), s)  # noqa
     return eval(f"SequentialPlus({s})")
 
 
@@ -641,7 +639,6 @@ class Slice(torch.utils.data.Dataset):
             kspace = f["kspace"][slice]
             ipat2_mask = f["mask"][()]
             target = f["reconstruction_rss"][slice]
-            acquisition = f.attrs["acquisition"]
             max = f.attrs["max"]
             norm = f.attrs["norm"]
 

@@ -275,11 +275,49 @@ The 2019 fastMRI challenge was an open challenge designed to advance research in
 Most current approaches to undersampled multi-coil MRI reconstruction focus on learning the reconstruction model for a fixed, equidistant acquisition trajectory. In this paper, we study the problem of joint learning of the reconstruction model together with acquisition policies. To this end, we extend the End-to-End Variational Network with learnable acquisition policies that can adapt to different data points. We validate our model on a coil-compressed version of the large scale undersampled multi-coil fastMRI dataset using two undersampling factors: 4× and 8×. Our experiments show on-par performance with the learnable non-adaptive and handcrafted equidistant strategies at 4×, and an observed improvement of more than 2% in SSIM at 8× acceleration, suggesting that potentially-adaptive k-space acquisition trajectories can improve reconstructed image quality for larger acceleration factors. However, and perhaps surprisingly, our best performing policies learn to be explicitly non-adaptive.
 
 ```BibTeX
-@article{bakker2022adaptive,
+@inproceedings{bakker2022adaptive,
     title={On learning adaptive acquisition policies for undersampled multi-coil {MRI} reconstruction},
     author={Tim Bakker and Matthew Muckley and Adriana Romero-Soriano and Michal Drozdzal and Luis Pineda},
-    journal={Proceedings of Machine Learning Research (MIDL)},
-    pages={to appear},
+    booktitle={Proceedings of Machine Learning Research (MIDL)},
     year={2022},
+}
+```
+
+## Deep Learning Reconstruction Enables Prospectively Accelerated Clinical Knee MRI
+
+[publication](https://doi.org/10.1148/radiol.220425) [Code](https://github.com/facebookresearch/fastMRI/tree/main/fastmri_examples/RadiologyJohnson2022)
+
+**Abstract**
+
+Compared with conventional reconstruction, deep learning reconstruction of prospectively accelerated knee MRI enabled an almost twofold scan time reduction, improved image quality, and had equivalent diagnostic utility.
+
+**Background**
+
+MRI is a powerful diagnostic tool with a long acquisition time. Recently, deep learning (DL) methods have provided accelerated high-quality image reconstructions from undersampled data, but it is unclear if DL image reconstruction can be reliably translated to everyday clinical practice.
+
+**Purpose**
+
+To determine the diagnostic equivalence of prospectively accelerated DL-reconstructed knee MRI compared with conventional accelerated MRI for evaluating internal derangement of the knee in a clinical setting.
+
+**Materials and Methods**
+
+A DL reconstruction model was trained with images from 298 clinical 3-T knee examinations. In a prospective analysis, patients clinically referred for knee MRI underwent a conventional accelerated knee MRI protocol at 3 T followed by an accelerated DL protocol between January 2020 and February 2021. The equivalence of the DL reconstruction of the images relative to the conventional images for the detection of an abnormality was assessed in terms of interchangeability. Each examination was reviewed by six musculoskeletal radiologists. Analyses pertaining to the detection of meniscal or ligament tears and bone marrow or cartilage abnormalities were based on four-point ordinal scores for the likelihood of an abnormality. Additionally, the protocols were compared with use of four-point ordinal scores for each aspect of image quality: overall image quality, presence of artifacts, sharpness, and signal-to-noise ratio.
+
+**Results**
+
+A total of 170 participants (mean age ± SD, 45 years ± 16; 76 men) were evaluated. The DL-reconstructed images were determined to be of diagnostic equivalence with the conventional images for detection of abnormalities. The overall image quality score, averaged over six readers, was significantly better (P < .001) for the DL than for the conventional images.
+
+**Conclusion**
+
+In a clinical setting, deep learning reconstruction enabled a nearly twofold reduction in scan time for a knee MRI and was diagnostically equivalent with the conventional protocol.
+
+```BibTeX
+@article{johnson2023deep,
+    title={Deep Learning Reconstruction Enables Prospectively Accelerated Clinical Knee MRI},
+    author={Johnson, Patricia M. and Lin, Dana J. and Zbontar, Jure and Zitnick, C. Lawrence and Sriram, Anuroop and Muckley, Matthew and Babb, James S. and Kline, Mitchell and Ciavarra, Gina and Alaia, Erin and Samim, Mohammad and Walter, William R. and Calderon, Liz and Pock, Thomas and Sodickson, Daniel K. and Recht, Michael P. and Knoll, Florian},
+    journal = {Radiology},
+    pages = {220425},
+    year = {2023},
+    doi = {10.1148/radiol.220425},
 }
 ```

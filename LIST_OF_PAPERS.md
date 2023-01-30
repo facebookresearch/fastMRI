@@ -271,7 +271,7 @@ The 2019 fastMRI challenge was an open challenge designed to advance research in
 
 ## On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction
 
-[publication](https://arxiv.org/abs/2203.16392)
+[publication](https://proceedings.mlr.press/v172/bakker22a)
 
 Most current approaches to undersampled multi-coil MRI reconstruction focus on learning the reconstruction model for a fixed, equidistant acquisition trajectory. In this paper, we study the problem of joint learning of the reconstruction model together with acquisition policies. To this end, we extend the End-to-End Variational Network with learnable acquisition policies that can adapt to different data points. We validate our model on a coil-compressed version of the large scale undersampled multi-coil fastMRI dataset using two undersampling factors: 4× and 8×. Our experiments show on-par performance with the learnable non-adaptive and handcrafted equidistant strategies at 4×, and an observed improvement of more than 2% in SSIM at 8× acceleration, suggesting that potentially-adaptive k-space acquisition trajectories can improve reconstructed image quality for larger acceleration factors. However, and perhaps surprisingly, our best performing policies learn to be explicitly non-adaptive.
 

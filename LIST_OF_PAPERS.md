@@ -13,8 +13,10 @@ The following is a short list of fastMRI publications. Clicking on the title wil
 9. Sriram, A.\*, Zbontar, J.\*, Murrell, T., Defazio, A., Zitnick, C. L., Yakubova, N., ... & Johnson, P. (2020). [End-to-End Variational Networks for Accelerated MRI Reconstruction](#end-to-end-variational-networks-for-accelerated-mri-reconstruction). In *International Conference on Medical Image Computing and Computer-Assisted Intervention*, pages 64-73.
 10. Defazio, A., Murrell, T., & Recht, M. P. (2020). [MRI Banding Removal via Adversarial Training](#mri-banding-removal-via-adversarial-training). In *Advances in Neural Information Processing Systems*, 33, pages 7660-7670.
 11. Muckley, M. J.\*, Riemenschneider, B.\*, Radmanesh, A., Kim, S., Jeong, G., Ko, J., ... & Knoll, F. (2021). [Results of the 2020 fastMRI Challenge for Machine Learning MR Image Reconstruction](#results-of-the-2020-fastmri-challenge-for-machine-learning-mr-image-reconstruction). *IEEE Transactions on Medical Imaging*, 40(9), pages 2306-2317.
-12. Johnson, P. M., Jeong, G., Hammernik, K., Schlemper, J., Qin, C., Duan, J., ..., & Knoll, F. [Evaluation of the Robustness of Learned MR Image Reconstruction to Systematic Deviations Between Training and Test Data for the Models from the fastMRI Challenge](#evaluation-of-the-robustness-of-learned-mr-image-reconstruction-to-systematic-deviations-between-training-and-test-data-for-the-models-from-the-fastmri-challenge). In *MICCAI Machine Learning for Medical Image Reconstruction Workshop*, pages 25–34, 2021.
-13. Bakker, T., Muckley, M.J., Romero-Soriano, A., Drozdzal, M. & Pineda, L. (2022). [On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction](https://arxiv.org/abs/2203.16392). *Accepted at MIDL, 2022*, to appear.
+12. Johnson, P. M., Jeong, G., Hammernik, K., Schlemper, J., Qin, C., Duan, J., ..., & Knoll, F. (2021). [Evaluation of the Robustness of Learned MR Image Reconstruction to Systematic Deviations Between Training and Test Data for the Models from the fastMRI Challenge](#evaluation-of-the-robustness-of-learned-mr-image-reconstruction-to-systematic-deviations-between-training-and-test-data-for-the-models-from-the-fastmri-challenge). In *MICCAI Machine Learning for Medical Image Reconstruction Workshop*, pages 25–34.
+13. Bakker, T., Muckley, M.J., Romero-Soriano, A., Drozdzal, M. & Pineda, L. (2022). [On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction](#on-learning-adaptive-acquisition-policies-for-undersampled-multi-coil-mri-reconstruction). In * *International Conference on Medical Imaging with Deep Learning*, pages 63-85.
+14. Radmanesh, A.\*, Muckley, M. J.\*, Murrell, T., Lindsey, E., Sriram, A., Knoll, F., ... & Lui, Y. W. (2022). [Exploring the Acceleration Limits of Deep Learning VarNet-based Two-dimensional Brain MRI](#exploring-the-acceleration-limits-of-deep-learning-varnet-based-two-dimensional-brain-mri). *Radiology: Artificial Intelligence*, 4(6), page e210313.
+15. Johnson, Patricia M., Lin, D. J., Zbontar, J., Zitnick, C. L., Sriram, A., Mucklye, M., ..., & Knoll, F. (2023). [Deep learning reconstruction enables prospectively accelerated clinical knee MRI](#deep-learning-reconstruction-enables-prospectively-accelerated-clinical-knee-mri) *Radiology*, page 220425.
 
 ## fastMRI: An open dataset and benchmarks for accelerated MRI
 
@@ -267,7 +269,6 @@ The 2019 fastMRI challenge was an open challenge designed to advance research in
 }
 ```
 
-
 ## On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction
 
 [publication](https://arxiv.org/abs/2203.16392)
@@ -280,6 +281,39 @@ Most current approaches to undersampled multi-coil MRI reconstruction focus on l
     author={Tim Bakker and Matthew Muckley and Adriana Romero-Soriano and Michal Drozdzal and Luis Pineda},
     booktitle={Proceedings of Machine Learning Research (MIDL)},
     year={2022},
+}
+```
+
+## Exploring the Acceleration Limits of Deep Learning VarNet-based Two-dimensional Brain MRI
+
+[publication](https://doi.org/10.1148/ryai.210313)
+
+**Purpose**
+
+To explore the limits of deep learning-based brain MRI reconstruction and identify useful acceleration ranges for general-purpose imaging and potential screening.
+
+**Materials and Methods**
+
+In this retrospective study conducted from 2019 through 2021, a model was trained for reconstruction on 5,847 brain MRIs. Performance was evaluated across a wide range of accelerations (up to 100-fold along a single phase-encoded direction for two-dimensional [2D] slices) on the fastMRI test set collected by New York University, consisting of 558 image volumes. In a sample of 69 volumes, reconstructions were classified by radiologists for identifying two clinical thresholds: 1) general-purpose diagnostic imaging and 2) potential use in a screening protocol. A Monte Carlo procedure was developed for estimating reconstruction error with only undersampled data. The model was evaluated on both in-domain and out-of-domain data. Confidence intervals were calculated using the percentile bootstrap method.
+
+**Results**
+
+Radiologists rated 100% of 69 volumes as having sufficient image quality for general-purpose imaging at up to 4× acceleration and 65 of 69 (94%) of volumes as having sufficient image quality for screening at up to 14× acceleration. The Monte Carlo procedure estimated ground truth peak signal-to-noise ratio and mean squared error with coefficients of determination greater than 0.5 at all accelerations. Out-of-distribution experiments demonstrated the model’s ability to produce images substantially distinct from the training set, even at 100× acceleration.
+
+**Conclusion**
+
+For 2D brain images using deep learning-based reconstruction, maximum acceleration for potential screening was 3–4 times higher than that for diagnostic general-purpose imaging.
+
+```BibTeX
+@article{radmanesh2022exploring,
+  title={Exploring the Acceleration Limits of Deep Learning {VarNet}-based Two-dimensional Brain {MRI}},
+  author={Radmanesh, Alireza and Muckley, Matthew J and Murrell, Tullie and Lindsey, Emma and Sriram, Anuroop and Knoll, Florian and Sodickson, Daniel K and Lui, Yvonne W},
+  journal={Radiology: Artificial Intelligence},
+  volume={4},
+  number={6},
+  pages={e210313},
+  year={2022},
+  publisher={Radiological Society of North America}
 }
 ```
 

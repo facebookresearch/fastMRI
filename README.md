@@ -176,6 +176,20 @@ paper:
 }
 ```
 
+If you use the fastMRI prostate data or code in your project, please cite that
+paper:
+
+```BibTeX
+@inproceedings{tibrewala2023fastmri,
+  title={{FastMRI Prostate}: A Publicly Available, Biparametric {MRI} Dataset to Advance Machine Learning for Prostate Cancer Imaging},
+  author={Tibrewala, Radhika and Dutt, Tarun and Tong, Angela and Ginocchio, Luke and Keerthivasan, Mahesh B and Baete, Steven H and Chopra, Sumit and Lui, Yvonne W and Sodickson, Daniel K and Chandarana, Hersh and Johnson, Patricia M},
+  journal = {ArXiv e-prints},
+  archivePrefix = "arXiv",
+  eprint={2304.09254},
+  year={2023}
+}
+```
+
 ## List of Papers
 
 The following lists titles of papers from the fastMRI project. The

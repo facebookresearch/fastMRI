@@ -125,6 +125,9 @@ in another repository.
   * (external repository) [Active MR k-space Sampling with Reinforcement Learning (L. Pineda et al., 2020)](https://github.com/facebookresearch/active-mri-acquisition)
   * [On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction (T. Bakker et al., 2022)](https://github.com/facebookresearch/fastMRI/tree/main/fastmri_examples/adaptive_varnet/)
 
+* **Prostate Data**
+  * (external respository) [FastMRI Prostate: A Publicly Available, Biparametric MRI Dataset to Advance Machine Learning for Prostate Cancer Imaging (Tibrewala et al., 2023)](https://github.com/cai2r/fastMRI_prostate)
+
 ## Testing
 
 Run `pytest tests`. By default integration tests that use the fastMRI data are
@@ -173,6 +176,20 @@ paper:
 }
 ```
 
+If you use the fastMRI prostate data or code in your project, please cite that
+paper:
+
+```BibTeX
+@inproceedings{tibrewala2023fastmri,
+  title={{FastMRI Prostate}: A Publicly Available, Biparametric {MRI} Dataset to Advance Machine Learning for Prostate Cancer Imaging},
+  author={Tibrewala, Radhika and Dutt, Tarun and Tong, Angela and Ginocchio, Luke and Keerthivasan, Mahesh B and Baete, Steven H and Chopra, Sumit and Lui, Yvonne W and Sodickson, Daniel K and Chandarana, Hersh and Johnson, Patricia M},
+  journal = {ArXiv e-prints},
+  archivePrefix = "arXiv",
+  eprint={2304.09254},
+  year={2023}
+}
+```
+
 ## List of Papers
 
 The following lists titles of papers from the fastMRI project. The
@@ -193,4 +210,5 @@ corresponding abstracts, as well as links to preprints and code can be found
 12. Johnson, P. M., Jeong, G., Hammernik, K., Schlemper, J., Qin, C., Duan, J., ..., & Knoll, F. (2021). [Evaluation of the Robustness of Learned MR Image Reconstruction to Systematic Deviations Between Training and Test Data for the Models from the fastMRI Challenge](https://doi.org/10.1007/978-3-030-88552-6_3). In *MICCAI MLMIR Workshop*, pages 25–34,
 13. Bakker, T., Muckley, M.J., Romero-Soriano, A., Drozdzal, M. & Pineda, L. (2022). [On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction](https://proceedings.mlr.press/v172/bakker22a). In *MIDL*, pages 63-85.
 14. Radmanesh, A.\*, Muckley, M. J.\*, Murrell, T., Lindsey, E., Sriram, A., Knoll, F., ... & Lui, Y. W. (2022). [Exploring the Acceleration Limits of Deep Learning VarNet-based Two-dimensional Brain MRI](https://doi.org/10.1148/ryai.210313). *Radiology: Artificial Intelligence*, 4(6), page e210313.
-15. Johnson, P.M., Lin, D.J., Zbontar, J., Zitnick, C.L., Sriram, A., Muckley, M., Babb, J.S., Kline, M., Ciavarra, G., Alaia, E., ..., & Knoll, F. [Deep Learning Reconstruction Enables Prospectively Accelerated Clinical Knee MRI](https://doi.org/10.1148/radiol.220425). *Radiology*, 2023.
+15. Johnson, P.M., Lin, D.J., Zbontar, J., Zitnick, C.L., Sriram, A., Muckley, M., Babb, J.S., Kline, M., Ciavarra, G., Alaia, E., ..., & Knoll, F. (2023). [Deep Learning Reconstruction Enables Prospectively Accelerated Clinical Knee MRI](https://doi.org/10.1148/radiol.220425). *Radiology*, 307(2), page e220425.
+16. Tibrewala, R., Dutt, T., Tong, A., Ginocchio, L., Keerthivasan, M.B., Baete, S.H., Lui, Y.W., Sodickson, D.K., Chandarana, H., Johnson, P.M. (2023). [FastMRI Prostate: A Publicly Available, Biparametric MRI Dataset to Advance Machine Learning for Prostate Cancer Imaging](https://arxiv.org/abs/2304.09254). *arXiv preprint, arXiv:2034.09254*.

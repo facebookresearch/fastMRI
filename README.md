@@ -39,6 +39,8 @@ There are multiple publications describing different subcomponents of the data
 
 * **Brain Dataset Properties:** [Supplemental Material](https://ieeexplore.ieee.org/ielx7/42/9526230/9420272/supp1-3075856.pdf?arnumber=9420272) of [Results of the 2020 fastMRI Challenge for Machine Learning MR Image Reconstruction ({M. Muckley*, B. Riemenschneider*} et al., 2021)](https://doi.org/10.1109/TMI.2021.3075856)
 
+* **Prostate Data:** [FastMRI Prostate: A Publicly Available, Biparametric MRI Dataset to Advance Machine Learning for Prostate Cancer Imaging (Tibrewala et al., 2023)](https://arxiv.org/abs/2304.09254)
+
 ### Code Repository
 
 For code documentation, most functions and classes have accompanying docstrings

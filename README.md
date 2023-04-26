@@ -154,7 +154,7 @@ example of how to train a model using the PyTorch Lightning framework.
 the fastmri.org domain was transferred from Meta ownership to NYU ownership on
 2023-04-17, and NYU has not yet rebuilt the site. Until the site and
 leaderbaords are rebuilt by NYU, leaderboards will be unavailable. Mitigations
-are discussed in [Discussion 293](https://github.com/facebookresearch/fastMRI/discussions/293).
+are presented in [Discussion 293](https://github.com/facebookresearch/fastMRI/discussions/293).
 
 ## License
 

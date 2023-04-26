@@ -3,7 +3,7 @@
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebookresearch/fastMRI/blob/master/LICENSE.md)
 [![Build and Test](https://github.com/facebookresearch/fastMRI/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/facebookresearch/fastMRI/actions/workflows/build-and-test.yml)
 
-[Website and Leaderboards](https://fastMRI.org) |
+[Website](https://fastMRI.org) |
 [Dataset](https://fastmri.med.nyu.edu/) |
 [GitHub](https://github.com/facebookresearch/fastMRI) |
 [Publications](#list-of-papers)
@@ -150,14 +150,11 @@ example of how to train a model using the PyTorch Lightning framework.
 
 ## Submitting to the Leaderboard
 
-Run your model on the provided test data and create a zip file containing your
-predictions. `fastmri` has a `save_reconstructions` function that saves the
-data in the correct format.
-
-Upload the zip file to any publicly accessible cloud storage (e.g. Amazon S3,
-Dropbox etc). Submit a link to the zip file on the
-[challenge website](https://fastmri.org/submit). You will need to create an
-account before submitting.
+**NOTICE:** As documented in [Discussion 293](https://github.com/facebookresearch/fastMRI/discussions/293),
+the fastmri.org domain was transferred from Meta ownership to NYU ownership on
+2023-04-17, and NYU has not yet rebuilt the site. Until the site and
+leaderbaords are rebuilt by NYU, leaderboards will be unavailable. Mitigations
+are presented in [Discussion 293](https://github.com/facebookresearch/fastMRI/discussions/293).
 
 ## License
 

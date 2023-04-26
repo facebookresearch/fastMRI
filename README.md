@@ -31,7 +31,8 @@ publications of the fastMRI project.
 ### The fastMRI Dataset
 
 There are multiple publications describing different subcomponents of the data
-(e.g., brain vs. knee) and associated baselines.
+(e.g., brain vs. knee) and associated baselines. All of the fastMRI data can be
+downloaded from the [fastMRI dataset page](https://fastmri.med.nyu.edu/).
 
 * **Project Summary, Datasets, Baselines:** [fastMRI: An Open Dataset and Benchmarks for Accelerated MRI ({J. Zbontar*, F. Knoll*, A. Sriram*} et al., 2018)](https://arxiv.org/abs/1811.08839)
 
@@ -168,7 +169,7 @@ If you use the fastMRI data or code in your project, please cite the arXiv
 paper:
 
 ```BibTeX
-@inproceedings{zbontar2018fastMRI,
+@misc{zbontar2018fastMRI,
     title={{fastMRI}: An Open Dataset and Benchmarks for Accelerated {MRI}},
     author={Jure Zbontar and Florian Knoll and Anuroop Sriram and Tullie Murrell and Zhengnan Huang and Matthew J. Muckley and Aaron Defazio and Ruben Stern and Patricia Johnson and Mary Bruno and Marc Parente and Krzysztof J. Geras and Joe Katsnelson and Hersh Chandarana and Zizhao Zhang and Michal Drozdzal and Adriana Romero and Michael Rabbat and Pascal Vincent and Nafissa Yakubova and James Pinkerton and Duo Wang and Erich Owens and C. Lawrence Zitnick and Michael P. Recht and Daniel K. Sodickson and Yvonne W. Lui},
     journal = {ArXiv e-prints},
@@ -182,7 +183,7 @@ If you use the fastMRI prostate data or code in your project, please cite that
 paper:
 
 ```BibTeX
-@inproceedings{tibrewala2023fastmri,
+@misc{tibrewala2023fastmri,
   title={{FastMRI Prostate}: A Publicly Available, Biparametric {MRI} Dataset to Advance Machine Learning for Prostate Cancer Imaging},
   author={Tibrewala, Radhika and Dutt, Tarun and Tong, Angela and Ginocchio, Luke and Keerthivasan, Mahesh B and Baete, Steven H and Chopra, Sumit and Lui, Yvonne W and Sodickson, Daniel K and Chandarana, Hersh and Johnson, Patricia M},
   journal = {ArXiv e-prints},

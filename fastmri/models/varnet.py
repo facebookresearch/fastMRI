@@ -198,7 +198,7 @@ class SensitivityModel(nn.Module):
 
         pad = (mask.shape[-2] - num_low_frequencies_tensor + 1) // 2
 
-        return pad, num_low_frequencies_tensor
+        return pad.type(torch.long), num_low_frequencies_tensor.type(torch.long)
 
     def forward(
         self,

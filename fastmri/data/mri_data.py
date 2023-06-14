@@ -10,6 +10,7 @@ import os
 import pickle
 import random
 import xml.etree.ElementTree as etree
+from copy import deepcopy
 from pathlib import Path
 from typing import (
     Any,
@@ -30,6 +31,7 @@ import pandas as pd
 import requests
 import torch
 import yaml
+from tqdm import tqdm
 
 
 def et_query(
@@ -469,7 +471,7 @@ class AnnotatedSliceDataset(SliceDataset):
             num_cols,
         )
 
-        self.annotated_raw_samples = []
+        annotated_raw_samples: List[FastMRIRawDataSample] = []
 
         if subsplit not in ("knee", "brain"):
             raise ValueError('subsplit should be either "knee" or "brain"')
@@ -489,6 +491,7 @@ class AnnotatedSliceDataset(SliceDataset):
 
         for raw_sample in self.raw_samples:
             fname, slice_ind, metadata = raw_sample
+            metadata = deepcopy(metadata)
 
             # using filename and slice to find desired annotation
             annotations_df = annotations_csv[
@@ -501,16 +504,16 @@ class AnnotatedSliceDataset(SliceDataset):
             if len(annotations_df) == 0:
                 annotation = self.get_annotation(True, None)
                 metadata["annotation"] = annotation
-                self.annotated_raw_samples.append(
-                    list([fname, slice_ind, metadata.copy()])
+                annotated_raw_samples.append(
+                    FastMRIRawDataSample(fname, slice_ind, metadata)
                 )
 
             elif len(annotations_df) == 1:
                 rows = list(annotations_list)[0]
                 annotation = self.get_annotation(False, rows)
                 metadata["annotation"] = annotation
-                self.annotated_raw_samples.append(
-                    list([fname, slice_ind, metadata.copy()])
+                annotated_raw_samples.append(
+                    FastMRIRawDataSample(fname, slice_ind, metadata)
                 )
 
             else:
@@ -519,8 +522,8 @@ class AnnotatedSliceDataset(SliceDataset):
                     rows = list(annotations_list)[0]
                     annotation = self.get_annotation(False, rows)
                     metadata["annotation"] = annotation
-                    self.annotated_raw_samples.append(
-                        list([fname, slice_ind, metadata.copy()])
+                    annotated_raw_samples.append(
+                        FastMRIRawDataSample(fname, slice_ind, metadata)
                     )
 
                 # use an annotation at random
@@ -529,8 +532,8 @@ class AnnotatedSliceDataset(SliceDataset):
                     rows = list(annotations_list)[random_number]
                     annotation = self.get_annotation(False, rows)
                     metadata["annotation"] = annotation
-                    self.annotated_raw_samples.append(
-                        list([fname, slice_ind, metadata.copy()])
+                    annotated_raw_samples.append(
+                        FastMRIRawDataSample(fname, slice_ind, metadata)
                     )
 
                 # extend raw samples to have tow copies of the same slice, one for each annotation
@@ -538,9 +541,11 @@ class AnnotatedSliceDataset(SliceDataset):
                     for rows in annotations_list:
                         annotation = self.get_annotation(False, rows)
                         metadata["annotation"] = annotation
-                        self.annotated_raw_samples.append(
-                            list([fname, slice_ind, metadata.copy()])
+                        annotated_raw_samples.append(
+                            FastMRIRawDataSample(fname, slice_ind, metadata)
                         )
+
+        self.raw_samples = annotated_raw_samples
 
     def get_annotation(self, empty_value, row):
         if empty_value is True:
@@ -581,16 +586,31 @@ class AnnotatedSliceDataset(SliceDataset):
     def download_csv(self, version, subsplit, path):
         # request file by git hash and mri type
         if version is None:
-            url = f"https://raw.githubusercontent.com/microsoft/fastmri-plus/main/Annotations/{subsplit}.csv"
+            url = (
+                "https://raw.githubusercontent.com/microsoft/fastmri-plus/"
+                f"main/Annotations/{subsplit}.csv"
+            )
         else:
-            url = f"https://raw.githubusercontent.com/microsoft/fastmri-plus/{version}/Annotations/{subsplit}.csv"
-        request = requests.get(url, timeout=10, stream=True)
+            url = (
+                "https://raw.githubusercontent.com/microsoft/fastmri-plus/"
+                f"{version}/Annotations/{subsplit}.csv"
+            )
+        response = requests.get(url, timeout=10, stream=True)
 
         # create temporary folders
         Path(".annotation_cache").mkdir(parents=True, exist_ok=True)
 
+        total_size_in_bytes = int(response.headers.get("content-length", 0))
+        progress_bar = tqdm(
+            desc="Downloading annotations",
+            total=total_size_in_bytes,
+            unit="iB",
+            unit_scale=True,
+        )
+
         # download csv from github and save it locally
         with open(path, "wb") as fh:
-            for chunk in request.iter_content(1024 * 1024):
+            for chunk in response.iter_content(1024 * 1024):
+                progress_bar.update(len(chunk))
                 fh.write(chunk)
         return path

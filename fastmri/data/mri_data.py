@@ -10,6 +10,7 @@ import os
 import pickle
 import random
 import xml.etree.ElementTree as etree
+from copy import deepcopy
 from pathlib import Path
 from typing import (
     Any,
@@ -490,6 +491,7 @@ class AnnotatedSliceDataset(SliceDataset):
 
         for raw_sample in self.raw_samples:
             fname, slice_ind, metadata = raw_sample
+            metadata = deepcopy(metadata)
 
             # using filename and slice to find desired annotation
             annotations_df = annotations_csv[
@@ -503,7 +505,7 @@ class AnnotatedSliceDataset(SliceDataset):
                 annotation = self.get_annotation(True, None)
                 metadata["annotation"] = annotation
                 annotated_raw_samples.append(
-                    FastMRIRawDataSample(fname, slice_ind, metadata.copy())
+                    FastMRIRawDataSample(fname, slice_ind, metadata)
                 )
 
             elif len(annotations_df) == 1:
@@ -511,7 +513,7 @@ class AnnotatedSliceDataset(SliceDataset):
                 annotation = self.get_annotation(False, rows)
                 metadata["annotation"] = annotation
                 annotated_raw_samples.append(
-                    FastMRIRawDataSample(fname, slice_ind, metadata.copy())
+                    FastMRIRawDataSample(fname, slice_ind, metadata)
                 )
 
             else:
@@ -521,7 +523,7 @@ class AnnotatedSliceDataset(SliceDataset):
                     annotation = self.get_annotation(False, rows)
                     metadata["annotation"] = annotation
                     annotated_raw_samples.append(
-                        FastMRIRawDataSample(fname, slice_ind, metadata.copy())
+                        FastMRIRawDataSample(fname, slice_ind, metadata)
                     )
 
                 # use an annotation at random
@@ -531,7 +533,7 @@ class AnnotatedSliceDataset(SliceDataset):
                     annotation = self.get_annotation(False, rows)
                     metadata["annotation"] = annotation
                     annotated_raw_samples.append(
-                        FastMRIRawDataSample(fname, slice_ind, metadata.copy())
+                        FastMRIRawDataSample(fname, slice_ind, metadata)
                     )
 
                 # extend raw samples to have tow copies of the same slice, one for each annotation
@@ -540,7 +542,7 @@ class AnnotatedSliceDataset(SliceDataset):
                         annotation = self.get_annotation(False, rows)
                         metadata["annotation"] = annotation
                         annotated_raw_samples.append(
-                            FastMRIRawDataSample(fname, slice_ind, metadata.copy())
+                            FastMRIRawDataSample(fname, slice_ind, metadata)
                         )
 
         self.raw_samples = annotated_raw_samples
@@ -584,9 +586,15 @@ class AnnotatedSliceDataset(SliceDataset):
     def download_csv(self, version, subsplit, path):
         # request file by git hash and mri type
         if version is None:
-            url = f"https://raw.githubusercontent.com/microsoft/fastmri-plus/main/Annotations/{subsplit}.csv"
+            url = (
+                "https://raw.githubusercontent.com/microsoft/fastmri-plus/"
+                f"main/Annotations/{subsplit}.csv"
+            )
         else:
-            url = f"https://raw.githubusercontent.com/microsoft/fastmri-plus/{version}/Annotations/{subsplit}.csv"
+            url = (
+                "https://raw.githubusercontent.com/microsoft/fastmri-plus/"
+                f"{version}/Annotations/{subsplit}.csv"
+            )
         response = requests.get(url, timeout=10, stream=True)
 
         # create temporary folders

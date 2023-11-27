@@ -25,7 +25,7 @@ from .conftest import create_input
 )
 def test_fft2(shape):
     shape = shape + [2]
-    x = create_input(shape)
+    x = create_input(shape).double()
     out_torch = fastmri.fft2c(x).numpy()
     out_torch = out_torch[..., 0] + 1j * out_torch[..., 1]
 
@@ -47,7 +47,7 @@ def test_fft2(shape):
 )
 def test_ifft2(shape):
     shape = shape + [2]
-    x = create_input(shape)
+    x = create_input(shape).double()
     out_torch = fastmri.ifft2c(x).numpy()
     out_torch = out_torch[..., 0] + 1j * out_torch[..., 1]
 

@@ -1,13 +1,29 @@
+"""
+Copyright (c) Facebook, Inc. and its affiliates.
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.
+"""
+
 import math
 from argparse import ArgumentParser
 
 import torch
-torch.set_float32_matmul_precision('high')
+
+torch.set_float32_matmul_precision("high")
 import torch.nn as nn
 from fastmri.pl_modules.mri_module import MriModule
 from fastmri.losses import SSIMLoss
 from fastmri.data.transforms import center_crop_to_smallest, center_crop
-from fastmri.models import FIVarNet, IFVarNet, FeatureVarNet_sh_w, FeatureVarNet_n_sh_w, AttentionFeatureVarNet_n_sh_w, E2EVarNet
+from fastmri.models import (
+    FIVarNet,
+    IFVarNet,
+    FeatureVarNet_sh_w,
+    FeatureVarNet_n_sh_w,
+    AttentionFeatureVarNet_n_sh_w,
+    E2EVarNet,
+)
+
 
 class FIVarNetModule(MriModule):
     def __init__(
@@ -33,7 +49,12 @@ class FIVarNetModule(MriModule):
         return self.fi_varnet(masked_kspace, mask, num_low_frequencies)
 
     def training_step(self, batch, batch_idx):
-        output = self.fi_varnet(batch.masked_kspace,batch.mask,batch.num_low_frequencies,crop_size=batch.crop_size)
+        output = self.fi_varnet(
+            batch.masked_kspace,
+            batch.mask,
+            batch.num_low_frequencies,
+            crop_size=batch.crop_size,
+        )
         target, output = center_crop_to_smallest(batch.target, output)
         loss = self.loss(
             output.unsqueeze(1), target.unsqueeze(1).float(), data_range=batch.max_value
@@ -47,7 +68,12 @@ class FIVarNetModule(MriModule):
                 self.log(f"grads/{name}", torch.norm(param.grad))
 
     def validation_step(self, batch, batch_idx):
-        output = self.fi_varnet(batch.masked_kspace,batch.mask,batch.num_low_frequencies,crop_size=batch.crop_size)
+        output = self.fi_varnet(
+            batch.masked_kspace,
+            batch.mask,
+            batch.num_low_frequencies,
+            crop_size=batch.crop_size,
+        )
         target, output = center_crop_to_smallest(batch.target, output)
         return {
             "batch_idx": batch_idx,
@@ -57,12 +83,19 @@ class FIVarNetModule(MriModule):
             "output": output,
             "target": target,
             "val_loss": self.loss(
-                output.unsqueeze(1), target.unsqueeze(1).float(), data_range=batch.max_value
+                output.unsqueeze(1),
+                target.unsqueeze(1).float(),
+                data_range=batch.max_value,
             ),
         }
 
     def test_step(self, batch, batch_idx):
-        output = self.fi_varnet(batch.masked_kspace,batch.mask,batch.num_low_frequencies,crop_size=batch.crop_size)
+        output = self.fi_varnet(
+            batch.masked_kspace,
+            batch.mask,
+            batch.num_low_frequencies,
+            crop_size=batch.crop_size,
+        )
         if output.shape[-1] < batch.crop_size[1]:
             crop_size = (output.shape[-1], output.shape[-1])
         else:
@@ -76,6 +109,7 @@ class FIVarNetModule(MriModule):
 
     def configure_optimizers(self):
         cosine_steps = self.max_steps - self.cosine_decay_start
+
         def step_fn(step):
             if step < self.cosine_decay_start:
                 return min(step / self.ramp_steps, 1.0)

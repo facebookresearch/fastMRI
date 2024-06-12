@@ -1,24 +1,41 @@
+"""
+Copyright (c) Facebook, Inc. and its affiliates.
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.
+"""
+
 import os
 import torch
-torch.set_float32_matmul_precision('high')
+
+torch.set_float32_matmul_precision("high")
 import pathlib
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Optional
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
-from fastmri.models.feature_varnet import FIVarNet, IFVarNet, FeatureVarNet_sh_w, FeatureVarNet_n_sh_w, E2EVarNet, AttentionFeatureVarNet_n_sh_w
-from pl_modules import FIVarNetModule
+from fastmri.models.feature_varnet import (
+    FIVarNet,
+    IFVarNet,
+    FeatureVarNet_sh_w,
+    FeatureVarNet_n_sh_w,
+    E2EVarNet,
+    AttentionFeatureVarNet_n_sh_w,
+)
 from fastmri.data.subsample import create_mask_for_mask_type
 from fastmri.data.transforms import VarNetDataTransform
 from fastmri.data.mri_data import fetch_dir
 from fastmri.pl_modules.data_module import FastMriDataModule
+from .feature_varnet_module import FIVarNetModule
 import subprocess
+
 
 def check_gpu_availability():
     command = "nvidia-smi --query-gpu=index --format=csv,noheader | wc -l"
     output = subprocess.check_output(command, shell=True).decode("utf-8").strip()
     return int(output)
+
 
 def reload_state_dict(
     module: FIVarNetModule, fname: Path, module_name: str = "fi_varnet."
@@ -29,6 +46,7 @@ def reload_state_dict(
     state_dict = {k[lm:]: v for k, v in state_dict.items() if k[:lm] == module_name}
     module.fi_varnet.load_state_dict(state_dict)
     return module
+
 
 def fetch_model(args, acceleration):
     if args.varnet_type == "fi_varnet":
@@ -52,7 +70,9 @@ def fetch_model(args, acceleration):
             acceleration=acceleration,
         )
     elif args.varnet_type == "attention_feature_varnet_sh_w":
-        print(f"BUILDING ATTENTION FEATURE VARNET WITH WEIGHT SHARING, chans={args.chans}")
+        print(
+            f"BUILDING ATTENTION FEATURE VARNET WITH WEIGHT SHARING, chans={args.chans}"
+        )
         return AttentionFeatureVarNet_n_sh_w(
             num_cascades=args.num_cascades,
             pools=args.pools,
@@ -90,6 +110,7 @@ def fetch_model(args, acceleration):
         )
     else:
         raise ValueError("Unrecognized varnet_type")
+
 
 def cli_main(args):
     pl.seed_everything(args.seed)
@@ -142,7 +163,10 @@ def cli_main(args):
     else:
         raise ValueError(f"unrecognized mode {args.mode}")
 
-def build_args(model_name: Optional[str] = "VarNet DDP x4", cluster_launch: bool = True):
+
+def build_args(
+    model_name: Optional[str] = "VarNet DDP x4", cluster_launch: bool = True
+):
     parser = ArgumentParser()
     path_config = pathlib.Path("./fastmri_dirs.yaml")
     backend = "ddp"
@@ -179,7 +203,14 @@ def build_args(model_name: Optional[str] = "VarNet DDP x4", cluster_launch: bool
     )
     parser.add_argument(
         "--varnet_type",
-        choices=("fi_varnet","if_varnet","feature_varnet_sh_w","feature_varnet_n_sh_w","attention_feature_varnet_sh_w","e2e_varnet"),
+        choices=(
+            "fi_varnet",
+            "if_varnet",
+            "feature_varnet_sh_w",
+            "feature_varnet_n_sh_w",
+            "attention_feature_varnet_sh_w",
+            "e2e_varnet",
+        ),
         default="fi_varnet",
         type=str,
         help="Type of VarNet to use",
@@ -191,17 +222,19 @@ def build_args(model_name: Optional[str] = "VarNet DDP x4", cluster_launch: bool
     if args.mode == "test" or args.mode == "test_val":
         num_gpus = 1
     if args.varnet_type == "e2e_varnet":
-        default_root_dir = (fetch_dir("log_path", path_config) / "e2e_varnet")
+        default_root_dir = fetch_dir("log_path", path_config) / "e2e_varnet"
     if args.varnet_type == "fi_varnet":
-        default_root_dir = (fetch_dir("log_path", path_config) / "fi_varnet")
+        default_root_dir = fetch_dir("log_path", path_config) / "fi_varnet"
     if args.varnet_type == "if_varnet":
-        default_root_dir = (fetch_dir("log_path", path_config) / "if_varnet")
+        default_root_dir = fetch_dir("log_path", path_config) / "if_varnet"
     elif args.varnet_type == "feature_varnet_sh_w":
-        default_root_dir = (fetch_dir("log_path", path_config) / "feature_varnet_sh_w")
+        default_root_dir = fetch_dir("log_path", path_config) / "feature_varnet_sh_w"
     elif args.varnet_type == "feature_varnet_n_sh_w":
-        default_root_dir = (fetch_dir("log_path", path_config) / "feature_varnet_n_sh_w")
+        default_root_dir = fetch_dir("log_path", path_config) / "feature_varnet_n_sh_w"
     elif args.varnet_type == "attention_feature_varnet_sh_w":
-        default_root_dir = (fetch_dir("log_path", path_config) / "attention_feature_varnet_sh_w")
+        default_root_dir = (
+            fetch_dir("log_path", path_config) / "attention_feature_varnet_sh_w"
+        )
 
     parser.set_defaults(
         data_path=data_path,  # path to fastMRI data
@@ -221,7 +254,7 @@ def build_args(model_name: Optional[str] = "VarNet DDP x4", cluster_launch: bool
         sens_chans=8,  # number of top-level channels for sense est. U-Net
         lr=0.0003,  # Adam learning rate
         ramp_steps=7500,
-        cosine_decay_start=150000,#150000,
+        cosine_decay_start=150000,  # 150000,
         weight_decay=0.0,  # weight regularization strength
     )
     parser = pl.Trainer.add_argparse_args(parser)
@@ -233,7 +266,7 @@ def build_args(model_name: Optional[str] = "VarNet DDP x4", cluster_launch: bool
         seed=42,  # random seed
         # deterministic=True,  # makes things slower, but deterministic
         default_root_dir=default_root_dir,  # directory for logs and checkpoints
-        max_steps=210000,#210000,  # number of steps for 50 knee epochs
+        max_steps=210000,  # 210000,  # number of steps for 50 knee epochs
         detect_anomaly=False,
         gradient_clip_val=1.0,
     )
@@ -262,9 +295,11 @@ def build_args(model_name: Optional[str] = "VarNet DDP x4", cluster_launch: bool
             args.resume_from_checkpoint = str(ckpt_list[-1])
     return args
 
+
 def run_cli():
     args = build_args(cluster_launch=True)
     cli_main(args)
+
 
 if __name__ == "__main__":
     run_cli()

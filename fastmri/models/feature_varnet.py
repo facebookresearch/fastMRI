@@ -938,7 +938,7 @@ class FIVarNet(nn.Module):
             kspace_pred = cascade(
                 kspace_pred, feature_image.ref_kspace, mask, feature_image.sens_maps
             )
-        # Return Final Image
+        # Divide with k-space factor and Return Final Image
         kspace_pred = kspace_pred / self.kspace_mult_factor
         return rss(complex_abs(ifft2c(kspace_pred)), dim=1)
 

@@ -53,9 +53,9 @@ def image_uncrop(image: Tensor, original_image: Tensor) -> Tensor:
     pad_height_left, pad_width = _calc_uncrop(image.shape[-1], in_shape[-1])
 
     try:
-        original_image[..., pad_height_top:pad_height, pad_height_left:pad_width] = (
-            image[...]
-        )
+        original_image[
+            ..., pad_height_top:pad_height, pad_height_left:pad_width
+        ] = image[...]
     except RuntimeError:
         print(f"in_shape: {in_shape}, image shape: {image.shape}")
         raise
@@ -553,7 +553,6 @@ class TransposeConvBlock(nn.Module):
 
 
 class NormUnet(nn.Module):
-
     def __init__(
         self,
         chans: int,
@@ -644,7 +643,6 @@ class NormUnet(nn.Module):
 
 
 class Norm1DUnet(nn.Module):
-
     def __init__(
         self,
         chans: int,

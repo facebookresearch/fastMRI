@@ -6,10 +6,6 @@ LICENSE file in the root directory of this source tree.
 """
 
 import os
-
-import torch
-
-torch.set_float32_matmul_precision("high")
 import pathlib
 import subprocess
 from argparse import ArgumentParser
@@ -17,6 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 import pytorch_lightning as pl
+import torch
 from feature_varnet import (
     AttentionFeatureVarNet_n_sh_w,
     E2EVarNet,
@@ -33,6 +30,8 @@ from fastmri.data.transforms import VarNetDataTransform
 from fastmri.pl_modules.data_module import FastMriDataModule
 
 from .feature_varnet_module import FIVarNetModule
+
+torch.set_float32_matmul_precision("high")
 
 
 def check_gpu_availability():

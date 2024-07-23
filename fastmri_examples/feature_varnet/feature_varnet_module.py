@@ -9,13 +9,13 @@ import math
 from argparse import ArgumentParser
 
 import torch
-
-torch.set_float32_matmul_precision("high")
 from feature_varnet import FIVarNet
 
 from fastmri.data.transforms import center_crop, center_crop_to_smallest
 from fastmri.losses import SSIMLoss
 from fastmri.pl_modules.mri_module import MriModule
+
+torch.set_float32_matmul_precision("high")
 
 
 class FIVarNetModule(MriModule):

@@ -127,6 +127,7 @@ class NormStats(nn.Module):
 
         return mean, variance
 
+
 class FeatureImage(NamedTuple):
     features: Tensor
     sens_maps: Optional[Tensor] = None

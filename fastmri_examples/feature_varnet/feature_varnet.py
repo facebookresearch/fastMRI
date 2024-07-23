@@ -5,21 +5,19 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-from typing import NamedTuple, Optional, Tuple, List
 import math
+from typing import List, NamedTuple, Optional, Tuple
+
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch import Tensor
 
-import torch.nn.functional as F
-import torch.distributed as dist
-import numpy as np
-import math
-from fastmri.data.transforms import center_crop, batched_mask_center
-from fastmri.fftc import ifft2c_new as ifft2c
+from fastmri.coil_combine import rss, rss_complex
+from fastmri.data.transforms import batched_mask_center, center_crop
 from fastmri.fftc import fft2c_new as fft2c
-from fastmri.coil_combine import rss_complex, rss
-from fastmri.math import complex_abs, complex_mul, complex_conj
+from fastmri.fftc import ifft2c_new as ifft2c
+from fastmri.math import complex_abs, complex_conj, complex_mul
 
 
 def image_crop(image: Tensor, crop_size: Optional[Tuple[int, int]] = None) -> Tensor:
@@ -55,9 +53,9 @@ def image_uncrop(image: Tensor, original_image: Tensor) -> Tensor:
         if len(in_shape) == 2:  # Assuming 2D images
             original_image[pad_height_top:pad_height, pad_height_left:pad_width] = image
         elif len(in_shape) == 3:  # Assuming 3D images with channels
-            original_image[
-                :, pad_height_top:pad_height, pad_height_left:pad_width
-            ] = image
+            original_image[:, pad_height_top:pad_height, pad_height_left:pad_width] = (
+                image
+            )
         elif len(in_shape) == 4:  # Assuming 4D images with batch size
             original_image[
                 :, :, pad_height_top:pad_height, pad_height_left:pad_width

@@ -6,29 +6,33 @@ LICENSE file in the root directory of this source tree.
 """
 
 import os
+
 import torch
 
 torch.set_float32_matmul_precision("high")
 import pathlib
+import subprocess
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Optional
+
 import pytorch_lightning as pl
-from pytorch_lightning.loggers import TensorBoardLogger
-from fastmri.models.feature_varnet import (
+from feature_varnet import (
+    AttentionFeatureVarNet_n_sh_w,
+    E2EVarNet,
+    FeatureVarNet_n_sh_w,
+    FeatureVarNet_sh_w,
     FIVarNet,
     IFVarNet,
-    FeatureVarNet_sh_w,
-    FeatureVarNet_n_sh_w,
-    E2EVarNet,
-    AttentionFeatureVarNet_n_sh_w,
 )
+from pytorch_lightning.loggers import TensorBoardLogger
+
+from fastmri.data.mri_data import fetch_dir
 from fastmri.data.subsample import create_mask_for_mask_type
 from fastmri.data.transforms import VarNetDataTransform
-from fastmri.data.mri_data import fetch_dir
 from fastmri.pl_modules.data_module import FastMriDataModule
+
 from .feature_varnet_module import FIVarNetModule
-import subprocess
 
 
 def check_gpu_availability():

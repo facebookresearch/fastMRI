@@ -53,9 +53,9 @@ def image_uncrop(image: Tensor, original_image: Tensor) -> Tensor:
         if len(in_shape) == 2:  # Assuming 2D images
             original_image[pad_height_top:pad_height, pad_height_left:pad_width] = image
         elif len(in_shape) == 3:  # Assuming 3D images with channels
-            original_image[:, pad_height_top:pad_height, pad_height_left:pad_width] = (
-                image
-            )
+            original_image[
+                :, pad_height_top:pad_height, pad_height_left:pad_width
+            ] = image
         elif len(in_shape) == 4:  # Assuming 4D images with batch size
             original_image[
                 :, :, pad_height_top:pad_height, pad_height_left:pad_width

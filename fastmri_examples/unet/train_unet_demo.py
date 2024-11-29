@@ -43,7 +43,7 @@ def cli_main(args):
         sample_rate=args.sample_rate,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
-        distributed_sampler=(args.accelerator in ("ddp", "ddp_cpu")),
+        distributed_sampler=(args.accelerations in ("ddp", "ddp_cpu")),
     )
 
     # ------------
@@ -64,7 +64,9 @@ def cli_main(args):
     # ------------
     # trainer
     # ------------
-    trainer = pl.Trainer.from_argparse_args(args)
+    #trainer = pl.Trainer.from_argparse_args(args)
+    #trainer = pl.Trainer(**vars(args))
+    trainer = pl.Trainer()
 
     # ------------
     # run
@@ -121,6 +123,13 @@ def build_args():
         type=int,
         help="Acceleration rates to use for masks",
     )
+    parser.add_argument(
+        "--resume_from_checkpoint",
+        nargs="+",
+        default=None,
+        type=str,
+        help="Path to checkpooint"
+    )
 
     # data config with path to fastMRI data and batch size
     parser = FastMriDataModule.add_data_specific_args(parser)
@@ -141,7 +150,7 @@ def build_args():
     )
 
     # trainer config
-    parser = pl.Trainer.add_argparse_args(parser)
+    #parser = pl.Trainer.add_argparse_args(parser)
     parser.set_defaults(
         gpus=num_gpus,  # number of gpus to use
         replace_sampler_ddp=False,  # this is necessary for volume dispatch during val

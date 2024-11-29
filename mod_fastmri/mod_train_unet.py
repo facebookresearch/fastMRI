@@ -219,4 +219,6 @@ def run_cli():
 
 
 if __name__ == "__main__":
+    # from the fastMRI directory
+    # python -m mod_fastmri.mod_train_unet --chalenllenge singlecoil --data_path mod_fastmri/unet_data mask_type random
     run_cli()

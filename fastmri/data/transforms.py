@@ -286,7 +286,10 @@ def batched_central_weight_mask(shape,
     - weight_mask: A tensor of shape [40, 640, 368] with weights applied to the central region.
     """
     # Extract spatial dimensions
-    if shape.ndim < 4:
+
+    # print("shape: ", shape)
+    
+    if len(shape) < 4:
         return create_central_weight_mask(shape, region_fraction, central_weight, outer_weight)
     
     _, slices, height, width, _ = shape
@@ -319,10 +322,10 @@ def create_central_weight_mask(shape,
     - weight_mask: A tensor of shape [40, 640, 368] with weights applied to the central region.
     """
     # Extract spatial dimensions
-    slices, height, width, _ = shape
+    _, height, width = shape
 
     # Initialize the weight mask with the outer weight
-    weight_mask = torch.full((slices, height, width), outer_weight)
+    weight_mask = torch.full((1, height, width), outer_weight)
 
     # Compute central region indices
     h_start, h_end, w_start, w_end = _central_idx_finder(height, width, region_fraction)

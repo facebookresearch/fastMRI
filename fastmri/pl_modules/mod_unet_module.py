@@ -94,10 +94,10 @@ class ModUnetModule(MriModule):
         output = self(batch.image)
 
         # Get the batched center weights for the loss
-        weight = batched_central_weight_mask(batch.image)
+        weight = batched_central_weight_mask(batch.image.shape)
       
         # Compute the loss
-        loss = self.loss_func(output, batch.target, weight)
+        loss = self.loss_func(output, batch.target, weight.to('cuda'))
 
         self.log("loss", loss.detach())
 
@@ -108,7 +108,7 @@ class ModUnetModule(MriModule):
         mean = batch.mean.unsqueeze(1).unsqueeze(2)
         std = batch.std.unsqueeze(1).unsqueeze(2)
 
-        weight = batched_central_weight_mask(batch.image)
+        weight = batched_central_weight_mask(batch.image.shape).to('cuda')
 
         return {
             "batch_idx": batch_idx,

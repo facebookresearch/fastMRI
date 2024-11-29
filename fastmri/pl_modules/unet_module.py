@@ -60,6 +60,8 @@ class UnetModule(MriModule):
         super().__init__(**kwargs)
         self.save_hyperparameters()
 
+        
+
         self.in_chans = in_chans
         self.out_chans = out_chans
         self.chans = chans

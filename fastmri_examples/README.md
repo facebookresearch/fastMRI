@@ -15,4 +15,3 @@ further details.
 
   * [End-to-End Variational Networks for Accelerated MRI Reconstruction ({A. Sriram*, J. Zbontar*} et al., 2020)](varnet/)
   * [On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction (T. Bakker et al., 2021)](adaptive_varnet/)
-  * [Accelerated MRI reconstructions via variational network and feature domain learning (I. Giannakopoulos et al., 2024)](feature_varnet/)

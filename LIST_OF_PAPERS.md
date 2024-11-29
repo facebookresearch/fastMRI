@@ -17,7 +17,6 @@ The following is a short list of fastMRI publications. Clicking on the title wil
 13. Bakker, T., Muckley, M.J., Romero-Soriano, A., Drozdzal, M. & Pineda, L. (2022). [On learning adaptive acquisition policies for undersampled multi-coil MRI reconstruction](#on-learning-adaptive-acquisition-policies-for-undersampled-multi-coil-mri-reconstruction). In * *International Conference on Medical Imaging with Deep Learning*, pages 63-85.
 14. Radmanesh, A.\*, Muckley, M. J.\*, Murrell, T., Lindsey, E., Sriram, A., Knoll, F., ... & Lui, Y. W. (2022). [Exploring the Acceleration Limits of Deep Learning VarNet-based Two-dimensional Brain MRI](#exploring-the-acceleration-limits-of-deep-learning-varnet-based-two-dimensional-brain-mri). *Radiology: Artificial Intelligence*, 4(6), page e210313.
 15. Johnson, Patricia M., Lin, D. J., Zbontar, J., Zitnick, C. L., Sriram, A., Mucklye, M., ..., & Knoll, F. (2023). [Deep learning reconstruction enables prospectively accelerated clinical knee MRI](#deep-learning-reconstruction-enables-prospectively-accelerated-clinical-knee-mri) *Radiology*, page 220425.
-16. Giannakopoulos, I. I., Muckley, M. J., Kim, J., Breen, M., Johnson, P. M., Lui, Y. W., & Lattanzi, R. (2024). [Accelerated MRI reconstructions via variational network and feature domain learning](#accelerated-mri-reconstructions-via-variational-network-and-feature-domain-learning) *Scientific Reports*, 14(1), 10991.
 
 ## fastMRI: An open dataset and benchmarks for accelerated MRI
 
@@ -354,26 +353,5 @@ In a clinical setting, deep learning reconstruction enabled a nearly twofold red
     pages = {220425},
     year = {2023},
     doi = {10.1148/radiol.220425},
-}
-```
-
-## Accelerated MRI reconstructions via variational network and feature domain learning
-
-[Publication](https://doi.org/10.1038/s41598-024-59705-0) [Code](https://github.com/facebookresearch/fastMRI/tree/main/fastmri_examples/feature_varnet)
-
-**Abstract**
-
-We introduce three architecture modifications to enhance the performance of the end-to-end (E2E) variational network (VarNet) for undersampled MRI reconstructions. We first implemented the Feature VarNet, which propagates information throughout the cascades of the network in an N-channel feature-space instead of a 2-channel feature-space. Then, we add an attention layer that utilizes the spatial locations of Cartesian undersampling artifacts to further improve performance. Lastly, we combined the Feature and E2E VarNets into the Feature-Image (FI) VarNet, to facilitate cross-domain learning and boost accuracy. Reconstructions were evaluated on the fastMRI dataset using standard metrics and clinical scoring by three neuroradiologists. Feature and FI VarNets outperformed the E2E VarNet for 4, 5 and 8 Cartesian undersampling in all studied metrics. FI VarNet secured second place in the public fastMRI leaderboard for 4 Cartesian undersampling, outperforming all open-source models in the leaderboard. Radiologists rated FI VarNet brain reconstructions with higher quality and sharpness than the E2E VarNet reconstructions. FI VarNet excelled in preserving anatomical details, including blood vessels, whereas E2E VarNet discarded or blurred them in some cases. The proposed FI VarNet enhances the reconstruction quality of undersampled MRI and could enable clinically acceptable reconstructions at higher acceleration factors than currently possible.
-
-```BibTeX
-@article{giannakopoulos2024accelerated,
-  title={Accelerated MRI reconstructions via variational network and feature domain learning},
-  author={Giannakopoulos, Ilias I and Muckley, Matthew J and Kim, Jesi and Breen, Matthew and Johnson, Patricia M and Lui, Yvonne W and Lattanzi, Riccardo},
-  journal={Scientific Reports},
-  volume={14},
-  number={1},
-  pages={10991},
-  year={2024},
-  publisher={Nature Publishing Group UK London}
 }
 ```

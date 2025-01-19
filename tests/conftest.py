@@ -16,7 +16,7 @@ SKIP_INTEGRATIONS = True
 
 
 def create_input(shape):
-    x = np.arange(np.product(shape)).reshape(shape)
+    x = np.arange(np.prod(shape)).reshape(shape)
     x = torch.from_numpy(x).float()
 
     return x

@@ -111,7 +111,7 @@ def test_root_sum_of_squares(shape, dim):
     ],
 )
 def test_roll(shift, dim, shape):
-    x = np.arange(np.product(shape)).reshape(shape)
+    x = np.arange(np.prod(shape)).reshape(shape)
     if isinstance(shift, int) and isinstance(dim, int):
         torch_shift = [shift]
         torch_dim = [dim]
@@ -132,7 +132,7 @@ def test_roll(shift, dim, shape):
     ],
 )
 def test_fftshift(shape):
-    x = np.arange(np.product(shape)).reshape(shape)
+    x = np.arange(np.prod(shape)).reshape(shape)
     out_torch = fastmri.fftshift(torch.from_numpy(x)).numpy()
     out_numpy = np.fft.fftshift(x)
 
@@ -148,7 +148,7 @@ def test_fftshift(shape):
     ],
 )
 def test_ifftshift(shape):
-    x = np.arange(np.product(shape)).reshape(shape)
+    x = np.arange(np.prod(shape)).reshape(shape)
     out_torch = fastmri.ifftshift(torch.from_numpy(x)).numpy()
     out_numpy = np.fft.ifftshift(x)
 

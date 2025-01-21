@@ -17,7 +17,7 @@ from fastmri.data import transforms
 
 
 def create_input(shape):
-    input = np.arange(np.product(shape)).reshape(shape)
+    input = np.arange(np.prod(shape)).reshape(shape)
     input = torch.from_numpy(input).float()
     return input
 
@@ -179,7 +179,7 @@ def test_normalize_instance(shape):
     [3, 4, 5],
 ])
 def test_roll(shift, dim, shape):
-    input = np.arange(np.product(shape)).reshape(shape)
+    input = np.arange(np.prod(shape)).reshape(shape)
     out_torch = transforms.roll(torch.from_numpy(input), shift, dim).numpy()
     out_numpy = np.roll(input, shift, dim)
     assert np.allclose(out_torch, out_numpy)
@@ -190,7 +190,7 @@ def test_roll(shift, dim, shape):
     [2, 4, 6],
 ])
 def test_fftshift(shape):
-    input = np.arange(np.product(shape)).reshape(shape)
+    input = np.arange(np.prod(shape)).reshape(shape)
     out_torch = transforms.fftshift(torch.from_numpy(input)).numpy()
     out_numpy = np.fft.fftshift(input)
     assert np.allclose(out_torch, out_numpy)
@@ -202,7 +202,7 @@ def test_fftshift(shape):
     [2, 7, 5],
 ])
 def test_ifftshift(shape):
-    input = np.arange(np.product(shape)).reshape(shape)
+    input = np.arange(np.prod(shape)).reshape(shape)
     out_torch = transforms.ifftshift(torch.from_numpy(input)).numpy()
     out_numpy = np.fft.ifftshift(input)
     assert np.allclose(out_torch, out_numpy)

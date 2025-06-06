@@ -9,3 +9,4 @@ shap==0.41.0
 h5py==3.9.0
 pydicom==2.4.0
 nibabel==5.1.0
+dicom2nifti==2.4.10

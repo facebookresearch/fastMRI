@@ -36,13 +36,18 @@ class MRIDataset(Dataset):
         self.transform = self._build_transform()
 
     def _build_transform(self):
-        tfms = [transforms.ToTensor()]
         if self.augment:
             tfms = [
                 transforms.RandomResizedCrop(224, scale=(0.8, 1.0)),
                 transforms.RandomRotation(10),
                 transforms.RandomHorizontalFlip(p=0.5),
-            ] + tfms
+                transforms.ToTensor(),
+            ]
+        else:
+            tfms = [
+                transforms.Resize(224),
+                transforms.ToTensor(),
+            ]
         return transforms.Compose(tfms)
 
     def __len__(self):
